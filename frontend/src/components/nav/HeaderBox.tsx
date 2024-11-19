@@ -1,6 +1,6 @@
 import React from 'react';
 import logo from '@/assets/images/logo.svg';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '../ui/button';
 
 
@@ -9,6 +9,8 @@ interface Props {
 }
 
 const HeaderBox: React.FC<Props> = (props) => {
+  const { pathname } = useLocation()
+  console.log(pathname)
   return (
     <header className='h-[110px] w-full xl:w-1280 mx-auto sticky top-0 z-50 bg-white'>
       <nav className='w-full h-full flex items-center justify-between'>
@@ -20,11 +22,11 @@ const HeaderBox: React.FC<Props> = (props) => {
           <NavLink to='#'>
             About Us
           </NavLink>
-          <Button className='bg-pry text-white w-[108px] h-9'>
+          {!pathname.includes('/auth') && <Button className='bg-pry text-white w-[108px] h-9'>
             <NavLink to='#' className='w-full h-full'>
               Login
             </NavLink>
-          </Button>
+          </Button>}
         </div>
       </nav>
     </header>
