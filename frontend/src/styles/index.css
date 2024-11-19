@@ -8,7 +8,23 @@
     @apply box-border;
   }
 
+  .reset {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .reset::-webkit-scrollbar {
+    display: none;
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+  }
+
   /* body {
     @apply ;
   } */
+}
+
+body {
+  contain: paint;
 }
