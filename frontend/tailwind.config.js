@@ -8,7 +8,12 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				pry: '#A56377',
+				pry: {
+					DEFAULT: '#779BE7',
+					accent: '#ECF1FC',
+					light: '#A1B7F2'
+				},
+				black1: '#110000C2',
 			},
 			spacing: {
 				'1280': '1280px',
@@ -18,6 +23,7 @@ export default {
 				'18': '18px',
 				'28': '28px',
 				'40': '40px',
+				'64': '64px',
 			},
 			borderRadius: {
 				10: '10px',

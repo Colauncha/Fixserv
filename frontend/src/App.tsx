@@ -3,6 +3,9 @@ import DefaultLayout from './components/layouts/DefaultLayout';
 import HomePage from './pages/home';
 import AuthLayout from './components/layouts/AuthLayout';
 import SignupPage from './pages/auth/sign-up';
+import GuestSignUpPage from './pages/auth/guest-sign-up';
+import LoginPage from './pages/auth/login';
+import { WelcomePage } from './pages/welcome-page';
 
 
 const router = createBrowserRouter([
@@ -13,6 +16,10 @@ const router = createBrowserRouter([
       {
         path: '/',
         element: <HomePage />
+      },
+      {
+        path: '/welcome',
+        element: <WelcomePage />
       }
     ]
   },
@@ -23,7 +30,15 @@ const router = createBrowserRouter([
       {
         path: '/auth/sign-up',
         element: <SignupPage />
-      }
+      },
+      {
+        path: '/auth/guest-sign-up',
+        element: <GuestSignUpPage />
+      },
+      {
+        path: '/auth/login',
+        element: <LoginPage />
+      },
     ]
   }
 ])

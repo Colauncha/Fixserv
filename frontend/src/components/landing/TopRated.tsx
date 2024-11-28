@@ -10,9 +10,9 @@ interface Props {
 
 const TopRated: React.FC<Props> = (props) => {
   return (
-    <section className='mt-[69px] w-full xl:w-[1198px] mx-auto'>
-      <h5 className='text-black text-3xl'>Top Rated Artisan</h5>
-      <div className='h-full lg:h-[510px] bg-[#F998981A] w-full grid items-center overflow-x-auto overscroll-x-contain snap-mandatory scroll-px-1 gap-6 grid-flow-col px-5 rounded-[20px] mt-5 reset'>
+    <section className='mt-[78px] px-6 xl:px-0 h-full xl:h-[889px] w-full mx-auto'>
+      <h5 className='text-black1 text-64 w-full xl:w-[1311px] mx-auto tracking-tighter font-medium'>Top Artisan</h5>
+      <div className='flex flex-wrap xl:flex-nowrap mt-8 justify-center gap-4 w-full pt-[101px] bg-[#ECF1FC] h-full xl:h-[763px]'>
         {
           Array(1, 2, 3).map(item => (
             <RatedCard name='Abbas Akande' jobTitle='Laptop Engineer' key={item} />

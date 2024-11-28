@@ -1,16 +1,19 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import HeaderBox from '../nav/HeaderBox';
 import Footer from '../footer/Footer';
 
 const DefaultLayout: React.FC = () => {
+  const { pathname } = useLocation()
   return (
     <>
-      <HeaderBox />
-      <main className='w-full xl:w-[1280px] mx-auto'>
+      <header className='pt-[34px]'>
+        <HeaderBox />
+      </header>
+      <main className='w-full 2xl:w-[1440px] mx-auto'>
         <Outlet />
       </main>
-      <Footer />
+      {pathname !== '/welcome' && <Footer />}
     </>
   );
 }

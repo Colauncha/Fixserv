@@ -23,12 +23,9 @@ const formSchema = z.object({
   confirm_password: z.string().min(8, {
     message: 'password must be at least 8 character(s)'
   }),
-  skill: z.string().min(3, {
-    message: 'skill must be at least 3 characters'
+  fix: z.string().min(3, {
+    message: 'item description must be at least 3 characters'
   }),
-  businessName: z.string().min(3, {
-    message: 'business name must be at least 3 characters'
-  })
 }).refine(data => data.password === data.confirm_password, {
   message: 'Passwords do not match',
   path: ['confirm_password'],
@@ -36,7 +33,7 @@ const formSchema = z.object({
 
 type FormField = z.infer<typeof formSchema>
 
-const SignupPage: React.FC = () => {
+const GuestSignUpPage: React.FC = () => {
 
   const {
     register,
@@ -54,8 +51,8 @@ const SignupPage: React.FC = () => {
   }
 
   return (
-    <section className='w-full h-full'>
-      <h2 className='text-black1 text-40'>Artisan Registration</h2>
+    <section>
+      <h2 className='text-black1 text-40'>Guest Registration</h2>
 
       <form onSubmit={handleSubmit(onSubmit)} className='w-[435px] pt-16'>
         <div className='mb-4 gap-3 grid grid-cols-2'>
@@ -103,20 +100,11 @@ const SignupPage: React.FC = () => {
         </div>
         <div className='mb-4'>
           <CustomImput
-            {...register('skill')}
+            {...register('fix')}
             type='text'
-            errorMsg={errors.skill?.message}
-            label='Skill/Services'
-            inputId='skill'
-          />
-        </div>
-        <div className='mb-4'>
-          <CustomImput
-            {...register('businessName')}
-            type='text'
-            errorMsg={errors.businessName?.message}
-            label='Business Name'
-            inputId='bname'
+            errorMsg={errors.fix?.message}
+            label='What do you want to fix?'
+            inputId='fix'
           />
         </div>
         <div className='w-full flex items-center justify-between mt-12'>
@@ -133,4 +121,4 @@ const SignupPage: React.FC = () => {
   );
 }
 
-export default SignupPage;
+export default GuestSignUpPage;

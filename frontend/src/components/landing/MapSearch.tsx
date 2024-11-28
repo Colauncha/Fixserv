@@ -1,8 +1,10 @@
 import React from 'react';
-import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Search } from 'lucide-react';
-import gmap from '@/assets/images/gmap.png'
+import { FaChevronDown } from "react-icons/fa6";
+import gmap from '@/assets/images/landing/map.png';
+import gisLocation from '@/assets/images/landing/location.svg';
+
+
 
 interface Props {
 
@@ -10,17 +12,20 @@ interface Props {
 
 const MapSearch: React.FC<Props> = (props) => {
   return (
-    <section className='w-full xl:w-[1138px] mx-auto h-[610px] py-6 bg-[#F998981A] rounded-[30px] mt-[67px]'>
-      <div className='w-full pl-[60px]'>
-        <div className='border-[#A56377] border w-[337px] h-[62px] rounded-[20px] flex items-center bg-white'>
-          <Button size='icon' className='w-[78px] bg-[#A56377] h-[62px] rounded-[20px] text-white'>
-            <Search />
-          </Button>
-          <Input type='text' placeholder='Search' className='w-full h-full rounded-[20px] border-none' />
-        </div>
+    <section className='w-full px-6 xl:px-0 mx-auto h-full py-6 rounded-[30px] mt-[67px]'>
+      <div className='w-full xl:w-[1311px] mx-auto'>
+        <h3 className='text-[52px] tracking-tight font-medium'>
+          Available Locations
+        </h3>
+
+        <Button className='bg-pry mt-6 text-xl w-[231px] px-[27px] justify-between text-white rounded-[50px] h-[65px]'>
+          <img src={gisLocation} alt="" />
+          <p>Location</p>
+          <FaChevronDown />
+        </Button>
       </div>
-      <div className='w-full px-[33px] mt-4 h-[475px]'>
-        <img src={gmap} alt="" className='block object-cover w-full h-full' />
+      <div className='h-full lg:h-[978px] mt-14'>
+        <img src={gmap} alt="" />
       </div>
     </section>
   );
