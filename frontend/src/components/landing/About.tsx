@@ -6,7 +6,7 @@ import image from '@/assets/images/landing/about.png';
 const About: React.FC = () => {
   return (
     <section className='px-6 xl:px-0 w-full bg-[#ECF1FC] h-full xl:h-[636px]'>
-      <div className='w-full flex h-full items-center gap-[120px] mx-auto xl:w-[1311px]'>
+      <div className='w-full flex flex-wrap lg:flex-nowrap h-full items-center gap-[120px] mx-auto xl:w-[1311px]'>
         <div className='w-full xl:w-[540px]'>
           <img src={image} alt="phone" />
         </div>

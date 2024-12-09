@@ -1,16 +1,16 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import image1 from '@/assets/images/man-working.png';
 import { Button } from '@/components/ui/button';
 
 
 
 export const WelcomePage: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
-  const handleNavigation = () => {
-    navigate('/auth/guest-sign-up');
-  };
+  // const handleNavigation = () => {
+  //   navigate('/auth/guest-sign-up');
+  // };
   return (
     <section className='w-full xl:w-[1440px] pt-14 flex gap-20 mx-auto'>
       <div>

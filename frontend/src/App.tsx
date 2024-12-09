@@ -6,6 +6,8 @@ import SignupPage from './pages/auth/sign-up';
 import GuestSignUpPage from './pages/auth/guest-sign-up';
 import LoginPage from './pages/auth/login';
 import { WelcomePage } from './pages/welcome-page';
+import ClientLayout from './components/layouts/ClientLayout';
+import ClientHomePage from './pages/clients/home';
 
 
 const router = createBrowserRouter([
@@ -39,6 +41,16 @@ const router = createBrowserRouter([
         path: '/auth/login',
         element: <LoginPage />
       },
+    ]
+  },
+  {
+    path: 'client',
+    element: <ClientLayout />,
+    children: [
+      {
+        path: '/client/home',
+        element: <ClientHomePage />
+      }
     ]
   }
 ])

@@ -59,7 +59,7 @@ const LoginPage: React.FC = () => {
             inputId='pwd'
           />
           <div className='w-full flex justify-end pt-2'>
-            <p>Forgot Password? <NavLink to='#' className='text-black'> Reset Password</NavLink></p>
+            <p>Forgot Password? <NavLink to='#' className='text-black font-bold'> Reset Password</NavLink></p>
           </div>
         </div>
         <div className='w-full flex items-center justify-between mt-12'>
@@ -70,7 +70,7 @@ const LoginPage: React.FC = () => {
             <img src={goog} alt="google icon" />
           </Button>
         </div>
-        <p className='text-center pt-4'>Already have an account? <NavLink to='#' className='font-semibold'>Login</NavLink></p>
+        {/* <p className='text-center pt-4'>Already have an account? <NavLink to='#' className='font-semibold'>Login</NavLink></p> */}
       </form>
     </section>
   );
