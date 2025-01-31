@@ -41,4 +41,6 @@ urlpatterns = [
     
     path('api/users/', include('users.urls')),  # Included user-related endpoints
     path('api/artisans/', include('artisans.urls')),
+    path('api/clients/', include('clients.urls')),
+
 ]

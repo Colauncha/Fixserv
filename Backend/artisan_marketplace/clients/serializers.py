@@ -1,9 +1,23 @@
 from rest_framework import serializers
+from users.models import Skill
+from artisans.models import Artisan, Booking
 
-from .models import Artisan, Booking
 
- 
-        
+class SkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skill
+        fields = ['id', 'name']
+
+class ArtisanSerializer(serializers.ModelSerializer):
+    artisan_skills = SkillSerializer(many=True)  # Include nested skill details
+
+    class Meta:
+        model = Artisan
+        fields = ['id', 'name', 'location', 'rating', 'profile_picture', 'is_available', 'artisan_skills']
+       
+
+
+
 class BookingSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client.full_name', read_only=True)
     artisan_name = serializers.CharField(source='artisan.name', read_only=True)

@@ -1,27 +1,21 @@
 from django.db import models
 from django.conf import settings  # To link the client (user)
+from users.models import CustomUser, Skill  # Import the CustomUser and Skill models
 
 # Create your models here.
 
 
 class Artisan(models.Model):
-    CATEGORIES = [
-        ('Television', 'Television'),
-        ('Refrigerator', 'Refrigerator'),
-        ('Gadgets', 'Gadgets'),
-        ('Game Gadgets', 'Game Gadgets'),
-    ]
-
     name = models.CharField(max_length=100)
-    category = models.CharField(max_length=50, choices=CATEGORIES)
+    artisan_skills = models.ManyToManyField(Skill, related_name='artisans')  # Updated to use Skill model
     location = models.CharField(max_length=100)
     rating = models.DecimalField(max_digits=3, decimal_places=1)  # e.g., 4.5
     profile_picture = models.ImageField(upload_to='artisans/', blank=True, null=True)
     is_available = models.BooleanField(default=True)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='artisan')
 
     def __str__(self):
         return self.name
-    
     
     
 

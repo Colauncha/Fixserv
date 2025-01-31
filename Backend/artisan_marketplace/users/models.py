@@ -4,6 +4,17 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 # Create your models here.
 
 
+class Skill(models.Model):
+    """
+    Model for managing supported skills.
+    """
+    name = models.CharField(max_length=50, unique=True)  # Skill name must be unique
+
+    def __str__(self):
+        return self.name
+
+
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -30,11 +41,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         ('artisan', 'Artisan'),
         ('client', 'Client'),
     )
+
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
     business_name = models.CharField(max_length=255, blank=True, null=True)
-    skills_services = models.TextField(blank=True, null=True)
+    skills_services = models.ManyToManyField(Skill, blank=True, related_name='users')  # Updated to use Skill model
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
