@@ -1,9 +1,10 @@
-import { ErrorRequestHandler, NextFunction, Request, Response } from "express";
 import { IAuthService } from "../../interfaces/IUserService";
 import { IUserRepository } from "../../domain/repositories/userRepository";
 import { TokenService } from "../../infrastructure/services/tokenService";
 import { UserAggregate } from "../../domain/aggregates/userAggregate";
-import { BadRequestError } from "../../errors/badRequestError";
+
+import { NotAuthorizeError } from "@fixserv-colauncha/shared";
+import { BadRequestError } from "@fixserv-colauncha/shared";
 import { Password } from "../../domain/value-objects/password";
 
 export class AuthService implements IAuthService {
@@ -16,21 +17,28 @@ export class AuthService implements IAuthService {
     email: string,
     password: string
   ): Promise<{ user: UserAggregate; sessionToken: string }> {
-    const user = await this.userRepository.findByEmail(email);
-    console.log("Searching for email:", email);
-    console.log(user);
-    if (!user) {
-      throw new BadRequestError("Invalid credentials");
+    if (!password) {
+      throw new BadRequestError("Password is required");
     }
+    const user = await this.userRepository.findByEmail(email);
+
+    if (!user) {
+      throw new NotAuthorizeError();
+    }
+
     const passwordData = Password.fromHash(user.password);
     const isMatch = await passwordData.compare(password);
     if (!isMatch) {
-      throw new BadRequestError("Invalid credentials");
+      throw new NotAuthorizeError();
     }
 
     //check if email is verified
 
-    const sessionToken = this.tokenService.generateSessionToken(user.id);
+    const sessionToken = this.tokenService.generateSessionToken(
+      user.id,
+      user.email,
+      user.role
+    );
 
     return { user, sessionToken };
   }
@@ -39,7 +47,11 @@ export class AuthService implements IAuthService {
     return;
   }
 
-  async currentUser(): Promise<void> {
-    return;
+  async findUserById(id: string): Promise<UserAggregate> {
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new BadRequestError("User with that Id not found");
+    }
+    return user;
   }
 }

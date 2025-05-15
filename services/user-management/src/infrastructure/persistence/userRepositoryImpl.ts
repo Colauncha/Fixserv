@@ -67,21 +67,39 @@ export class UserRepositoryImpl implements IUserRepository {
 
   async findByEmail(email: string): Promise<UserAggregate | null> {
     let userData: any;
-    console.log(userData);
-    console.log(`Searching for email: ${email}`);
 
     userData = await ClientModel.findOne({ email });
     if (userData) return this.toDomain(userData);
 
     userData = await ArtisanModel.findOne({ email });
-    console.log("Artisan result:", userData);
     if (userData) return this.toDomain(userData);
 
     userData = await AdminModel.findOne({ email });
     if (userData) return this.toDomain(userData);
     return null;
+  }
 
-    // Add error handling and detailed logging
+  async updateRating(userId: string, newRating: number): Promise<void> {
+    try {
+      // Only artisans have ratings
+      await ArtisanModel.findOneAndUpdate(
+        { _id: userId },
+        {
+          $set: { rating: newRating },
+          $push: {
+            ratingHistory: {
+              rating: newRating,
+              updatedAt: new Date(),
+            },
+          },
+        },
+        { new: true }
+      ).exec();
+    } catch (error: any) {
+      throw new Error(
+        `Failed to update rating for user ${userId}: ${error.message}`
+      );
+    }
   }
 
   private toPersistence(user: UserAggregate): any {
@@ -89,8 +107,8 @@ export class UserRepositoryImpl implements IUserRepository {
       _id: user.id,
       email: user.email,
       password: user.password,
-      role: user.role,
       fullName: user.fullName,
+      role: user.role,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -98,16 +116,16 @@ export class UserRepositoryImpl implements IUserRepository {
       return {
         ...base,
         deliveryAddress: user.deliveryAddress,
-        servicePreferences: user.servicePreferences,
+        servicePreferences: user.servicePreferences.categories,
       };
     } else if (user.role === "ARTISAN") {
       return {
         ...base,
         businessName: user.businessName,
-        skillSet: user.skills,
-        businessHours: user.businessHours,
         location: user.location,
         rating: user.rating,
+        skillSet: user.skills.skills,
+        businessHours: user.businessHours,
       };
     } else if (user.role === "ADMIN") {
       return {
@@ -118,13 +136,12 @@ export class UserRepositoryImpl implements IUserRepository {
   }
 
   private toDomain(data: any): UserAggregate {
-    console.log("raw data", data);
     if (data.role === "CLIENT") {
       return UserAggregate.createClient(
         data._id.toString(),
         new Email(data.email),
-        data.fullName,
         Password.fromHash(data.password),
+        data.fullName,
         new DeliveryAddress(
           data.deliveryAddress.street,
           data.deliveryAddress.city,
@@ -132,26 +149,31 @@ export class UserRepositoryImpl implements IUserRepository {
           data.deliveryAddress.state,
           data.deliveryAddress.country
         ),
-        new ServicePreferences(data.servicePreferences)
+        new ServicePreferences(
+          Array.isArray(data.servicePreferences) ? data.servicePreferences : []
+        )
       );
     } else if (data.role === "ARTISAN") {
+      const skills = Array.isArray(data.skillSet)
+        ? data.skillSet
+        : ["General Repair"];
       return UserAggregate.createArtisan(
         data._id.toString(),
         new Email(data.email),
-        data.fullName,
         Password.fromHash(data.password),
+        data.fullName,
         data.businessName,
-        data.rating,
         data.location,
-        new SkillSet(data.skills),
-        new BusinessHours(data.businessHours) as any
+        data.rating,
+        new SkillSet(skills),
+        new BusinessHours(data.businessHours)
       );
     } else if (data.role === "ADMIN") {
       return UserAggregate.createAdmin(
         data._id.toString(),
         new Email(data.email),
-        data.fullName,
         Password.fromHash(data.password),
+        data.fullName,
         data.permissions
       );
     }

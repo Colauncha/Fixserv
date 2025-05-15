@@ -1,10 +1,11 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import "express-async-errors";
 import { userRouter } from "./routes/userRoutes";
 import { adminRouter } from "./routes/authRoutes";
 import cookieSession from "cookie-session";
-import { ErrorHandler } from "../middlewares/errorHandler";
-import { NotFoundError } from "../../errors/notFoundError";
+
+import { NotFoundError } from "@fixserv-colauncha/shared";
+import { errorHandler } from "@fixserv-colauncha/shared";
 
 const app = express();
 
@@ -24,5 +25,5 @@ app.all("*", async () => {
   throw new NotFoundError();
 });
 
-app.use(ErrorHandler.errorHandler);
+app.use(errorHandler);
 export default app;

@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from "uuid";
+import { BadRequestError } from "@fixserv-colauncha/shared";
 import { UserAggregate } from "../../domain/aggregates/userAggregate";
 import { IUserRepository } from "../../domain/repositories/userRepository";
 import { BusinessHours } from "../../domain/value-objects/businessHours";
@@ -8,9 +10,13 @@ import { ServicePreferences } from "../../domain/value-objects/servicePreference
 import { SkillSet } from "../../domain/value-objects/skillSet";
 import { TokenService } from "../../infrastructure/services/tokenService";
 import { IUserService } from "../../interfaces/IUserService";
-import { v4 as uuidv4 } from "uuid";
+import { ArtisanCreatedEvent } from "../../events/artisanCreatedEvent";
+import { RedisEventBus } from "@fixserv-colauncha/shared";
+import { EventAck } from "@fixserv-colauncha/shared";
 
 export class UserService implements IUserService {
+  private eventBus = new RedisEventBus();
+  private pendingEvents = new Map<string, Promise<EventAck>>();
   constructor(
     private userRepository: IUserRepository,
     private tokenService: TokenService
@@ -33,11 +39,10 @@ export class UserService implements IUserService {
     },
     artisanData?: {
       businessName: string;
-      skillSet: string[];
-
-      businessHours: Record<string, { open: string; close: string }>;
       location: string;
       rating: number;
+      skillSet: string[];
+      businessHours: Record<string, { open: string; close: string }>;
     },
     adminData?: {
       permissions: string[];
@@ -50,7 +55,7 @@ export class UserService implements IUserService {
 
     switch (role) {
       case "CLIENT":
-        if (!clientData) throw new Error("Client data required");
+        if (!clientData) throw new BadRequestError("Client data required");
         user = UserAggregate.createClient(
           uuidv4(),
           emailData,
@@ -75,8 +80,8 @@ export class UserService implements IUserService {
           passwordData,
           fullName,
           artisanData.businessName,
-          artisanData.rating,
           artisanData.location,
+          artisanData.rating,
           new SkillSet(artisanData.skillSet),
           new BusinessHours(artisanData.businessHours)
         );
@@ -87,18 +92,54 @@ export class UserService implements IUserService {
         user = UserAggregate.createAdmin(
           uuidv4(),
           emailData,
-          fullName,
           passwordData,
+          fullName,
           adminData.permissions
         );
         break;
       default:
         throw new Error("Invalid role");
     }
+
+    const event = new ArtisanCreatedEvent({
+      name: user.businessName,
+      skills: user.skills.skills,
+    });
     const sessionToken = this.tokenService.generateSessionToken(
-      user.id
+      user.id,
+      user.email,
+      user.role
     );
+
+    let unsubscribe: () => Promise<void> = async () => {};
+    const ackPromise = new Promise<EventAck>(async (resolve) => {
+      const sub: { unsubscribe: () => Promise<void> } =
+        await this.eventBus.subscribe("event_acks", (ack) => {
+          if (ack.originalEventId === event.id) {
+            resolve(ack);
+          }
+        });
+      unsubscribe = sub.unsubscribe;
+    });
     await this.userRepository.save(user);
-    return { user, sessionToken };
+    this.pendingEvents.set(event.id, ackPromise);
+
+    try {
+      await this.eventBus.publish("artisan_events", event);
+      const ack = await Promise.race([ackPromise, timeout(5000)]);
+
+      if (ack.status === "failed") {
+        throw new BadRequestError(`Event processing failed: ${ack.error}`);
+      }
+      return { user, sessionToken };
+    } catch (err: any) {
+      throw new Error(err);
+    }
   }
+}
+
+function timeout(ms: number): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Timeout reached")), ms)
+  );
 }

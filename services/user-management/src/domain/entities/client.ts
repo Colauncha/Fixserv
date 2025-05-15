@@ -13,7 +13,7 @@ export class Client extends User {
     public deliveryAddress: DeliveryAddress,
     public servicePreferences: ServicePreferences
   ) {
-    super(id, email, fullName, password, "CLIENT");
+    super(id, email, password, fullName, "CLIENT");
   }
 
   updatePreferences(newPreferences: string[]): Client {

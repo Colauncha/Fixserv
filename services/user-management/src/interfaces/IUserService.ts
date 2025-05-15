@@ -18,10 +18,10 @@ export interface IUserService {
     },
     artisanData?: {
       businessName: string;
-      skillSet: string[];
-      businessHours: Record<string, { open: string; close: string }>;
       location: string;
       rating: number;
+      skillSet: string[];
+      businessHours: Record<string, { open: string; close: string }>;
     },
     adminData?: {
       permissions: string[];
@@ -35,5 +35,5 @@ export interface IAuthService {
     password: string
   ): Promise<{ user: UserAggregate; sessionToken: string }>;
   logout(sessionToken: string): Promise<void>;
-  currentUser(): Promise<void>;
+  findUserById(id: string): Promise<UserAggregate>;
 }

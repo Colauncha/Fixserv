@@ -32,12 +32,10 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
       min: 1,
       max: 5,
     },
-    // skillSet: [String],
-    skillSet: [
-      {
-        skills: [String],
-      },
-    ],
+    skillSet: {
+      type: [String],
+      default: ["General repair"],
+    },
     businessHours: Schema.Types.Mixed,
   },
   {

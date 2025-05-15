@@ -1,4 +1,4 @@
-type Day =
+export type Day =
   | "monday"
   | "tuesday"
   | "wednesday"
@@ -7,11 +7,18 @@ type Day =
   | "saturday"
   | "sunday";
 
-export class BusinessHours {
-  private readonly _schedule: Record<Day, { open: string; close: string }>;
+type DayHours = {
+  open: string;
+  close: string;
+};
 
-  constructor(schedule: Partial<Record<Day, { open: string; close: string }>>) {
-    const defaultHours = { open: "09:00", close: "17:00" };
+export type BusinessHoursSchedule = Record<Day, DayHours>;
+
+export class BusinessHours {
+  private readonly _schedule: BusinessHoursSchedule;
+
+  constructor(schedule: Partial<BusinessHoursSchedule>) {
+    const defaultHours: DayHours = { open: "09:00", close: "17:00" };
 
     this._schedule = {
       monday: schedule.monday || defaultHours,

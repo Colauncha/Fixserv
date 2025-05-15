@@ -1,17 +1,16 @@
 import jwt from "jsonwebtoken";
 import { TokenService } from "./tokenService";
-import { AuthMiddleware } from "../../interfaces/middlewares/authMiddleware";
-import { NotAuthorizeError } from "../../errors/notAuthorizeError";
-
+import { NotAuthorizeError } from "@fixserv-colauncha/shared";
 interface UserPayload {
   id: string;
   email: string;
+  role: string;
 }
 export class JwtTokenService implements TokenService {
   constructor() {}
 
-  generateSessionToken(id: string): string {
-    return jwt.sign({ id }, process.env.JWT_KEY!, {
+  generateSessionToken(id: string, email: string, role: string): string {
+    return jwt.sign({ id, email, role }, process.env.JWT_KEY!, {
       expiresIn: "1h",
     });
   }
