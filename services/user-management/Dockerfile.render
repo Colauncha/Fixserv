@@ -1,0 +1,21 @@
+# Step 1: Base image
+FROM node:18-alpine
+
+# Step 2: Create and set working directory
+WORKDIR /app
+
+# Step 3: Copy project files (from current folder, since we're already in services/user-management)
+COPY . .
+
+# Step 4: Install dependencies
+RUN npm install -g pnpm && pnpm install
+
+# Step 5: Build the TypeScript app (optional — only if you compile)
+RUN pnpm run build
+
+
+# Step 6: Expose port 4000
+EXPOSE 4000
+
+# Step 7: Start the app
+CMD ["node", "dist/index.js"]
