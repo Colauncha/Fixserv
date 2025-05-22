@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import { ServiceService } from "../../../application/services/serviceService";
 import { ArtisanRepositoryImpl } from "../../../infrastructure/artisanRepositoryImpl";
 import { ServiceRepositoryImpl } from "../../../infrastructure/serviceRepositoryImpl";
@@ -37,6 +37,13 @@ router.get(
 router.patch(
   "/:serviceId",
   serviceController.updateService.bind(serviceController)
+);
+
+router.get(
+  "/currentUser",
+  // authenticate.protect,
+  // requireRole("ADMIN", "ARTISAN"),
+  serviceController.currentUser.bind(serviceController)
 );
 
 export { router as serviceRouter };

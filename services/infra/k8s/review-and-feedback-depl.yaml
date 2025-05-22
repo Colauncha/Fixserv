@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: review-and-feedback
-          image: israel/review-and-feedback
+          image: docker.io/ogkpos/review-and-feedback
           env:
             - name: MONGO_URI
               valueFrom:

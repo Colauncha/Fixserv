@@ -17,12 +17,11 @@ COPY services/user-management ./services/user-management/
 
 WORKDIR /app/services/user-management
 
-RUN pnpm --filter ./services/user-management... run build
 
 
-CMD ["node","dist/index.js"]
 
 
-# CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+# CMD ["node","dist/index.js"]
+CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
 
 

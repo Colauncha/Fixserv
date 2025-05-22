@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: service-management
-          image: israel/service-management
+          image: docker.io/ogkpos/service-management
           env:
             - name: MONGO_URI
               valueFrom:

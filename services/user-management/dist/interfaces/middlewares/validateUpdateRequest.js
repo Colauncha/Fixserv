@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUpdateRequest = validateUpdateRequest;
+exports.validateUpdateRequest = void 0;
 const shared_1 = require("@fixserv-colauncha/shared");
 function validateUpdateRequest(role, updates) {
     // Common validations
@@ -39,6 +39,7 @@ function validateUpdateRequest(role, updates) {
             break;
     }
 }
+exports.validateUpdateRequest = validateUpdateRequest;
 function validateBusinessHours(businessHours) {
     if (typeof businessHours !== "object" || businessHours === null) {
         throw new shared_1.BadRequestError("Business hours must be an object");

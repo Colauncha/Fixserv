@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAxiosClient = createAxiosClient;
+exports.createAxiosClient = void 0;
 const axios_1 = __importDefault(require("axios"));
 function createAxiosClient(baseURL) {
     const instance = axios_1.default.create({
@@ -28,3 +28,4 @@ function createAxiosClient(baseURL) {
     });
     return instance;
 }
+exports.createAxiosClient = createAxiosClient;

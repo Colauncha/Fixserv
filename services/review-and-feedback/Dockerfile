@@ -27,6 +27,6 @@ WORKDIR /app/services/review-and-feedback
 
 RUN pnpm --filter ./services/review-and-feedback... run build
 
-# CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
 
-CMD ["node","dist/index.js"]
+# CMD ["node","dist/index.js"]

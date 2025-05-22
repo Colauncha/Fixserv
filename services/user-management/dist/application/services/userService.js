@@ -41,44 +41,49 @@ class UserService {
                     break;
                 case "ARTISAN":
                     if (!artisanData)
-                        throw new Error("Artisan data required");
+                        throw new shared_1.BadRequestError("Artisan data required");
                     user = userAggregate_1.UserAggregate.createArtisan((0, uuid_1.v4)(), emailData, passwordData, fullName, artisanData.businessName, artisanData.location, artisanData.rating, new skillSet_1.SkillSet(artisanData.skillSet), new businessHours_1.BusinessHours(artisanData.businessHours));
+                    const event = new artisanCreatedEvent_1.ArtisanCreatedEvent({
+                        name: user.businessName,
+                        skills: user.skills.skills,
+                    });
+                    let unsubscribe = () => __awaiter(this, void 0, void 0, function* () { });
+                    const ackPromise = new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+                        const sub = yield this.eventBus.subscribe("event_acks", (ack) => {
+                            if (ack.originalEventId === event.id) {
+                                resolve(ack);
+                            }
+                        });
+                        unsubscribe = sub.unsubscribe;
+                    }));
+                    yield this.userRepository.save(user);
+                    this.pendingEvents.set(event.id, ackPromise);
+                    try {
+                        yield this.eventBus.publish("artisan_events", event);
+                        const ack = yield Promise.race([ackPromise, timeout(5000)]);
+                        if (ack.status === "failed") {
+                            throw new shared_1.BadRequestError(`Event processing failed: ${ack.error}`);
+                        }
+                    }
+                    catch (err) {
+                        throw new shared_1.BadRequestError(err);
+                    }
                     break;
                 case "ADMIN":
                     if (!adminData)
-                        throw new Error("Admin data required");
+                        throw new shared_1.BadRequestError("Admin data required");
                     user = userAggregate_1.UserAggregate.createAdmin((0, uuid_1.v4)(), emailData, passwordData, fullName, adminData.permissions);
                     break;
                 default:
-                    throw new Error("Invalid role");
+                    throw new shared_1.BadRequestError("Invalid role");
             }
-            const event = new artisanCreatedEvent_1.ArtisanCreatedEvent({
-                name: user.businessName,
-                skills: user.skills.skills,
-            });
+            //const event = new ArtisanCreatedEvent({
+            //  name: user.businessName,
+            //  skills: user.skills.skills,
+            //});
             const sessionToken = this.tokenService.generateSessionToken(user.id, user.email, user.role);
-            let unsubscribe = () => __awaiter(this, void 0, void 0, function* () { });
-            const ackPromise = new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
-                const sub = yield this.eventBus.subscribe("event_acks", (ack) => {
-                    if (ack.originalEventId === event.id) {
-                        resolve(ack);
-                    }
-                });
-                unsubscribe = sub.unsubscribe;
-            }));
             yield this.userRepository.save(user);
-            this.pendingEvents.set(event.id, ackPromise);
-            try {
-                yield this.eventBus.publish("artisan_events", event);
-                const ack = yield Promise.race([ackPromise, timeout(5000)]);
-                if (ack.status === "failed") {
-                    throw new shared_1.BadRequestError(`Event processing failed: ${ack.error}`);
-                }
-                return { user, sessionToken };
-            }
-            catch (err) {
-                throw new Error(err);
-            }
+            return { user, sessionToken };
         });
     }
 }

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: user-management
-          image: israel/user-management
+          image: docker.io/ogkpos/user-management
           env:
             - name: MONGO_URI
               valueFrom:

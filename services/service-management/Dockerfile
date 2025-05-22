@@ -22,6 +22,6 @@ WORKDIR /app/services/service-management
 
 RUN pnpm --filter ./services/service-management... run build
 
-# CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
-CMD ["node","dist/index.js"]
+CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+# CMD ["node","dist/index.js"]
 

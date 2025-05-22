@@ -11,9 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fixserv-colauncha/shared": "^1.0.4",
+    "@fixserv-colauncha/shared": "^1.0.9",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
     "cookie-session": "^2.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^3.0.0",
+    "@types/cookie-parser": "^1.4.8",
     "@types/cookie-session": "^2.0.49",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.1",

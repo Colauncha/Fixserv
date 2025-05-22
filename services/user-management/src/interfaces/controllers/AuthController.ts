@@ -27,7 +27,15 @@ export class AuthController {
 
       req.session = { jwt: sessionToken };
 
-      res.status(200).json(user);
+      res.cookie("jwt", sessionToken, {
+        httpOnly: false,
+        secure: true,
+        sameSite: "none",
+        maxAge: 24 * 60 * 60 * 1000,
+        path: "/",
+      });
+
+      res.status(200).json({ data: { user, sessionToken } });
     } catch (error) {
       // throw new NotAuthorizeError();
       console.log(error);

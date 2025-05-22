@@ -140,4 +140,13 @@ export class ServiceController {
       }
     }
   }
+
+  currentUser(req: Request, res: Response) {
+    const user = req.currentUser!;
+    if (!user) {
+      throw new BadRequestError("user not found");
+    }
+    console.log(user);
+    res.send("hello world");
+  }
 }

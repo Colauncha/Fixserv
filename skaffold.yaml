@@ -6,9 +6,9 @@ deploy:
       - ./services/infra/k8s/*
 build:
   local:
-    push: false
+    push: true
   artifacts:
-    - image: israel/user-management
+    - image: docker.io/ogkpos/user-management
       context: .
       docker:
         dockerfile: services/user-management/Dockerfile
@@ -16,7 +16,7 @@ build:
         manual:
           - src: "src/**/*.ts"
             dest: .
-    - image: israel/service-management
+    - image: docker.io/ogkpos/service-management
       context: .
       docker:
         dockerfile: services/service-management/Dockerfile
@@ -24,7 +24,7 @@ build:
         manual:
           - src: "src/**/*.ts"
             dest: .
-    - image: israel/review-and-feedback
+    - image: docker.io/ogkpos/review-and-feedback
       context: .
       docker:
         dockerfile: services/review-and-feedback/Dockerfile

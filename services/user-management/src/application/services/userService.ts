@@ -73,7 +73,7 @@ export class UserService implements IUserService {
         break;
 
       case "ARTISAN":
-        if (!artisanData) throw new Error("Artisan data required");
+        if (!artisanData) throw new BadRequestError("Artisan data required");
         user = UserAggregate.createArtisan(
           uuidv4(),
           emailData,
@@ -85,10 +85,38 @@ export class UserService implements IUserService {
           new SkillSet(artisanData.skillSet),
           new BusinessHours(artisanData.businessHours)
         );
+        const event = new ArtisanCreatedEvent({
+          name: user.businessName,
+          skills: user.skills.skills,
+        });
+
+        // let unsubscribe: () => Promise<void> = async () => {};
+        // const ackPromise = new Promise<EventAck>(async (resolve) => {
+        //   const sub: { unsubscribe: () => Promise<void> } =
+        //     await this.eventBus.subscribe("event_acks", (ack) => {
+        //       if (ack.originalEventId === event.id) {
+        //         resolve(ack);
+        //       }
+        //     });
+        //   unsubscribe = sub.unsubscribe;
+        // });
+        // await this.userRepository.save(user);
+        // this.pendingEvents.set(event.id, ackPromise);
+        //
+        try {
+          //   await this.eventBus.publish("artisan_events", event);
+          //   const ack = await Promise.race([ackPromise, timeout(5000)]);
+          //   if (ack.status === "failed") {
+          //     throw new BadRequestError(`Event processing failed: ${ack.//error}`);
+          //   }
+        } catch (err: any) {
+          throw new BadRequestError(err);
+        }
+
         break;
 
       case "ADMIN":
-        if (!adminData) throw new Error("Admin data required");
+        if (!adminData) throw new BadRequestError("Admin data required");
         user = UserAggregate.createAdmin(
           uuidv4(),
           emailData,
@@ -98,43 +126,21 @@ export class UserService implements IUserService {
         );
         break;
       default:
-        throw new Error("Invalid role");
+        throw new BadRequestError("Invalid role");
     }
 
-    const event = new ArtisanCreatedEvent({
-      name: user.businessName,
-      skills: user.skills.skills,
-    });
+    //const event = new ArtisanCreatedEvent({
+    //  name: user.businessName,
+    //  skills: user.skills.skills,
+    //});
     const sessionToken = this.tokenService.generateSessionToken(
       user.id,
       user.email,
       user.role
     );
 
-    let unsubscribe: () => Promise<void> = async () => {};
-    const ackPromise = new Promise<EventAck>(async (resolve) => {
-      const sub: { unsubscribe: () => Promise<void> } =
-        await this.eventBus.subscribe("event_acks", (ack) => {
-          if (ack.originalEventId === event.id) {
-            resolve(ack);
-          }
-        });
-      unsubscribe = sub.unsubscribe;
-    });
     await this.userRepository.save(user);
-    this.pendingEvents.set(event.id, ackPromise);
-
-    try {
-      await this.eventBus.publish("artisan_events", event);
-      const ack = await Promise.race([ackPromise, timeout(5000)]);
-
-      if (ack.status === "failed") {
-        throw new BadRequestError(`Event processing failed: ${ack.error}`);
-      }
-      return { user, sessionToken };
-    } catch (err: any) {
-      throw new Error(err);
-    }
+    return { user, sessionToken };
   }
 }
 

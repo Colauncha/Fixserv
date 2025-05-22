@@ -17,13 +17,25 @@ require("express-async-errors");
 const userRoutes_1 = require("./routes/userRoutes");
 const authRoutes_1 = require("./routes/authRoutes");
 const cookie_session_1 = __importDefault(require("cookie-session"));
+const cors_1 = __importDefault(require("cors"));
 const shared_1 = require("@fixserv-colauncha/shared");
 const shared_2 = require("@fixserv-colauncha/shared");
 const app = (0, express_1.default)();
+app.set("trust proxy", true);
+app.use((0, cors_1.default)({
+    origin: [
+        "https://service-management-4ec8bc3-dirty.onrender.com",
+        "https://review-and-feedback-4ec8bc3-dirty.onrender.com",
+    ],
+    credentials: true,
+}));
 app.use(express_1.default.json());
 app.use((0, cookie_session_1.default)({
     signed: false,
-    secure: false,
+    secure: true,
+    sameSite: "none",
+    domain: "onrender.com",
+    maxAge: 24 * 60 * 60 * 1000,
 }));
 app.use("/api/users", userRoutes_1.userRouter);
 app.use("/api/admin", authRoutes_1.adminRouter);
