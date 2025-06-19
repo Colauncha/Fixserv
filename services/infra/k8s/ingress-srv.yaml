@@ -39,3 +39,17 @@ spec:
                 name: review-and-feedback-srv
                 port:
                   number: 4002
+          - path: /api/search/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: search-and-discovery-srv
+                port:
+                  number: 4003
+          - path: /api/orders/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order-management-srv
+                port:
+                  number: 4004

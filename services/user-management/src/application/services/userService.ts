@@ -47,7 +47,7 @@ export class UserService implements IUserService {
     adminData?: {
       permissions: string[];
     }
-  ): Promise<{ user: UserAggregate; sessionToken: string }> {
+  ): Promise<{ user: UserAggregate }> {
     const emailData = new Email(email);
     const passwordData = await Password.create(password);
 
@@ -90,27 +90,29 @@ export class UserService implements IUserService {
           skills: user.skills.skills,
         });
 
-        // let unsubscribe: () => Promise<void> = async () => {};
-        // const ackPromise = new Promise<EventAck>(async (resolve) => {
-        //   const sub: { unsubscribe: () => Promise<void> } =
-        //     await this.eventBus.subscribe("event_acks", (ack) => {
-        //       if (ack.originalEventId === event.id) {
-        //         resolve(ack);
-        //       }
-        //     });
-        //   unsubscribe = sub.unsubscribe;
-        // });
-        // await this.userRepository.save(user);
-        // this.pendingEvents.set(event.id, ackPromise);
-        //
+        let unsubscribe: () => Promise<void> = async () => {};
+        const ackPromise = new Promise<EventAck>(async (resolve) => {
+          const sub: { unsubscribe: () => Promise<void> } =
+            await this.eventBus.subscribe("event_acks", (ack) => {
+              if (ack.originalEventId === event.id) {
+                resolve(ack);
+                unsubscribe();
+              }
+            });
+          unsubscribe = sub.unsubscribe;
+        });
+        this.pendingEvents.set(event.id, ackPromise);
+
         try {
-          //   await this.eventBus.publish("artisan_events", event);
-          //   const ack = await Promise.race([ackPromise, timeout(5000)]);
-          //   if (ack.status === "failed") {
-          //     throw new BadRequestError(`Event processing failed: ${ack.//error}`);
-          //   }
+          await this.userRepository.save(user);
+          await this.eventBus.publish("artisan_events", event);
+          const ack = await Promise.race; //([ackPromise, timeout(5000)]);
+          // if (ack.status === "failed") {
+          //   throw new BadRequestError(`Event //processing failed: ${ack.//error}`);
+          //}
         } catch (err: any) {
-          throw new BadRequestError(err);
+          this.pendingEvents.delete(event.id);
+          // throw new BadRequestError(err);
         }
 
         break;
@@ -133,14 +135,14 @@ export class UserService implements IUserService {
     //  name: user.businessName,
     //  skills: user.skills.skills,
     //});
-    const sessionToken = this.tokenService.generateSessionToken(
-      user.id,
-      user.email,
-      user.role
-    );
+    //const sessionToken = this.tokenService.//generateSessionToken(
+    //  user.id,
+    //  user.email,
+    //  user.role
+    //);
 
     await this.userRepository.save(user);
-    return { user, sessionToken };
+    return { user };
   }
 }
 

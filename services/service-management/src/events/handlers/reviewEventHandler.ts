@@ -5,7 +5,7 @@ import { ReviewProcessedEvent } from "../reviewProcessedEvent";
 export class ReviewEventHandler {
   constructor() {}
   private serviceRepository = new ServiceRepositoryImpl();
-  private eventBus = new RedisEventBus();
+  private eventBus = new RedisEventBus(process.env.REDIS_URL);
 
   async setupSubscriptions() {
     const sub = await this.eventBus.subscribe(

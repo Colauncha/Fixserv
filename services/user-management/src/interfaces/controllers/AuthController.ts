@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AuthService } from "../../application/services/authService";
-import { BadRequestError } from "@fixserv-colauncha/shared";
+import { BadRequestError, NotAuthorizeError } from "@fixserv-colauncha/shared";
 import { UserRepositoryImpl } from "../../infrastructure/persistence/userRepositoryImpl";
 import { validateUpdateRequest } from "../middlewares/validateUpdateRequest";
 import { UserAggregate } from "../../domain/aggregates/userAggregate";
@@ -20,35 +20,39 @@ export class AuthController {
       if (!email || !password) {
         throw new BadRequestError("Email and password are required");
       }
-      const { user, sessionToken } = await this.authService.login(
+      const { user, BearerToken } = await this.authService.login(
         email,
         password
       );
 
-      req.session = { jwt: sessionToken };
-
-      res.cookie("jwt", sessionToken, {
-        httpOnly: false,
-        secure: true,
+      // req.session = { jwt: sessionToken };
+      //
+      //res.cookie("session", sessionToken, {
+      //  httpOnly: false,
+      //  secure: false,
+      //  sameSite: "none",
+      //  maxAge: 24 * 60 * 60 * 1000,
+      //  path: "/",
+      //});
+      res.cookie("jwt", BearerToken, {
+        httpOnly: true,
+        secure: false, // Set to true in production
         sameSite: "none",
-        maxAge: 24 * 60 * 60 * 1000,
-        path: "/",
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
-      res.status(200).json({ data: { user, sessionToken } });
+      const response = this.userRepository.toJSON(user);
+      res.status(200).json({ data: { response, BearerToken } });
     } catch (error) {
-      // throw new NotAuthorizeError();
-      console.log(error);
-      res.status(404).send(error);
+      throw new BadRequestError("Invalid credentials");
     }
   }
 
   async logout(req: Request, res: Response): Promise<void> {
     try {
-      const sessionToken = req.session?.jwt;
-
-      await this.authService.logout(sessionToken);
-      req.session = null;
+      res.clearCookie("jwt", {
+        httpOnly: true,
+      });
       res.status(200).json({ message: "Logged out successfull" });
     } catch (error) {
       res.status(400).json({ message: "Logout failed" });
@@ -101,7 +105,7 @@ export class AuthController {
   private applyUpdates(user: UserAggregate, updates: any): UserAggregate {
     // Base fields that all users can update
     if (updates.fullName) user.updateFullName(updates.fullName);
-    if (updates.password) user.changePassword(user.password, updates.password);
+    // if (updates.password) user.changePassword(user.password, updates.//password);
 
     let skillsArray = updates.skillSet;
     // Role-specific updates

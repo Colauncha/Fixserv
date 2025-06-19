@@ -9,7 +9,7 @@ interface UserPayload {
 export class JwtTokenService implements TokenService {
   constructor() {}
 
-  generateSessionToken(id: string, email: string, role: string): string {
+  generateBearerToken(id: string, email: string, role: string): string {
     return jwt.sign({ id, email, role }, process.env.JWT_KEY!, {
       expiresIn: "1h",
     });

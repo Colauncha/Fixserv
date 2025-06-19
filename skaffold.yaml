@@ -1,33 +1,21 @@
-apiVersion: skaffold/v2alpha3
+apiVersion: skaffold/v3
 kind: Config
 deploy:
   kubectl:
     manifests:
-      - ./services/infra/k8s/*
+      paths:
+        - ./services/infra/k8s/*
 build:
   local:
-    push: true
+    push: false
+  tagPolicy:
+    customTemplate:
+      template: "{{.IMAGE_NAME}}:1.0.0"
   artifacts:
     - image: docker.io/ogkpos/user-management
       context: .
       docker:
         dockerfile: services/user-management/Dockerfile
-      sync:
-        manual:
-          - src: "src/**/*.ts"
-            dest: .
-    - image: docker.io/ogkpos/service-management
-      context: .
-      docker:
-        dockerfile: services/service-management/Dockerfile
-      sync:
-        manual:
-          - src: "src/**/*.ts"
-            dest: .
-    - image: docker.io/ogkpos/review-and-feedback
-      context: .
-      docker:
-        dockerfile: services/review-and-feedback/Dockerfile
       sync:
         manual:
           - src: "src/**/*.ts"

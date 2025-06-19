@@ -16,14 +16,14 @@ export class AuthService implements IAuthService {
   async login(
     email: string,
     password: string
-  ): Promise<{ user: UserAggregate; sessionToken: string }> {
+  ): Promise<{ user: UserAggregate; BearerToken: string }> {
     if (!password) {
       throw new BadRequestError("Password is required");
     }
     const user = await this.userRepository.findByEmail(email);
 
     if (!user) {
-      throw new NotAuthorizeError();
+      throw new BadRequestError("No user with that email exists");
     }
 
     const passwordData = Password.fromHash(user.password);
@@ -34,17 +34,13 @@ export class AuthService implements IAuthService {
 
     //check if email is verified
 
-    const sessionToken = this.tokenService.generateSessionToken(
+    const BearerToken = this.tokenService.generateBearerToken(
       user.id,
       user.email,
       user.role
     );
 
-    return { user, sessionToken };
-  }
-
-  async logout(sessionToken: string): Promise<void> {
-    return;
+    return { user, BearerToken };
   }
 
   async findUserById(id: string): Promise<UserAggregate> {

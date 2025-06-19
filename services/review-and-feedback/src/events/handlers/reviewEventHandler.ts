@@ -16,7 +16,7 @@ export class ReviewEventsHandler {
     private serviceManagementClient: ServiceManagementClient,
     private reviewRepository?: ReviewRepository
   ) {}
-  private eventBus = new RedisEventBus();
+  private eventBus = new RedisEventBus(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {

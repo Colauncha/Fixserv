@@ -20,6 +20,7 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
     password: {
       type: String,
       required: true,
+      select: false,
     },
     role: {
       type: String,
@@ -43,9 +44,20 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
       transform(doc, ret) {
         ret.id = ret._id;
         delete ret._id;
+
         delete ret.__v;
+        if (ret._user) {
+          if (ret._user?.password) {
+            delete ret._user.password;
+          }
+        }
       },
     },
+    toObject:{
+      transform(doc,ret){
+        delete ret.password
+      }
+    }
   }
 );
 

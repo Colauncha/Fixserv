@@ -28,7 +28,11 @@ router.post(
   authController.login.bind(authController)
 );
 
-router.post("/logout", authController.logout.bind(authController));
+router.post(
+  "/logout",
+  authMiddleware.protect,
+  authController.logout.bind(authController)
+);
 
 router.get(
   "/currentUser",

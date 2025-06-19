@@ -6,6 +6,11 @@ import { connectDB } from "@fixserv-colauncha/shared";
 import { ServiceEventsHandler } from "./events/handlers/serviceEventHandler";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
 
+process.on("uncaughtException", (err) => {
+  console.log(err.name, err.message);
+  process.exit(1);
+});
+
 if (!process.env.JWT_KEY) {
   throw new Error("JWT SECRET must be defined");
 }

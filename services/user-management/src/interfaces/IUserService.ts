@@ -26,14 +26,14 @@ export interface IUserService {
     adminData?: {
       permissions: string[];
     }
-  ): Promise<{ user: UserAggregate; sessionToken: string }>;
+  ): Promise<{ user: UserAggregate }>;
 }
 
 export interface IAuthService {
   login(
     email: string,
     password: string
-  ): Promise<{ user: UserAggregate; sessionToken: string }>;
-  logout(sessionToken: string): Promise<void>;
+  ): Promise<{ user: UserAggregate; BearerToken: string }>;
+
   findUserById(id: string): Promise<UserAggregate>;
 }

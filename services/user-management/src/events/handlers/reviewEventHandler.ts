@@ -7,7 +7,7 @@ import { ReviewCreatedEvent } from "../reviewCreatedEvent";
 export class ReviewEventsHandler {
   constructor() {}
   private userRepository = new UserRepositoryImpl();
-  private eventBus = new RedisEventBus();
+  private eventBus = new RedisEventBus(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {

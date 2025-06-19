@@ -2,15 +2,19 @@ import { RedisEventBus } from "@fixserv-colauncha/shared";
 import { EventAck } from "@fixserv-colauncha/shared";
 
 export class ArtisanEventsHandler {
-  private eventBus = new RedisEventBus();
+  private eventBus = new RedisEventBus(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {
-    await this.eventBus.subscribe("artisan_events", (event: any) => {
-      if (event.eventName === "ArtisanCreated") {
-        this.handleArtisanCreated(event);
+    const sub = await this.eventBus.subscribe(
+      "artisan_events",
+      (event: any) => {
+        if (event.eventName === "ArtisanCreated") {
+          this.handleArtisanCreated(event);
+        }
       }
-    });
+    );
+    this.subscriptions.push(sub);
   }
 
   async cleanup() {

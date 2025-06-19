@@ -10,9 +10,9 @@ export function validateUpdateRequest(role: string, updates: any) {
     throw new BadRequestError("Full name must be a string");
   }
 
-  if (updates.password && typeof updates.password !== "string") {
-    throw new BadRequestError("Password must be a string");
-  }
+  //  if (updates.password && typeof updates.password !== "string") {
+  //    throw new BadRequestError("Password must be a string");
+  //  }
 
   // Role-specific validations
   switch (role) {
@@ -27,6 +27,18 @@ export function validateUpdateRequest(role: string, updates: any) {
             `Missing delivery address fields: ${missing.join(", ")}`
           );
         }
+      }
+      if (updates.servicePreferences) {
+        if (!Array.isArray(updates.servicePreferences)) {
+          throw new BadRequestError("Service preferences must be an array");
+        }
+        updates.servicePreferences.forEach((pref: any) => {
+          if (typeof pref !== "string") {
+            throw new BadRequestError(
+              "Each service preference must be a string"
+            );
+          }
+        });
       }
       break;
 

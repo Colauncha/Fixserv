@@ -32,7 +32,10 @@ export class UserRepositoryImpl implements IUserRepository {
             _id: user.id,
           },
           userData,
-          { upsert: true, new: true }
+          {
+            upsert: true,
+            new: true,
+          }
         );
         break;
 
@@ -53,13 +56,13 @@ export class UserRepositoryImpl implements IUserRepository {
   async findById(id: string): Promise<UserAggregate | null> {
     let userData: any;
 
-    userData = await ClientModel.findById(id);
+    userData = await ClientModel.findById(id).select("+password");
     if (userData) return this.toDomain(userData);
 
-    userData = await ArtisanModel.findById(id);
+    userData = await ArtisanModel.findById(id).select("+password");
     if (userData) return this.toDomain(userData);
 
-    userData = await AdminModel.findById(id);
+    userData = await AdminModel.findById(id).select("+password");
     if (userData) return this.toDomain(userData);
 
     return null;
@@ -68,13 +71,13 @@ export class UserRepositoryImpl implements IUserRepository {
   async findByEmail(email: string): Promise<UserAggregate | null> {
     let userData: any;
 
-    userData = await ClientModel.findOne({ email });
+    userData = await ClientModel.findOne({ email }).select("+password");
     if (userData) return this.toDomain(userData);
 
-    userData = await ArtisanModel.findOne({ email });
+    userData = await ArtisanModel.findOne({ email }).select("+password");
     if (userData) return this.toDomain(userData);
 
-    userData = await AdminModel.findOne({ email });
+    userData = await AdminModel.findOne({ email }).select("+password");
     if (userData) return this.toDomain(userData);
     return null;
   }
@@ -178,5 +181,37 @@ export class UserRepositoryImpl implements IUserRepository {
       );
     }
     throw new Error(`Unknown role ${data.role}`);
+  }
+
+  toJSON(user: UserAggregate): any {
+    const base = {
+      _id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    if (user.role === "CLIENT") {
+      return {
+        ...base,
+        deliveryAddress: user.deliveryAddress,
+        servicePreferences: user.servicePreferences.categories,
+      };
+    } else if (user.role === "ARTISAN") {
+      return {
+        ...base,
+        businessName: user.businessName,
+        location: user.location,
+        rating: user.rating,
+        skillSet: user.skills.skills,
+        businessHours: user.businessHours,
+      };
+    } else if (user.role === "ADMIN") {
+      return {
+        ...base,
+        permissions: user.permissions,
+      };
+    }
   }
 }
