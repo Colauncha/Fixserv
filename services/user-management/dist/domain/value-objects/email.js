@@ -15,5 +15,8 @@ class Email {
         const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return regex.test(email);
     }
+    static fromJSON(value) {
+        return new Email(value);
+    }
 }
 exports.Email = Email;

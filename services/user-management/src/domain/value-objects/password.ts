@@ -28,4 +28,8 @@ export class Password {
   public async compare(plainPassword: string): Promise<boolean> {
     return await bcrypt.compare(plainPassword, this._hash);
   }
+  // ✅ Add this for cache deserialization (aliases fromHash)
+  public static fromJSON(hash: string): Password {
+    return this.fromHash(hash);
+  }
 }

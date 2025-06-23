@@ -16,7 +16,7 @@ const reviewProcessedEvent_1 = require("../reviewProcessedEvent");
 class ReviewEventsHandler {
     constructor() {
         this.userRepository = new userRepositoryImpl_1.UserRepositoryImpl();
-        this.eventBus = new shared_1.RedisEventBus();
+        this.eventBus = new shared_1.RedisEventBus(process.env.REDIS_URL);
         this.subscriptions = [];
     }
     setupSubscriptions() {

@@ -42,4 +42,13 @@ export class BusinessHours {
       return acc;
     }, {} as Record<Day, string>);
   }
+
+  toJSON(): BusinessHoursSchedule {
+    return this._schedule;
+  }
+
+  // ✅ Deserialize from JSON (used in fromJSON of UserAggregate)
+  static fromJSON(schedule: BusinessHoursSchedule): BusinessHours {
+    return new BusinessHours(schedule);
+  }
 }

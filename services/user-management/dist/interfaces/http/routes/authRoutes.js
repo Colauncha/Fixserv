@@ -22,6 +22,7 @@ const shared_1 = require("@fixserv-colauncha/shared");
 const shared_2 = require("@fixserv-colauncha/shared");
 const shared_3 = require("@fixserv-colauncha/shared");
 const express_validator_1 = require("express-validator");
+const shared_4 = require("@fixserv-colauncha/shared");
 const router = express_1.default.Router();
 exports.adminRouter = router;
 const userRepository = new userRepositoryImpl_1.UserRepositoryImpl();
@@ -34,7 +35,7 @@ router.post("/login", [
     (0, express_validator_1.body)("email").isEmail().withMessage("Email must be valid"),
     (0, express_validator_1.body)("password").trim().notEmpty().withMessage("Password is required"),
 ], validate.validateRequest, authController.login.bind(authController));
-router.post("/logout", authController.logout.bind(authController));
+router.post("/logout", authMiddleware.protect, authController.logout.bind(authController));
 router.get("/currentUser", authMiddleware.protect, (0, shared_2.requireRole)("ADMIN", "ARTISAN"), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield userRepository.findById(req.currentUser.id);
     res.status(200).send(user);
@@ -42,3 +43,8 @@ router.get("/currentUser", authMiddleware.protect, (0, shared_2.requireRole)("AD
 router.get("/artisan/:id", authController.findUserById.bind(authController));
 router.get("/client/:clientId", authController.findUserById.bind(authController));
 router.patch("/:id", authMiddleware.protect, (0, shared_2.requireRole)("ADMIN", "ARTISAN", "CLIENT"), authController.updateUser.bind(authController));
+router.get("/debug-cache/:email", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const key = `user:email:${req.params.email}`;
+    const raw = yield shared_4.redis.get(key);
+    res.json({ key, raw: JSON.parse(raw || "{}") });
+}));

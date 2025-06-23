@@ -8,7 +8,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const shared_1 = require("@fixserv-colauncha/shared");
 class JwtTokenService {
     constructor() { }
-    generateSessionToken(id, email, role) {
+    generateBearerToken(id, email, role) {
         return jsonwebtoken_1.default.sign({ id, email, role }, process.env.JWT_KEY, {
             expiresIn: "1h",
         });

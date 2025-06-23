@@ -27,7 +27,14 @@ export class ServicePreferences {
     return this._categories.includes(preference);
   }
 
-  toJSON() {
+  toJSON(): string[] {
     return this._categories;
+  }
+
+  static fromJSON(data: string[] | any): ServicePreferences {
+    if (!Array.isArray(data)) {
+      throw new BadRequestError("Invalid service preferences data");
+    }
+    return new ServicePreferences(data);
   }
 }

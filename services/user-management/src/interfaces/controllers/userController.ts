@@ -30,27 +30,7 @@ export class UserController {
       if (error.code === 11000) {
         throw new BadRequestError("Email already in use");
       }
-      // return res.status(404).send(error);
+      throw new BadRequestError(error.message || "User registration failed");
     }
-  }
-  async users(req: Request, res: Response): Promise<void> {
-    try {
-      const artisans = await ArtisanModel.find();
-      if (!artisans) {
-        throw new BadRequestError("No artisan in Database");
-      }
-      res.status(200).json({
-        results: artisans.length,
-        data: {
-          artisans,
-        },
-      });
-    } catch (error: any) {
-      throw new BadRequestError("Not found");
-    }
-  }
-
-  test(req: Request, res: Response) {
-    res.send("Hello world");
   }
 }

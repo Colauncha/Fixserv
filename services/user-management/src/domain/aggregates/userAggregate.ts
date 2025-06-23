@@ -216,4 +216,91 @@ export class UserAggregate {
     }
     (this._user as Admin).permissions = permissions;
   }
+
+  static fromJSON(json: any): UserAggregate {
+    const { id, fullName, role } = json;
+
+    const email = Email.fromJSON(json.email || "");
+
+    const password = Password.fromJSON(json.password || "");
+
+    switch (role) {
+      case "CLIENT":
+        const address = DeliveryAddress.fromJSON(json.deliveryAddress || {});
+
+        const servicePreferences = ServicePreferences.fromJSON(
+          json.servicePreferences || []
+        );
+        return UserAggregate.createClient(
+          id,
+          email,
+          password,
+          fullName,
+          address,
+          servicePreferences
+        );
+
+      case "ARTISAN":
+        const skillSet = new SkillSet(json.skills || []);
+        const businessHours = BusinessHours.fromJSON(json.businessHours || {});
+        return UserAggregate.createArtisan(
+          id,
+          email,
+          password,
+          fullName,
+          json.businessName,
+          json.location,
+          json.rating,
+          skillSet,
+          businessHours
+        );
+
+      case "ADMIN":
+        return UserAggregate.createAdmin(
+          id,
+          email,
+          password,
+          fullName,
+          json.permissions || []
+        );
+
+      default:
+        throw new BadRequestError(`Unknown role: ${role}`);
+    }
+  }
+
+  toJSON(): any {
+    const base = {
+      id: this.id,
+      email: this.email,
+      password: this.password,
+      fullName: this.fullName,
+      role: this.role,
+    };
+
+    switch (this.role) {
+      case "CLIENT":
+        return {
+          ...base,
+          deliveryAddress: this.deliveryAddress,
+          servicePreferences: this.servicePreferences,
+        };
+      case "ARTISAN":
+        return {
+          ...base,
+          businessName: this.businessName,
+          location: this.location,
+          rating: this.rating,
+          skills: this.skills,
+          businessHours: this.businessHours,
+        };
+      case "ADMIN":
+        return {
+          ...base,
+          permissions: this.permissions,
+        };
+      default:
+        return base;
+    }
+  }
 }

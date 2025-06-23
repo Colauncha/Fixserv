@@ -14,7 +14,12 @@ const admin_1 = require("../entities/admin");
 const artisan_1 = require("../entities/artisan");
 const shared_1 = require("@fixserv-colauncha/shared");
 const client_1 = require("../entities/client");
+const businessHours_1 = require("../value-objects/businessHours");
+const deliveryAddress_1 = require("../value-objects/deliveryAddress");
+const email_1 = require("../value-objects/email");
 const password_1 = require("../value-objects/password");
+const servicePreferences_1 = require("../value-objects/servicePreferences");
+const skillSet_1 = require("../value-objects/skillSet");
 class UserAggregate {
     constructor(_user) {
         this._user = _user;
@@ -155,6 +160,44 @@ class UserAggregate {
             throw new shared_1.BadRequestError("Only admins can update permissions");
         }
         this._user.permissions = permissions;
+    }
+    static fromJSON(json) {
+        const { id, fullName, role } = json;
+        const email = email_1.Email.fromJSON(json.email || "");
+        const password = password_1.Password.fromJSON(json.password || "");
+        switch (role) {
+            case "CLIENT":
+                const address = deliveryAddress_1.DeliveryAddress.fromJSON(json.deliveryAddress || {});
+                const servicePreferences = servicePreferences_1.ServicePreferences.fromJSON(json.servicePreferences || []);
+                return UserAggregate.createClient(id, email, password, fullName, address, servicePreferences);
+            case "ARTISAN":
+                const skillSet = new skillSet_1.SkillSet(json.skills || []);
+                const businessHours = businessHours_1.BusinessHours.fromJSON(json.businessHours || {});
+                return UserAggregate.createArtisan(id, email, password, fullName, json.businessName, json.location, json.rating, skillSet, businessHours);
+            case "ADMIN":
+                return UserAggregate.createAdmin(id, email, password, fullName, json.permissions || []);
+            default:
+                throw new shared_1.BadRequestError(`Unknown role: ${role}`);
+        }
+    }
+    toJSON() {
+        const base = {
+            id: this.id,
+            email: this.email,
+            password: this.password,
+            fullName: this.fullName,
+            role: this.role,
+        };
+        switch (this.role) {
+            case "CLIENT":
+                return Object.assign(Object.assign({}, base), { deliveryAddress: this.deliveryAddress, servicePreferences: this.servicePreferences });
+            case "ARTISAN":
+                return Object.assign(Object.assign({}, base), { businessName: this.businessName, location: this.location, rating: this.rating, skills: this.skills, businessHours: this.businessHours });
+            case "ADMIN":
+                return Object.assign(Object.assign({}, base), { permissions: this.permissions });
+            default:
+                return base;
+        }
     }
 }
 exports.UserAggregate = UserAggregate;

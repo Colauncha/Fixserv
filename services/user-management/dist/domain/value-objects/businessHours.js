@@ -26,5 +26,12 @@ class BusinessHours {
             return acc;
         }, {});
     }
+    toJSON() {
+        return this._schedule;
+    }
+    // ✅ Deserialize from JSON (used in fromJSON of UserAggregate)
+    static fromJSON(schedule) {
+        return new BusinessHours(schedule);
+    }
 }
 exports.BusinessHours = BusinessHours;

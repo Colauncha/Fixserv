@@ -8,6 +8,8 @@ import { DeliveryAddress } from "../../domain/value-objects/deliveryAddress";
 import { ServicePreferences } from "../../domain/value-objects/servicePreferences";
 import { BusinessHours } from "../../domain/value-objects/businessHours";
 import { SkillSet } from "../../domain/value-objects/skillSet";
+import { resend } from "../../infrastructure/services/resendService";
+import { redis, connectRedis } from "@fixserv-colauncha/shared";
 
 export class AuthController {
   private userRepository = new UserRepositoryImpl();
@@ -42,8 +44,21 @@ export class AuthController {
       });
 
       const response = this.userRepository.toJSON(user);
+      /*
+      const { data, error } = await resend.emails.send({
+        from: "artisanack@resend.dev",
+        to: "evwerhamreisrael@gmail.com",
+        subject: "Hello from Resend",
+        html: "<strong>It works!</strong>",
+      });
+      if (error) {
+        throw new BadRequestError("Failed to send email");
+      }
+        */
+
       res.status(200).json({ data: { response, BearerToken } });
     } catch (error) {
+      console.error("Login failed:", error);
       throw new BadRequestError("Invalid credentials");
     }
   }
@@ -93,6 +108,7 @@ export class AuthController {
       // Save updated user
 
       await this.userRepository.save(updatedUser);
+
       res.status(200).json(existingUser);
     } catch (error: any) {
       res.status(error instanceof BadRequestError ? 400 : 500).json({

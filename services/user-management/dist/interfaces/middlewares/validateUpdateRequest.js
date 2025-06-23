@@ -1,15 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUpdateRequest = void 0;
+exports.validateUpdateRequest = validateUpdateRequest;
 const shared_1 = require("@fixserv-colauncha/shared");
 function validateUpdateRequest(role, updates) {
     // Common validations
     if (updates.fullName && typeof updates.fullName !== "string") {
         throw new shared_1.BadRequestError("Full name must be a string");
     }
-    if (updates.password && typeof updates.password !== "string") {
-        throw new shared_1.BadRequestError("Password must be a string");
-    }
+    //  if (updates.password && typeof updates.password !== "string") {
+    //    throw new BadRequestError("Password must be a string");
+    //  }
     // Role-specific validations
     switch (role) {
         case "CLIENT":
@@ -19,6 +19,16 @@ function validateUpdateRequest(role, updates) {
                 if (missing.length > 0) {
                     throw new shared_1.BadRequestError(`Missing delivery address fields: ${missing.join(", ")}`);
                 }
+            }
+            if (updates.servicePreferences) {
+                if (!Array.isArray(updates.servicePreferences)) {
+                    throw new shared_1.BadRequestError("Service preferences must be an array");
+                }
+                updates.servicePreferences.forEach((pref) => {
+                    if (typeof pref !== "string") {
+                        throw new shared_1.BadRequestError("Each service preference must be a string");
+                    }
+                });
             }
             break;
         case "ARTISAN":
@@ -39,7 +49,6 @@ function validateUpdateRequest(role, updates) {
             break;
     }
 }
-exports.validateUpdateRequest = validateUpdateRequest;
 function validateBusinessHours(businessHours) {
     if (typeof businessHours !== "object" || businessHours === null) {
         throw new shared_1.BadRequestError("Business hours must be an object");

@@ -29,24 +29,48 @@ class AuthController {
                 if (!email || !password) {
                     throw new shared_1.BadRequestError("Email and password are required");
                 }
-                const { user, sessionToken } = yield this.authService.login(email, password);
-                req.session = { jwt: sessionToken };
-                res.status(200).json(user);
+                const { user, BearerToken } = yield this.authService.login(email, password);
+                // req.session = { jwt: sessionToken };
+                //
+                //res.cookie("session", sessionToken, {
+                //  httpOnly: false,
+                //  secure: false,
+                //  sameSite: "none",
+                //  maxAge: 24 * 60 * 60 * 1000,
+                //  path: "/",
+                //});
+                res.cookie("jwt", BearerToken, {
+                    httpOnly: true,
+                    secure: false, // Set to true in production
+                    sameSite: "none",
+                    maxAge: 24 * 60 * 60 * 1000, // 1 day
+                });
+                const response = this.userRepository.toJSON(user);
+                /*
+                const { data, error } = await resend.emails.send({
+                  from: "artisanack@resend.dev",
+                  to: "evwerhamreisrael@gmail.com",
+                  subject: "Hello from Resend",
+                  html: "<strong>It works!</strong>",
+                });
+                if (error) {
+                  throw new BadRequestError("Failed to send email");
+                }
+                  */
+                res.status(200).json({ data: { response, BearerToken } });
             }
             catch (error) {
-                // throw new NotAuthorizeError();
-                console.log(error);
-                res.status(404).send(error);
+                console.error("Login failed:", error);
+                throw new shared_1.BadRequestError("Invalid credentials");
             }
         });
     }
     logout(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             try {
-                const sessionToken = (_a = req.session) === null || _a === void 0 ? void 0 : _a.jwt;
-                yield this.authService.logout(sessionToken);
-                req.session = null;
+                res.clearCookie("jwt", {
+                    httpOnly: true,
+                });
                 res.status(200).json({ message: "Logged out successfull" });
             }
             catch (error) {
@@ -100,8 +124,7 @@ class AuthController {
         // Base fields that all users can update
         if (updates.fullName)
             user.updateFullName(updates.fullName);
-        if (updates.password)
-            user.changePassword(user.password, updates.password);
+        // if (updates.password) user.changePassword(user.password, updates.//password);
         let skillsArray = updates.skillSet;
         // Role-specific updates
         switch (user.role) {

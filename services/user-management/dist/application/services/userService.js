@@ -52,21 +52,23 @@ class UserService {
                         const sub = yield this.eventBus.subscribe("event_acks", (ack) => {
                             if (ack.originalEventId === event.id) {
                                 resolve(ack);
+                                unsubscribe();
                             }
                         });
                         unsubscribe = sub.unsubscribe;
                     }));
-                    yield this.userRepository.save(user);
                     this.pendingEvents.set(event.id, ackPromise);
                     try {
+                        yield this.userRepository.save(user);
                         yield this.eventBus.publish("artisan_events", event);
-                        const ack = yield Promise.race([ackPromise, timeout(5000)]);
-                        if (ack.status === "failed") {
-                            throw new shared_1.BadRequestError(`Event processing failed: ${ack.error}`);
-                        }
+                        const ack = yield Promise.race; //([ackPromise, timeout(5000)]);
+                        // if (ack.status === "failed") {
+                        //   throw new BadRequestError(`Event //processing failed: ${ack.//error}`);
+                        //}
                     }
                     catch (err) {
-                        throw new shared_1.BadRequestError(err);
+                        this.pendingEvents.delete(event.id);
+                        // throw new BadRequestError(err);
                     }
                     break;
                 case "ADMIN":
@@ -81,9 +83,13 @@ class UserService {
             //  name: user.businessName,
             //  skills: user.skills.skills,
             //});
-            const sessionToken = this.tokenService.generateSessionToken(user.id, user.email, user.role);
+            //const sessionToken = this.tokenService.//generateSessionToken(
+            //  user.id,
+            //  user.email,
+            //  user.role
+            //);
             yield this.userRepository.save(user);
-            return { user, sessionToken };
+            return { user };
         });
     }
 }

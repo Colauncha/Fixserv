@@ -34,7 +34,10 @@ class UserRepositoryImpl {
                 case "ARTISAN":
                     yield artisan_1.ArtisanModel.findOneAndUpdate({
                         _id: user.id,
-                    }, userData, { upsert: true, new: true });
+                    }, userData, {
+                        upsert: true,
+                        new: true,
+                    });
                     break;
                 case "ADMIN":
                     yield admin_1.AdminModel.findOneAndUpdate({
@@ -49,13 +52,13 @@ class UserRepositoryImpl {
     findById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             let userData;
-            userData = yield client_1.ClientModel.findById(id);
+            userData = yield client_1.ClientModel.findById(id).select("+password");
             if (userData)
                 return this.toDomain(userData);
-            userData = yield artisan_1.ArtisanModel.findById(id);
+            userData = yield artisan_1.ArtisanModel.findById(id).select("+password");
             if (userData)
                 return this.toDomain(userData);
-            userData = yield admin_1.AdminModel.findById(id);
+            userData = yield admin_1.AdminModel.findById(id).select("+password");
             if (userData)
                 return this.toDomain(userData);
             return null;
@@ -64,13 +67,13 @@ class UserRepositoryImpl {
     findByEmail(email) {
         return __awaiter(this, void 0, void 0, function* () {
             let userData;
-            userData = yield client_1.ClientModel.findOne({ email });
+            userData = yield client_1.ClientModel.findOne({ email }).select("+password");
             if (userData)
                 return this.toDomain(userData);
-            userData = yield artisan_1.ArtisanModel.findOne({ email });
+            userData = yield artisan_1.ArtisanModel.findOne({ email }).select("+password");
             if (userData)
                 return this.toDomain(userData);
-            userData = yield admin_1.AdminModel.findOne({ email });
+            userData = yield admin_1.AdminModel.findOne({ email }).select("+password");
             if (userData)
                 return this.toDomain(userData);
             return null;
@@ -129,6 +132,25 @@ class UserRepositoryImpl {
             return userAggregate_1.UserAggregate.createAdmin(data._id.toString(), new email_1.Email(data.email), password_1.Password.fromHash(data.password), data.fullName, data.permissions);
         }
         throw new Error(`Unknown role ${data.role}`);
+    }
+    toJSON(user) {
+        const base = {
+            _id: user.id,
+            email: user.email,
+            fullName: user.fullName,
+            role: user.role,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+        if (user.role === "CLIENT") {
+            return Object.assign(Object.assign({}, base), { deliveryAddress: user.deliveryAddress, servicePreferences: user.servicePreferences.categories });
+        }
+        else if (user.role === "ARTISAN") {
+            return Object.assign(Object.assign({}, base), { businessName: user.businessName, location: user.location, rating: user.rating, skillSet: user.skills.skills, businessHours: user.businessHours });
+        }
+        else if (user.role === "ADMIN") {
+            return Object.assign(Object.assign({}, base), { permissions: user.permissions });
+        }
     }
 }
 exports.UserRepositoryImpl = UserRepositoryImpl;

@@ -13,7 +13,7 @@ exports.ServiceEventsHandler = void 0;
 const shared_1 = require("@fixserv-colauncha/shared");
 class ServiceEventsHandler {
     constructor() {
-        this.eventBus = new shared_1.RedisEventBus();
+        this.eventBus = new shared_1.RedisEventBus(process.env.REDIS_URL);
     }
     setupSubscriptions() {
         return __awaiter(this, void 0, void 0, function* () {

@@ -11,6 +11,7 @@ import { NotFoundError } from "@fixserv-colauncha/shared";
 import { errorHandler } from "@fixserv-colauncha/shared";
 import morgan from "morgan";
 import helmet from "helmet";
+import rootRouter from "./routes/rootRoutes";
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.use(mongoSanitize());
 
 app.use(morgan("dev"));
 
+app.use("/", rootRouter);
 app.use("/api/users", userRouter);
 app.use("/api/admin", adminRouter);
 

@@ -10,9 +10,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
+const userAggregate_1 = require("../../domain/aggregates/userAggregate");
 const shared_1 = require("@fixserv-colauncha/shared");
 const shared_2 = require("@fixserv-colauncha/shared");
 const password_1 = require("../../domain/value-objects/password");
+const shared_3 = require("@fixserv-colauncha/shared");
 class AuthService {
     constructor(userRepository, tokenService) {
         this.userRepository = userRepository;
@@ -23,31 +25,48 @@ class AuthService {
             if (!password) {
                 throw new shared_2.BadRequestError("Password is required");
             }
-            const user = yield this.userRepository.findByEmail(email);
-            if (!user) {
-                throw new shared_1.NotAuthorizeError();
+            const cacheKey = `user:email:${email}`;
+            yield (0, shared_3.connectRedis)();
+            const cachedUser = yield shared_3.redis.get(cacheKey);
+            let user;
+            if (cachedUser) {
+                user = userAggregate_1.UserAggregate.fromJSON(JSON.parse(cachedUser));
+            }
+            else {
+                const foundUser = yield this.userRepository.findByEmail(email);
+                if (!foundUser) {
+                    throw new shared_2.BadRequestError("No user with that email exists");
+                }
+                user = foundUser;
+                // Cache the user data for 10 minutes
+                yield shared_3.redis.set(cacheKey, JSON.stringify(user.toJSON()), {
+                    EX: 60 * 10,
+                });
             }
             const passwordData = password_1.Password.fromHash(user.password);
             const isMatch = yield passwordData.compare(password);
             if (!isMatch) {
                 throw new shared_1.NotAuthorizeError();
             }
-            //check if email is verified
-            const sessionToken = this.tokenService.generateSessionToken(user.id, user.email, user.role);
-            return { user, sessionToken };
-        });
-    }
-    logout(sessionToken) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return;
+            const BearerToken = this.tokenService.generateBearerToken(user.id, user.email, user.role);
+            return { user, BearerToken };
         });
     }
     findUserById(id) {
         return __awaiter(this, void 0, void 0, function* () {
+            const cacheKey = `user:${id}`;
+            yield (0, shared_3.connectRedis)();
+            const cachedUser = yield shared_3.redis.get(cacheKey);
+            if (cachedUser) {
+                return userAggregate_1.UserAggregate.fromJSON(JSON.parse(cachedUser));
+            }
             const user = yield this.userRepository.findById(id);
             if (!user) {
                 throw new shared_2.BadRequestError("User with that Id not found");
             }
+            yield shared_3.redis.set(cacheKey, JSON.stringify(user.toJSON()), {
+                EX: 60 * 10,
+            });
             return user;
         });
     }

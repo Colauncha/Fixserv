@@ -24,5 +24,11 @@ class ServicePreferences {
     toJSON() {
         return this._categories;
     }
+    static fromJSON(data) {
+        if (!Array.isArray(data)) {
+            throw new shared_1.BadRequestError("Invalid service preferences data");
+        }
+        return new ServicePreferences(data);
+    }
 }
 exports.ServicePreferences = ServicePreferences;

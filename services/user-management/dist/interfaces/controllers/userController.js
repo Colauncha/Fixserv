@@ -21,23 +21,51 @@ var __rest = (this && this.__rest) || function (s, e) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
+const userRepositoryImpl_1 = require("../../infrastructure/persistence/userRepositoryImpl");
+const shared_1 = require("@fixserv-colauncha/shared");
+const artisan_1 = require("../../infrastructure/persistence/models/artisan");
 class UserController {
     constructor(userService) {
         this.userService = userService;
+        this.response = new userRepositoryImpl_1.UserRepositoryImpl();
     }
     register(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const _a = req.body, { email, password, fullName, role } = _a, roleData = __rest(_a, ["email", "password", "fullName", "role"]);
-                const { user, sessionToken } = yield this.userService.registerUser(email, password, fullName, role, roleData.clientData, roleData.artisanData, roleData.adminData);
-                req.session = { jwt: sessionToken };
-                return res.status(201).json(user);
+                const { user } = yield this.userService.registerUser(email, password, fullName, role, roleData.clientData, roleData.artisanData, roleData.adminData);
+                // req.session = { jwt: sessionToken };
+                res.status(201).json(this.response.toJSON(user));
             }
             catch (error) {
-                console.log(error);
-                return res.status(404).send(error);
+                if (error.code === 11000) {
+                    throw new shared_1.BadRequestError("Email already in use");
+                }
+                // return res.status(404).send(error);
             }
         });
+    }
+    users(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const artisans = yield artisan_1.ArtisanModel.find();
+                if (!artisans) {
+                    throw new shared_1.BadRequestError("No artisan in Database");
+                }
+                res.status(200).json({
+                    results: artisans.length,
+                    data: {
+                        artisans,
+                    },
+                });
+            }
+            catch (error) {
+                throw new shared_1.BadRequestError("Not found");
+            }
+        });
+    }
+    test(req, res) {
+        res.send("Hello world");
     }
 }
 exports.UserController = UserController;

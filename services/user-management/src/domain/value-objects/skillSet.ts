@@ -4,6 +4,9 @@ export class SkillSet {
   private readonly _skills: string[];
 
   constructor(skills: any[]) {
+    if (!Array.isArray(skills)) {
+      throw new BadRequestError("Skills must be an array");
+    }
     if (!skills || skills.length === 0) {
       throw new BadRequestError("At least one skill is required");
     }
@@ -13,7 +16,19 @@ export class SkillSet {
       }
     });
 
+    const sanitized = skills
+      .filter((s) => typeof s === "string" && s.trim().length > 0)
+      .map((s) => s.trim());
+
+    if (sanitized.length === 0) {
+      throw new BadRequestError("At least one valid skill is required");
+    }
+
     this._skills = [...new Set(skills)];
+  }
+
+  static fromJSON(raw: any): SkillSet {
+    return new SkillSet(Array.isArray(raw) ? raw : []);
   }
 
   toArray(): string[] {
@@ -27,7 +42,7 @@ export class SkillSet {
     return this._skills.includes(skill);
   }
 
-  toJSON() {
+  toJSON(): string[] {
     return this._skills;
   }
 
