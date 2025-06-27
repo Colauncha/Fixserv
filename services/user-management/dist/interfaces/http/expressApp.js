@@ -23,6 +23,7 @@ const shared_1 = require("@fixserv-colauncha/shared");
 const shared_2 = require("@fixserv-colauncha/shared");
 const morgan_1 = __importDefault(require("morgan"));
 const helmet_1 = __importDefault(require("helmet"));
+const rootRoutes_1 = __importDefault(require("./routes/rootRoutes"));
 const app = (0, express_1.default)();
 app.set("trust proxy", true);
 /*
@@ -61,6 +62,7 @@ app.use((0, express_mongo_sanitize_1.default)());
 //  })
 //);
 app.use((0, morgan_1.default)("dev"));
+app.use("/", rootRoutes_1.default);
 app.use("/api/users", userRoutes_1.userRouter);
 app.use("/api/admin", authRoutes_1.adminRouter);
 app.all("*", () => __awaiter(void 0, void 0, void 0, function* () {

@@ -17,5 +17,3 @@ const router = express_1.default.Router();
 exports.userRouter = router;
 //@ts-ignore
 router.post("/register", userController.register.bind(userController));
-router.get("/artisans", (req, res) => userController.users(req, res));
-router.get("/", userController.test.bind(userController));

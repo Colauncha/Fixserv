@@ -21,6 +21,6 @@ RUN npm install -g pnpm && \
 WORKDIR /app/services/user-management
 
 
-
+EXPOSE 4000
 
 CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]

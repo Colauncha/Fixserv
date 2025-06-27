@@ -23,7 +23,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
 const userRepositoryImpl_1 = require("../../infrastructure/persistence/userRepositoryImpl");
 const shared_1 = require("@fixserv-colauncha/shared");
-const artisan_1 = require("../../infrastructure/persistence/models/artisan");
 class UserController {
     constructor(userService) {
         this.userService = userService;
@@ -41,31 +40,9 @@ class UserController {
                 if (error.code === 11000) {
                     throw new shared_1.BadRequestError("Email already in use");
                 }
-                // return res.status(404).send(error);
+                throw new shared_1.BadRequestError(error.message || "User registration failed");
             }
         });
-    }
-    users(req, res) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const artisans = yield artisan_1.ArtisanModel.find();
-                if (!artisans) {
-                    throw new shared_1.BadRequestError("No artisan in Database");
-                }
-                res.status(200).json({
-                    results: artisans.length,
-                    data: {
-                        artisans,
-                    },
-                });
-            }
-            catch (error) {
-                throw new shared_1.BadRequestError("Not found");
-            }
-        });
-    }
-    test(req, res) {
-        res.send("Hello world");
     }
 }
 exports.UserController = UserController;
