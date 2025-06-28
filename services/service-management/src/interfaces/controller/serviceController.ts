@@ -140,13 +140,90 @@ export class ServiceController {
       }
     }
   }
-
-  currentUser(req: Request, res: Response) {
-    const user = req.currentUser!;
-    if (!user) {
-      throw new BadRequestError("user not found");
+  async getServices(req: Request, res: Response): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const services = await this.serviceService.getPaginatedServices(
+        page,
+        limit
+      );
+      res.status(200).json(
+        services.map((service) => ({
+          id: service.id,
+          artisanId: service.artisanId,
+          title: service.details.title,
+          description: service.details.description,
+          price: service.details.price,
+          estimatedDuration: service.details.estimatedDuration,
+          isActive: service.isActive,
+          rating: service.rating,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      res.status(500).json({ error: "Failed to fetch services" });
     }
-    console.log(user);
-    res.send("hello world");
+  }
+
+  async deleteService(req: Request, res: Response): Promise<void> {
+    try {
+      const { serviceId } = req.params;
+      if (!serviceId) {
+        throw new BadRequestError("Service ID is required");
+      }
+      await this.serviceService.deleteService(serviceId);
+      res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ error: error.message });
+      } else if (error.message.includes("not found")) {
+        res.status(404).json({ error: error.message });
+      } else {
+        console.error("Service deletion error:", error);
+        res.status(500).json({ error: "Failed to delete service" });
+      }
+    }
+  }
+  async streamServices(req: Request, res: Response): Promise<void> {
+    try {
+      res.setHeader("Content-Type", "application/json");
+      res.write("["); // opening JSON array
+
+      const stream = await this.serviceService.streamServices();
+
+      let first = true;
+
+      stream.on("data", (doc) => {
+        const service = {
+          id: doc._id,
+          artisanId: doc.artisanId,
+          title: doc.title,
+          description: doc.description,
+          price: doc.price,
+          estimatedDuration: doc.estimatedDuration,
+          isActive: doc.isActive,
+          rating: doc.rating,
+        };
+        if (!first) {
+          res.write(",");
+        }
+        res.write(JSON.stringify(service));
+        first = false;
+      });
+
+      stream.on("end", () => {
+        res.write("]");
+        res.end();
+      });
+
+      stream.on("error", (err) => {
+        console.error("Streaming error:", err);
+        res.status(500).json({ error: "Streaming failed" });
+      });
+    } catch (err) {
+      console.error("Streaming setup error:", err);
+      res.status(500).json({ error: "Unexpected error" });
+    }
   }
 }

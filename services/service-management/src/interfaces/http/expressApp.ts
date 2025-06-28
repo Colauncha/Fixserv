@@ -11,6 +11,7 @@ import { serviceRouter } from "./routes/serviceRoute";
 import morgan from "morgan";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
+import rootRouter from "./routes/rootRoutes";
 
 const app = express();
 
@@ -28,19 +29,10 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-//app.use(
-//  cookieSession({
-//    signed: false,
-//    secure: false,
-//    sameSite: "none",
-//    maxAge: 24 * 60 * 60 * 1000,
-//  })
-//);
-//
-
 app.use(mongoSanitize());
 app.use(morgan("dev"));
 
+app.use("/", rootRouter);
 app.use("/api/service", serviceRouter);
 
 app.all("*", async () => {

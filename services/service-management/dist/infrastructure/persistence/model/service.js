@@ -16,5 +16,7 @@ const ServiceSchema = new mongoose_1.default.Schema({
     isActive: { type: Boolean, default: true },
     rating: { type: Number, default: 0, min: 0, max: 5, required: true },
 }, { timestamps: true });
+//compound index (e.g. to get active services by rating)
+ServiceSchema.index({ isActive: 1, rating: -1 });
 const ServiceModel = mongoose_1.default.model("ServiceModel", ServiceSchema);
 exports.ServiceModel = ServiceModel;

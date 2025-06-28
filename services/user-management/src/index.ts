@@ -6,7 +6,7 @@ import { connectDB } from "@fixserv-colauncha/shared";
 import { ServiceEventsHandler } from "./events/handlers/serviceEventHandler";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
 
-import { connectRedis } from "@fixserv-colauncha/shared";
+import { connectRedis, rateLimiter } from "@fixserv-colauncha/shared";
 
 process.on("uncaughtException", (err) => {
   console.log(err.name, err.message);
@@ -20,18 +20,22 @@ if (!process.env.MONGO_URI) {
   throw new Error("MongoDb connection string must be available");
 }
 
-connectDB()
-  .then(async () => {
+const start = async () => {
+  try {
+    await connectDB();
     await connectRedis();
+    app.use(rateLimiter());
     app.listen(4000, () => {
       console.log("user-management is running on port 4000");
     });
-  })
-  .catch((error: any) => {
-    console.error("Failed to conect to database", error);
-  });
 
-const eventsHandler = new ServiceEventsHandler();
-const reviewEventHandler = new ReviewEventsHandler();
-eventsHandler.setupSubscriptions().catch(console.error);
-reviewEventHandler.setupSubscriptions().catch(console.error);
+    const eventsHandler = new ServiceEventsHandler();
+    const reviewEventHandler = new ReviewEventsHandler();
+    await eventsHandler.setupSubscriptions();
+    await reviewEventHandler.setupSubscriptions();
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// start();

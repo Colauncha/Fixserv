@@ -1,17 +1,4 @@
-// review-and-feedback/src/domain/models/review.ts
-//export class Review {
-//  constructor(
-//    public id: string,
-//    public serviceId: string, // From service-management
-//    public artisanId: string, // From user-management
-//    public clientId: string, // From user-management
-//    public rating: RatingValue,
-//    public comment: string,
-//    public createdAt: Date,
-//    public status: ReviewStatus = "pending",
-//    public moderatorId?: string
-//  ) {}
-
+import { BadRequestError } from "@fixserv-colauncha/shared";
 import { ReviewDto } from "../dtos/reviewDto";
 import { Rating } from "../value-objects/rating";
 import { Feedback } from "./feedback";
@@ -50,13 +37,13 @@ export class Review {
     this._feedback = feedback;
     this._artisanRating = artisanRating;
     this._serviceRating = serviceRating;
-    this._date = new Date();
-    this._status = "pending";
+    this._date = date || new Date();
+    this._status = status || "pending";
   }
 
   publish() {
     if (this.status !== "pending") {
-      throw new Error("Only pending reviews can be published");
+      throw new BadRequestError("Only pending reviews can be published");
     }
     this._status = "published";
   }
@@ -68,14 +55,16 @@ export class Review {
 
   markAsProcessing() {
     if (this._status !== "pending") {
-      throw new Error("Only pending reviews can be marked as processing");
+      throw new BadRequestError(
+        "Only pending reviews can be marked as processing"
+      );
     }
     this._status = "processing";
   }
 
   markAsPublished() {
     if (this._status !== "processing") {
-      throw new Error("Only processing reviews can be published");
+      throw new BadRequestError("Only processing reviews can be published");
     }
     this._status = "published";
   }
@@ -159,20 +148,28 @@ export class Review {
     );
   }
 
-  updateFeedback(newComment: string) {
-    // if (this._status !== "published") {
-    //   throw new Error("Only published reviews can be updated");
-    // }
-    this._feedback = new Feedback(newComment);
+  updateContent(
+    newComment?: string,
+    newArtisanRating?: Rating,
+    newServiceRating?: Rating
+  ): void {
+    if (this._status !== "published") {
+      throw new BadRequestError("Only published reviews can be updtaed");
+    }
+
+    if (newComment) {
+      this._feedback = new Feedback(newComment);
+    }
+    if (newArtisanRating) {
+      this._artisanRating = newArtisanRating;
+    }
+
+    if (newServiceRating) {
+      this._serviceRating = newServiceRating;
+    }
     this._status = "pending";
   }
-
-  updateRatings(newArtisanRating: Rating, newServiceRating: Rating) {
-    // if (this._status !== "published") {
-    //   throw new Error("Only published reviews can be updated");
-    // }
-    this._artisanRating = newArtisanRating;
-    this._serviceRating = newServiceRating;
-    this._status = "pending";
+  canBeDeleted() {
+    return ["pending", "flagged"].includes(this._status);
   }
 }

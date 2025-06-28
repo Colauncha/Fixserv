@@ -1,12 +1,14 @@
+import { BadRequestError } from "@fixserv-colauncha/shared";
 import { ServiceAggregate } from "../domain/aggregates/serviceAggregate";
 import { Service } from "../domain/entities/service";
 import { IServiceRepository } from "../domain/repository/serviceRepository";
 import { ServiceDetails } from "../domain/value-objects/serviceDetails";
 import { ServiceModel } from "./persistence/model/service";
+import { redis, connectRedis } from "@fixserv-colauncha/shared";
 
 export class ServiceRepositoryImpl implements IServiceRepository {
   async findByArtisanId(artisanId: string): Promise<Service[]> {
-    const docs = await ServiceModel.find({ artisanId });
+    const docs = await ServiceModel.find({ artisanId }).lean();
     return docs.map(this.toDomain);
   }
 
@@ -28,7 +30,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
   }
 
   async findById(id: string): Promise<Service | null> {
-    const doc = await ServiceModel.findById(id);
+    const doc = await ServiceModel.findById(id).lean();
     if (!doc) return null;
     return this.toDomain(doc);
   }
@@ -44,6 +46,42 @@ export class ServiceRepositoryImpl implements IServiceRepository {
 
   async deactivateService(id: string): Promise<void> {
     await ServiceModel.updateOne({ _id: id }, { isActive: false });
+  }
+
+  async getServices(): Promise<Service[]> {
+    const docs = await ServiceModel.find();
+    return docs.map(this.toDomain);
+  }
+
+  async getPaginatedServices(page: number, limit: number): Promise<Service[]> {
+    const skip = (page - 1) * limit;
+    const cacheKey = `services:page=${page}:limit=${limit}`;
+    await connectRedis();
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData).map(this.toDomain);
+    }
+
+    const docs = await ServiceModel.find()
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    await redis.set(cacheKey, JSON.stringify(docs), {
+      EX: 60 * 5, // Cache for 5 mins
+    });
+    return docs.map(this.toDomain);
+  }
+
+  async deleteService(id: string): Promise<void> {
+    const result = await ServiceModel.deleteOne({ _id: id });
+    if (result.deletedCount === 0) {
+      throw new BadRequestError("Service not found");
+    }
+  }
+
+  async streamAllServices(): Promise<import("mongoose").Cursor<any>> {
+    return ServiceModel.find().cursor() as import("mongoose").Cursor<any>;
   }
 
   async updateService(

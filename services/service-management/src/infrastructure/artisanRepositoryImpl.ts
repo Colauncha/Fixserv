@@ -1,10 +1,10 @@
-import { ArtisanModel } from "../modules-from-user-management/artisan";
+import { ArtisanModel } from "../modules-from-other-services/artisan";
 import { IArtisanRepository } from "../domain/repository/artisanRepository";
-import { Artisan } from "../modules-from-user-management/domain/entities/artisan";
+import { Artisan } from "../modules-from-other-services/domain/entities/artisan";
 
 export class ArtisanRepositoryImpl implements IArtisanRepository {
   async findById(id: string): Promise<Artisan | null> {
-    const doc = await ArtisanModel.findById(id);
+    const doc = await ArtisanModel.findById(id).lean();
     if (!doc) return null;
     return this.toDomain(doc);
   }

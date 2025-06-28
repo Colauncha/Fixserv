@@ -10,13 +10,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ServiceRepositoryImpl = void 0;
+const shared_1 = require("@fixserv-colauncha/shared");
 const service_1 = require("../domain/entities/service");
 const serviceDetails_1 = require("../domain/value-objects/serviceDetails");
 const service_2 = require("./persistence/model/service");
+const shared_2 = require("@fixserv-colauncha/shared");
 class ServiceRepositoryImpl {
     findByArtisanId(artisanId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const docs = yield service_2.ServiceModel.find({ artisanId });
+            const docs = yield service_2.ServiceModel.find({ artisanId }).lean();
             return docs.map(this.toDomain);
         });
     }
@@ -36,7 +38,7 @@ class ServiceRepositoryImpl {
     }
     findById(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const doc = yield service_2.ServiceModel.findById(id);
+            const doc = yield service_2.ServiceModel.findById(id).lean();
             if (!doc)
                 return null;
             return this.toDomain(doc);
@@ -54,6 +56,44 @@ class ServiceRepositoryImpl {
     deactivateService(id) {
         return __awaiter(this, void 0, void 0, function* () {
             yield service_2.ServiceModel.updateOne({ _id: id }, { isActive: false });
+        });
+    }
+    getServices() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const docs = yield service_2.ServiceModel.find();
+            return docs.map(this.toDomain);
+        });
+    }
+    getPaginatedServices(page, limit) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const skip = (page - 1) * limit;
+            const cacheKey = `services:page=${page}:limit=${limit}`;
+            yield (0, shared_2.connectRedis)();
+            const cachedData = yield shared_2.redis.get(cacheKey);
+            if (cachedData) {
+                return JSON.parse(cachedData).map(this.toDomain);
+            }
+            const docs = yield service_2.ServiceModel.find()
+                .skip(skip)
+                .limit(limit)
+                .sort({ createdAt: -1 });
+            yield shared_2.redis.set(cacheKey, JSON.stringify(docs), {
+                EX: 60 * 5, // Cache for 5 mins
+            });
+            return docs.map(this.toDomain);
+        });
+    }
+    deleteService(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const result = yield service_2.ServiceModel.deleteOne({ _id: id });
+            if (result.deletedCount === 0) {
+                throw new shared_1.BadRequestError("Service not found");
+            }
+        });
+    }
+    streamAllServices() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return service_2.ServiceModel.find().cursor();
         });
     }
     updateService(id, updates) {

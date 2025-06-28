@@ -1,35 +1,36 @@
 import express from "express";
 import "express-async-errors";
 import cors from "cors";
-
-import cookieSession from "cookie-session";
-
+import morgan from "morgan";
 import { NotFoundError } from "@fixserv-colauncha/shared";
 import { errorHandler } from "@fixserv-colauncha/shared";
 import { reviewRouter } from "./routes/reviewRoute";
+import cookieParser from "cookie-parser";
+import mongoSanitize from "express-mongo-sanitize";
+import helmet from "helmet";
+import rootRouter from "./routes/rootRoutes";
 
 const app = express();
 
-app.use(express.json());
+app.set("trust proxy", true);
+
+app.use(helmet());
+
 app.use(
   cors({
-    origin: ["https://user-management-4ec8bc3-dirty.onrender.com"],
+    origin: true,
     credentials: true,
   })
 );
 
-app.use(
-  cookieSession({
-    signed: false,
-    secure: true,
-    sameSite: "none",
-    domain: ".onrender.com",
-    maxAge: 24 * 60 * 60 * 1000,
-  })
-);
+app.use(express.json());
+app.use(cookieParser());
 
-app.set("trust proxy", true);
+app.use(mongoSanitize());
 
+app.use(morgan("dev"));
+
+app.use("/", rootRouter);
 app.use("/api/reviews", reviewRouter);
 
 app.all("*", async () => {

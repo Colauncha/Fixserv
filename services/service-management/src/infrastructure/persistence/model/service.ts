@@ -15,5 +15,12 @@ const ServiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+//compound index (e.g. to get active services by rating)
+ServiceSchema.index({ isActive: 1, rating: -1 });
+
 const ServiceModel = mongoose.model("ServiceModel", ServiceSchema);
+
+//You're now perfectly indexed for queries like:
+//ServiceModel.find({ isActive: true }).sort({ rating: -1 });
+
 export { ServiceModel };

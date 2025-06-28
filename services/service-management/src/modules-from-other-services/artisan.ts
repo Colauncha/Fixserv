@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IArtisan } from "../modules-from-user-management/IArtisan";
+import { IArtisan } from "./IArtisan";
 import { v4 as uuidv4 } from "uuid";
 
 const artisanSchema = new mongoose.Schema<IArtisan>(

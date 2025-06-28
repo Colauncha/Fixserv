@@ -2,16 +2,18 @@ import { Request, Response } from "express";
 import { SearchService } from "../../application/searchService";
 
 export class SearchController {
-  constructor(private searchService:SearchService){}
+  constructor(private searchService: SearchService) {}
   async search(req: Request, res: Response) {
     const {
-      keyword,
+      keyword="",
       location,
       category,
       minPrice,
       maxPrice,
       rating,
       isAvailableNow,
+      page = "1",
+      limit = "20",
     } = req.query;
 
     const filters = {
@@ -23,7 +25,12 @@ export class SearchController {
       isAvailableNow: isAvailableNow === "true",
     };
 
-    const results = await this.searchService.searchAll(keyword as string, filters);
-    res.json(results);
+    const results = await this.searchService.searchAll(
+      keyword as string,
+      filters,
+      Number(page),
+      Number(limit)
+    );
+    res.json({ success: true, data: results });
   }
 }

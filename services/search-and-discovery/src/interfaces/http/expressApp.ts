@@ -4,27 +4,36 @@ import { searchRouter } from "./routes/routes";
 import cookieSession from "cookie-session";
 
 import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import mongoSanitize from "express-mongo-sanitize";
 
 import { NotFoundError } from "@fixserv-colauncha/shared";
 import { errorHandler } from "@fixserv-colauncha/shared";
+import rootRouter from "./routes/rootRoutes";
 
 const app = express();
 
 app.set("trust proxy", true);
 
-app.use(cors());
-
-app.use(express.json());
+app.use(helmet());
 
 app.use(
-  cookieSession({
-    signed: false,
-    secure: false,
-    sameSite: "none",
-    maxAge: 24 * 60 * 60 * 1000,
+  cors({
+    origin: true,
+    credentials: true,
   })
 );
 
+app.use(express.json());
+app.use(cookieParser());
+
+app.use(mongoSanitize());
+
+app.use(morgan("dev"));
+
+app.use("/", rootRouter);
 app.use("/api/search", searchRouter);
 
 app.all("*", async () => {

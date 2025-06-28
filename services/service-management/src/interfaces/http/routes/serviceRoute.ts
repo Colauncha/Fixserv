@@ -22,6 +22,10 @@ router.post(
   serviceController.create.bind(serviceController)
 );
 
+router.get("/services", serviceController.getServices.bind(serviceController));
+
+router.get("/stream", serviceController.streamServices.bind(serviceController));
+
 router.get(
   "/artisan/:artisanId",
   authenticate.protect,
@@ -39,11 +43,11 @@ router.patch(
   serviceController.updateService.bind(serviceController)
 );
 
-router.get(
-  "/currentUser",
-  // authenticate.protect,
-  // requireRole("ADMIN", "ARTISAN"),
-  serviceController.currentUser.bind(serviceController)
+router.delete(
+  "/:serviceId",
+  authenticate.protect,
+  requireRole("ARTISAN"),
+  serviceController.deleteService.bind(serviceController)
 );
 
 export { router as serviceRouter };

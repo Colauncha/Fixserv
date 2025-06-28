@@ -38,9 +38,30 @@ router.post(
   reviewController.submitReview.bind(reviewController)
 );
 
+router.get("/reviews", reviewController.getAllReviews.bind(reviewController));
+router.get(
+  "/reviews/:id",
+  reviewController.getReviewById.bind(reviewController)
+);
+
+router.get(
+  "/artisan/:artisanId",
+  reviewController.getArtisanReviews.bind(reviewController)
+);
+
+router.get(
+  "/service/:serviceId",
+  reviewController.getServiceReviews.bind(reviewController)
+);
+
 router.get(
   "/artisan/:artisanId/average",
   reviewController.getArtisanAverageRating.bind(reviewController)
+);
+
+router.get(
+  "/service/:serviceId/average",
+  reviewController.getServiceAverageRating.bind(reviewController)
 );
 
 router.patch(
@@ -48,4 +69,8 @@ router.patch(
   reviewController.updateReview.bind(reviewController)
 );
 
+router.delete(
+  "/:reviewId",
+  reviewController.deleteReview.bind(reviewController)
+);
 export { router as reviewRouter };

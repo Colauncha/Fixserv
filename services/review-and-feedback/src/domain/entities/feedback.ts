@@ -1,3 +1,5 @@
+import { BadRequestError } from "@fixserv-colauncha/shared";
+
 export class Feedback {
   private _comment: string;
   private _moderationNotes: string[] = [];
@@ -5,13 +7,13 @@ export class Feedback {
 
   constructor(comment?: string) {
     if (!comment) {
-      throw new Error("Feedback comment is required");
+      throw new BadRequestError("Feedback comment is required");
     }
     if (typeof comment !== "string") {
-      throw new Error("Feedback comment must be a string");
+      throw new BadRequestError("Feedback comment must be a string");
     }
     if (comment.length > 500) {
-      throw new Error("Feedback comment too long");
+      throw new BadRequestError("Feedback comment too long");
     }
     this._comment = comment;
   }

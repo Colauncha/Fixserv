@@ -15,7 +15,7 @@ const artisan_2 = require("../modules-from-user-management/domain/entities/artis
 class ArtisanRepositoryImpl {
     findById(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const doc = yield artisan_1.ArtisanModel.findById(id);
+            const doc = yield artisan_1.ArtisanModel.findById(id).lean();
             if (!doc)
                 return null;
             return this.toDomain(doc);

@@ -17,4 +17,7 @@ export interface IServiceRepository {
       rating?: number;
     }
   ): Promise<void>;
+  getServices(): Promise<Service[]>;
+  deleteService(id: string): Promise<void>;
+  getPaginatedServices(page: number, limit: number): Promise<Service[]>;
 }

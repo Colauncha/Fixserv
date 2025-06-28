@@ -5,4 +5,5 @@ export interface SearchFilter {
   maxPrice?: number;
   rating?: number;
   isAvailableNow?: boolean;
+  [key: string]: unknown;
 }

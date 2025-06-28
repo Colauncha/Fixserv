@@ -15,9 +15,11 @@ import {
   ReviewCreatedEvent,
   ReviewProcessedEvent,
 } from "../../events/reviewEvents";
+import { ReviewPublishedEvent } from "../../events/reviewPublishedEvent";
+import { clearPublishedCache } from "../../infrastructure/utils/clearPublishedCache";
 
 export class ReviewService {
-  private eventBus = new RedisEventBus();
+  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private processingReviews = new Map<string, Promise<EventAck | void>>();
   constructor(
     private reviewRepository: ReviewRepository,
@@ -49,7 +51,6 @@ export class ReviewService {
     );
 
     await this.reviewRepository.save(review);
-    console.log(`Review ${review.id} saved with status: ${review.status}`);
 
     this.processingReviews.set(
       review.id,
@@ -65,6 +66,12 @@ export class ReviewService {
       review.markAsProcessing();
       await this.reviewRepository.save(review);
 
+      const ackPromise = this.waitForProcessingAck(
+        review.id,
+        ["user", "service"],
+        15000
+      );
+
       await this.eventBus.publish(
         "review_events",
         new ReviewCreatedEvent({
@@ -79,19 +86,29 @@ export class ReviewService {
       );
       console.log(`Published ReviewCreatedEvent for ${review.id}`);
 
-      const ackResult = await this.waitForProcessingAck(
-        review.id,
-        ["user", "service"],
-        15000
-      );
+      const ackResult = await ackPromise;
 
       if (ackResult.success) {
         review.markAsPublished();
-      } else {
-        review.markAsFailed(ackResult.error || "Processing failed");
-      }
+        await this.reviewRepository.save(review);
 
-      await this.reviewRepository.save(review);
+        await clearPublishedCache(review.artisanId, review.serviceId);
+
+        await this.eventBus.publish(
+          "review_events",
+          new ReviewPublishedEvent({
+            reviewId: review.id,
+            artisanId: review.artisanId,
+            serviceId: review.serviceId,
+            clientId: review.clientId,
+            artisanRating: review.artisanRating.value,
+            serviceRating: review.serviceRating.value,
+          })
+        );
+      } else {
+        review.markAsFailed(ackResult.error ?? "Processing failed");
+        await this.reviewRepository.save(review);
+      }
     } catch (error: any) {
       review.markAsFailed(error.message);
       await this.reviewRepository.save(review);
@@ -99,50 +116,6 @@ export class ReviewService {
     } finally {
       this.processingReviews.delete(review.id);
     }
-  }
-
-  private async waitForProcessingAck1(
-    reviewId: string,
-    timeoutMs = 10000
-  ): Promise<{ success: boolean; error?: string }> {
-    return new Promise(async (resolve) => {
-      let resolved = false;
-      const acks: { success: boolean; error?: string }[] = [];
-
-      const subscription: {
-        unsubscribe: () => Promise<void>;
-      } = await this.eventBus.subscribe(
-        "review_ack_events",
-        (event: ReviewProcessedEvent) => {
-          if (event.payload.reviewId === reviewId) {
-            acks.push({
-              success: event.payload.success,
-              error: event.payload.error,
-            });
-            //resolve asap, if there is no error
-            if (!event.payload.success && !resolved) {
-              resolved = true;
-              subscription.unsubscribe();
-              resolve({ success: false, error: event.payload.error });
-            }
-          }
-        }
-      );
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          subscription.unsubscribe();
-          // Use latest ack if we have any, otherwise timeout
-          const latestAck = acks[acks.length - 1];
-          resolve(
-            latestAck || {
-              success: false,
-              error: "Processing acknowledgement timeout",
-            }
-          );
-        }
-      }, timeoutMs);
-    });
   }
 
   private async waitForProcessingAck(
@@ -275,35 +248,60 @@ export class ReviewService {
   ): Promise<Review> {
     const review = await this.reviewRepository.findById(reviewId);
     if (!review) {
-      throw new Error("Review not found");
+      throw new BadRequestError("Review not found");
     }
 
-    if (update.comment) {
-      review.updateFeedback(update.comment);
-    }
+    const newArtisanRating = update.artisanRating
+      ? new Rating(update.artisanRating.value, update.artisanRating.dimensions)
+      : undefined;
+    const newServiceRating = update.serviceRating
+      ? new Rating(update.serviceRating.value, update.serviceRating.dimensions)
+      : undefined;
 
-    if (update.artisanRating) {
-      const newArtisanRating = new Rating(
-        update.artisanRating.value,
-        update.artisanRating.dimensions
-      );
-      const newServiceRating = update.serviceRating
-        ? new Rating(
-            update.serviceRating.value,
-            update.serviceRating.dimensions
-          )
-        : review.serviceRating;
+    review.updateContent(update.comment, newArtisanRating, newServiceRating);
 
-      review.updateRatings(newArtisanRating, newServiceRating);
-    } else if (update.serviceRating) {
-      const newServiceRating = new Rating(
-        update.serviceRating.value,
-        update.serviceRating.dimensions
-      );
-      review.updateRatings(review.artisanRating, newServiceRating);
-    }
     await this.reviewRepository.update(review);
 
+    await this.processReview(review);
+
+    return review;
+  }
+
+  async deleteReview(id: string): Promise<void> {
+    const review = await this.reviewRepository.findById(id);
+    if (!review) throw new BadRequestError("Review not found");
+
+    if (!review.canBeDeleted()) {
+      throw new BadRequestError(
+        "Only pending or flagged reviews can be deleted"
+      );
+    }
+
+    await this.reviewRepository.delete(id);
+  }
+
+  async findByArtisan(artisanId: string, status?: string) {
+    if (status === "published") {
+      return await this.reviewRepository.findPublishedByArtisan(artisanId);
+    }
+    return await this.reviewRepository.findByArtisan(artisanId);
+  }
+
+  async findByService(serviceId: string, status?: string) {
+    if (status === "published") {
+      return await this.reviewRepository.findPublishedByService(serviceId);
+    }
+    return await this.reviewRepository.findByService(serviceId);
+  }
+
+  async getAllReviews(): Promise<Review[]> {
+    return await this.reviewRepository.findAll();
+  }
+  async getReviewById(id: string): Promise<Review | null> {
+    const review = await this.reviewRepository.findById(id);
+    if (!review) {
+      throw new BadRequestError("Review not found");
+    }
     return review;
   }
 }

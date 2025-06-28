@@ -6,12 +6,13 @@ export const reviewSchema = new mongoose.Schema(
   {
     _id: {
       type: String,
-      default: () => new mongoose.Types.ObjectId().toString(),
+      default: uuidv4,
     },
     orderId: {
       type: String,
       required: true,
       default: uuidv4,
+      unique: true,
     },
     artisanId: {
       type: String,
@@ -61,5 +62,11 @@ export const reviewSchema = new mongoose.Schema(
     },
   }
 );
+
+reviewSchema.index({ artisanId: 1, status: 1, createdAt: -1 });
+reviewSchema.index({ serviceId: 1, status: 1, createdAt: -1 });
+reviewSchema.index({ clientId: 1, createdAt: -1 });
+// reviewSchema.index({ orderId: 1 }, { unique: true });
+reviewSchema.index({ createdAt: -1 });
 
 export const ReviewModel = mongoose.model("ReviewModel", reviewSchema);

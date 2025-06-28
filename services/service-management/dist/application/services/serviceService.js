@@ -16,11 +16,15 @@ const uuid_1 = require("uuid");
 const serviceDetails_1 = require("../../domain/value-objects/serviceDetails");
 const shared_2 = require("@fixserv-colauncha/shared");
 const serviceCreatedEvent_1 = require("../../events/serviceCreatedEvent");
+const redisUtils_1 = require("../../infrastructure/utils/redisUtils");
+const serviceLoader_1 = require("../../infrastructure/loaders/serviceLoader");
+const serviceRepositoryImpl_1 = require("../../infrastructure/serviceRepositoryImpl");
 class ServiceService {
     constructor(serviceRepository, artisanRepository) {
         this.serviceRepository = serviceRepository;
         this.artisanRepository = artisanRepository;
         this.eventBus = new shared_2.RedisEventBus();
+        this.serviceRepoImpl = new serviceRepositoryImpl_1.ServiceRepositoryImpl();
     }
     createService(artisanId, title, description, price, estimatedDuration, rating) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -37,6 +41,8 @@ class ServiceService {
             });
             yield this.serviceRepository.save(service);
             yield this.eventBus.publish("service_events", event);
+            //invalidate cache
+            yield (0, redisUtils_1.clearServiceCache)();
             return service;
         });
     }
@@ -50,7 +56,8 @@ class ServiceService {
     }
     getServiceById(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const service = yield this.serviceRepository.findById(id);
+            // const service = await this.serviceRepository.findById(id);
+            const service = yield serviceLoader_1.serviceLoader.load(id);
             if (!service) {
                 throw new shared_1.BadRequestError("Service not found");
             }
@@ -67,14 +74,51 @@ class ServiceService {
                 throw new shared_1.BadRequestError("Price must be a positive number");
             }
             // Get existing service to validate
-            const existingService = yield this.serviceRepository.findById(serviceId);
+            // const existingService = await this.serviceRepository.findById(serviceId);
+            const existingService = yield serviceLoader_1.serviceLoader.load(serviceId);
             if (!existingService) {
                 throw new shared_1.BadRequestError("Service not found");
             }
             // Apply updates
             yield this.serviceRepository.updateService(serviceId, updates);
+            // Invalidate cache
+            yield (0, redisUtils_1.clearServiceCache)();
             // Return updated service
-            return this.serviceRepository.findById(serviceId);
+            // return this.serviceRepository.findById(serviceId) as Promise<Service>;
+            return serviceLoader_1.serviceLoader.load(serviceId);
+        });
+    }
+    getServices() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const services = yield this.serviceRepository.getServices();
+            if (!services || services.length === 0) {
+                throw new shared_1.BadRequestError("No services found");
+            }
+            return services;
+        });
+    }
+    deleteService(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // const service = await this.serviceRepository.findById(id);
+            const service = yield serviceLoader_1.serviceLoader.load(id);
+            if (!service) {
+                throw new shared_1.BadRequestError("Service not found");
+            }
+            // Invalidate cache before deletion
+            yield (0, redisUtils_1.clearServiceCache)();
+            yield this.serviceRepository.deleteService(id);
+        });
+    }
+    getPaginatedServices(page, limit) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.serviceRepository.getPaginatedServices(page, limit);
+        });
+    }
+    streamServices() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const cursor = yield this.serviceRepoImpl.streamAllServices();
+            // Return the cursor directly as a readable stream
+            return cursor;
         });
     }
 }

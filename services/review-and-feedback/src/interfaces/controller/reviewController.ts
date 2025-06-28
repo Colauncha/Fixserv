@@ -4,6 +4,7 @@ import { ReviewService } from "../../application/services/reviewService";
 import { RatingCalculator } from "../../domain/services/ratingCalculator";
 import { Feedback } from "../../domain/entities/feedback";
 import { Rating } from "../../domain/value-objects/rating";
+import { BadRequestError } from "@fixserv-colauncha/shared";
 export class ReviewController {
   constructor(
     private reviewService: ReviewService,
@@ -55,10 +56,7 @@ export class ReviewController {
 
       res.status(200).json({
         success: true,
-        data: {
-          id: review.id,
-          status: review.status,
-        },
+        data: review.toDto(),
       });
     } catch (error: any) {
       res.status(400).json({
@@ -68,70 +66,62 @@ export class ReviewController {
     }
   }
 
-  //async getArtisanReviews(req: Request, res: Response) {
-  //  try {
-  //    const { artisanId } = req.params;
-  //    const { status } = req.query;
-  //
-  //    let reviews;
-  //    if (status === "published") {
-  //      reviews = await this.reviewService.findPublishedByArtisan//(artisanId);
-  //    } else {
-  //      reviews = await this.reviewService.findByArtisan(artisanId);
-  //    }
-  //
-  //    res.status(200).json({
-  //      success: true,
-  //      data: reviews.map((review) => ({
-  //        id: review.id,
-  //        clientId: review.clientId,
-  //        serviceId: review.serviceId,
-  //        rating: review.artisanRating.value,
-  //        comment: review.feedback.comment,
-  //        status: review.status,
-  //        createdAt: review.date,
-  //      })),
-  //    });
-  //  } catch (error) {
-  //    res.status(400).json({
-  //      success: false,
-  //      error: error.message,
-  //    });
-  //  }
-  //}
-  //
-  //async getServiceReviews(req: Request, res: Response) {
-  //  try {
-  //    const { serviceId } = req.params;
-  //    const { status } = req.query;
-  //
-  //    let reviews;
-  //    if (status === "published") {
-  //      reviews = await this.reviewService.findPublishedByService//(serviceId);
-  //    } else {
-  //      reviews = await this.reviewService.findByService(serviceId);
-  //    }
-  //
-  //    res.status(200).json({
-  //      success: true,
-  //      data: reviews.map((review) => ({
-  //        id: review.id,
-  //        clientId: review.clientId,
-  //        artisanId: review.artisanId,
-  //        rating: review.serviceRating.value,
-  //        comment: review.feedback.comment,
-  //        status: review.status,
-  //        createdAt: review.date,
-  //      })),
-  //    });
-  //  } catch (error) {
-  //    res.status(400).json({
-  //      success: false,
-  //      error: error.message,
-  //    });
-  //  }
-  //}
-  //
+  async getArtisanReviews(req: Request, res: Response) {
+    try {
+      const { artisanId } = req.params;
+      let { status } = req.query;
+
+      status = Array.isArray(status) ? status[0] : status;
+      status = status?.toString().trim().toLowerCase();
+      const reviews = await this.reviewService.findByArtisan(
+        artisanId,
+        status as string
+      );
+
+      if (status && status !== "published") {
+        throw new BadRequestError("Unsupported status");
+      }
+
+      res.status(200).json({
+        success: true,
+        data: reviews.map((review) => review.toDto()),
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  async getServiceReviews(req: Request, res: Response) {
+    try {
+      const { serviceId } = req.params;
+      let { status } = req.query;
+
+      status = Array.isArray(status) ? status[0] : status;
+      status = status?.toString().trim().toLowerCase();
+
+      const reviews = await this.reviewService.findByService(
+        serviceId,
+        status as string
+      );
+
+      if (status && status !== "published") {
+        throw new BadRequestError("Unsupported status");
+      }
+      res.status(200).json({
+        success: true,
+        data: reviews.map((review) => review.toDto()),
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
   async getArtisanAverageRating(req: Request, res: Response) {
     try {
       const { artisanId } = req.params;
@@ -150,27 +140,70 @@ export class ReviewController {
       });
     }
   }
-  //
-  //async getServiceAverageRating(req: Request, res: Response) {
-  //  try {
-  //    const { serviceId } = req.params;
-  //    const average = await this.ratingCalculator.//calculateAverageServiceRating(
-  //      serviceId
-  //    );
-  //
-  //    res.status(200).json({
-  //      success: true,
-  //      data: { serviceId, averageRating: average },
-  //    });
-  //  } catch (error) {
-  //    res.status(400).json({
-  //      success: false,
-  //      error: error.message,
-  //    });
-  //  }
-  //}
-  //
-  //async publishReview(req: Request, res: Response) {
+
+  async getAllReviews(req: Request, res: Response) {
+    try {
+      const reviews = await this.reviewService.getAllReviews();
+
+      res.status(200).json({
+        success: true,
+        data: reviews.map((review) => review.toDto()),
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  async getReviewById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const review = await this.reviewService.getReviewById(id);
+
+      if (!review) {
+        throw new BadRequestError("Review not found");
+      }
+
+      res.status(200).json({
+        success: true,
+        data: review.toDto(),
+      });
+    } catch (error: any) {
+      throw new BadRequestError(error.message);
+    }
+  }
+
+  async getServiceAverageRating(req: Request, res: Response) {
+    try {
+      const { serviceId } = req.params;
+      const average = await this.ratingCalculator.calculateAverageServiceRating(
+        serviceId
+      );
+
+      res.status(200).json({
+        success: true,
+        data: { serviceId, averageRating: average },
+      });
+    } catch (error: any) {
+      throw new BadRequestError(error.message);
+    }
+  }
+
+  async deleteReview(req: Request, res: Response) {
+    try {
+      const { reviewId } = req.params;
+      await this.reviewService.deleteReview(reviewId);
+      res
+        .status(200)
+        .json({ success: true, message: "Review deleted successfully" });
+    } catch (error: any) {
+      throw new BadRequestError(error.message);
+    }
+  }
+
+  // async publishReview(req: Request, res: Response) {
   //  try {
   //    const { reviewId } = req.params;
   //    const review = await this.reviewService.publishReview(reviewId);
@@ -188,5 +221,5 @@ export class ReviewController {
   //      error: error.message,
   //    });
   //  }
-  //}
+  // }
 }

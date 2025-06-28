@@ -1,7 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 import app from "./interfaces/http/expressApp";
-import { connectDB, RedisEventBus } from "@fixserv-colauncha/shared";
+import {
+  connectDB,
+  connectRedis,
+  rateLimiter,
+} from "@fixserv-colauncha/shared";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
 import { RatingCalculator } from "./domain/services/ratingCalculator";
 import { reviewAndFeedbackRepositoryImpls } from "./infrastructure/review-and-feedbackRepositoryImpls";
@@ -27,20 +31,24 @@ const serviceManagementClient = new ServiceManagementClient(
 const reviewRepo = new reviewAndFeedbackRepositoryImpls();
 const ratingCalculator = new RatingCalculator(reviewRepo);
 
-connectDB()
-  .then(() => {
+const start = async () => {
+  try {
+    await connectDB();
+    await connectRedis();
+    app.use(rateLimiter());
     app.listen(4002, () => {
       console.log("review-service is running on port 4002");
     });
-  })
-  .catch((error: any) => {
-    console.error("Failed to conect to database", error);
-  });
+    const reviewEventsHandler = new ReviewEventsHandler(
+      ratingCalculator,
+      userManagementClient,
+      serviceManagementClient
+    );
 
-const reviewEventsHandler = new ReviewEventsHandler(
-  ratingCalculator,
-  userManagementClient,
-  serviceManagementClient
-);
+    await reviewEventsHandler.setupSubscriptions();
+  } catch (error) {
+    console.log(error);
+  }
+};
 
-reviewEventsHandler.setupSubscriptions().catch(console.error);
+// start();

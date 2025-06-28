@@ -2,7 +2,7 @@ import { RedisEventBus } from "@fixserv-colauncha/shared";
 import { EventAck } from "@fixserv-colauncha/shared";
 
 export class ArtisanEventsHandler {
-  private eventBus = new RedisEventBus(process.env.REDIS_URL);
+  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {

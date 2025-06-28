@@ -14,16 +14,17 @@ const shared_1 = require("@fixserv-colauncha/shared");
 const shared_2 = require("@fixserv-colauncha/shared");
 class ArtisanEventsHandler {
     constructor() {
-        this.eventBus = new shared_1.RedisEventBus();
+        this.eventBus = new shared_1.RedisEventBus(process.env.REDIS_URL);
         this.subscriptions = [];
     }
     setupSubscriptions() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.eventBus.subscribe("artisan_events", (event) => {
+            const sub = yield this.eventBus.subscribe("artisan_events", (event) => {
                 if (event.eventName === "ArtisanCreated") {
                     this.handleArtisanCreated(event);
                 }
             });
+            this.subscriptions.push(sub);
         });
     }
     cleanup() {

@@ -11,6 +11,13 @@ spec:
     - host: fixserv.dev
       http:
         paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: user-management-srv
+                port:
+                  number: 4000
           - path: /api/admin/?(.*)
             pathType: ImplementationSpecific
             backend:
@@ -25,6 +32,13 @@ spec:
                 name: user-management-srv
                 port:
                   number: 4000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: service-management-srv
+                port:
+                  number: 4001
           - path: /api/service/?(.*)
             pathType: ImplementationSpecific
             backend:
@@ -32,6 +46,13 @@ spec:
                 name: service-management-srv
                 port:
                   number: 4001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: review-and-feedback-srv
+                port:
+                  number: 4002
           - path: /api/reviews/?(.*)
             pathType: ImplementationSpecific
             backend:
@@ -39,6 +60,13 @@ spec:
                 name: review-and-feedback-srv
                 port:
                   number: 4002
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: search-and-discovery-srv
+                port:
+                  number: 4003
           - path: /api/search/?(.*)
             pathType: ImplementationSpecific
             backend:
@@ -46,6 +74,13 @@ spec:
                 name: search-and-discovery-srv
                 port:
                   number: 4003
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: order-management-srv
+                port:
+                  number: 4004
           - path: /api/orders/?(.*)
             pathType: ImplementationSpecific
             backend:

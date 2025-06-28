@@ -16,21 +16,21 @@ export class ReviewEventsHandler {
     private serviceManagementClient: ServiceManagementClient,
     private reviewRepository?: ReviewRepository
   ) {}
-  private eventBus = new RedisEventBus(process.env.REDIS_URL);
+  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {
-    const reviewSub = await this.eventBus.subscribe(
-      "review_events",
-      async (event: any) => {
-        if (event.eventName === "ReviewCreated") {
-          await this.handleReviewCreated(event);
-        } else if (event.eventName === "ReviewProcessed") {
-          await this.handleReviewProcessed(event);
-        }
-      }
-    );
-    this.subscriptions.push(reviewSub);
+    //const reviewSub = await this.eventBus.subscribe(
+    //  "review_events",
+    //  async (event: any) => {
+    //    if (event.eventName === "ReviewCreated") {
+    //      await this.handleReviewCreated(event);
+    //    } else if (event.eventName === "ReviewProcessed") {
+    //      await this.handleReviewProcessed(event);
+    //    }
+    //  }
+    //);
+    //this.subscriptions.push(reviewSub);
 
     const ratingSub = await this.eventBus.subscribe(
       "rating_events",

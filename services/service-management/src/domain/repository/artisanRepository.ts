@@ -1,4 +1,4 @@
-import { Artisan } from "../../modules-from-user-management/domain/entities/artisan";
+import { Artisan } from "../../modules-from-other-services/domain/entities/artisan";
 
 export interface IArtisanRepository {
   findById(id: string): Promise<Artisan | null>;
