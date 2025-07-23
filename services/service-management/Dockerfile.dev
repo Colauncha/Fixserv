@@ -1,0 +1,26 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
+
+COPY services/service-management/package.json ./services/service-management/
+
+
+COPY services/shared/package.json ./services/shared/
+
+# Install with --shamefully-flatten to completely avoid symlinks
+
+RUN npm install -g pnpm && \
+    pnpm install --shamefully-hoist 
+ 
+# COPY /app/node_modules ./node_modules
+     
+ COPY services/service-management ./services/service-management/
+
+WORKDIR /app/services/service-management
+
+
+
+
+CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]

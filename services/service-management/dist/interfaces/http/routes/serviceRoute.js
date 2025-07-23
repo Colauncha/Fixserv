@@ -1,0 +1,27 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.serviceRouter = void 0;
+const express_1 = __importDefault(require("express"));
+const serviceService_1 = require("../../../application/services/serviceService");
+const artisanRepositoryImpl_1 = require("../../../infrastructure/artisanRepositoryImpl");
+const serviceRepositoryImpl_1 = require("../../../infrastructure/serviceRepositoryImpl");
+const shared_1 = require("@fixserv-colauncha/shared");
+const shared_2 = require("@fixserv-colauncha/shared");
+const serviceController_1 = require("../../controller/serviceController");
+const router = express_1.default.Router();
+exports.serviceRouter = router;
+const artisanRepository = new artisanRepositoryImpl_1.ArtisanRepositoryImpl();
+const serviceRepository = new serviceRepositoryImpl_1.ServiceRepositoryImpl();
+const authenticate = new shared_1.AuthMiddleware();
+const serviceService = new serviceService_1.ServiceService(serviceRepository, artisanRepository);
+const serviceController = new serviceController_1.ServiceController(serviceService);
+router.post("/createService", authenticate.protect, (0, shared_2.requireRole)("ARTISAN"), serviceController.create.bind(serviceController));
+router.get("/services", serviceController.getServices.bind(serviceController));
+router.get("/stream", serviceController.streamServices.bind(serviceController));
+router.get("/artisan/:artisanId", authenticate.protect, (0, shared_2.requireRole)("ARTISAN"), serviceController.listByArtisan.bind(serviceController));
+router.get("/:serviceId", serviceController.getServiceById.bind(serviceController));
+router.patch("/:serviceId", serviceController.updateService.bind(serviceController));
+router.delete("/:serviceId", authenticate.protect, (0, shared_2.requireRole)("ARTISAN"), serviceController.deleteService.bind(serviceController));
