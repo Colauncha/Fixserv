@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wallet-service-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wallet-service
+  template:
+    metadata:
+      labels:
+        app: wallet-service
+    spec:
+      containers:
+        - name: wallet-service
+          image: docker.io/ogkpos/wallet-service
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: MONGO_URI
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
+          ports:
+            - containerPort: 4005
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wallet-service-srv
+spec:
+  selector:
+    app: wallet-service
+  ports:
+    - name: wallet-service
+      protocol: TCP
+      port: 4005
+      targetPort: 4005

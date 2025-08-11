@@ -1,0 +1,77 @@
+🧾 FixServ’s Business Model: How It Makes Money
+FixServ makes money by acting as the middleman between the client (the person requesting service) and the artisan (the person doing the work), and it does this safely using escrow. Here’s how:
+
+🧠 Main Revenue Source:
+FixServ charges a transaction fee (e.g. 2-5%) on every successful order. This is deducted from the total order payment before releasing money to the artisan.
+
+👥 Who Are the Actors?
+Client: The customer who needs something fixed.
+
+Artisan: The technician or service provider.
+
+FixServ: The platform in the middle, managing escrow, disputes, and fees.
+
+🔁 Full Order + Escrow Flow (Plain English)
+Client chooses an Artisan and creates an order
+
+The Client picks a service from the platform (e.g., fix a broken phone).
+
+They agree on the price with the Artisan.
+
+Client pays FixServ (not the artisan directly)
+
+The full payment goes into escrow (a holding account managed by FixServ).
+
+FixServ sends a notification to both sides: "We’ve got the money — go ahead with the job."
+
+Artisan does the work
+
+Once the job is done, the Artisan marks it as Completed.
+
+Client checks the work
+
+If happy, the Client clicks “Release Payment”.
+
+FixServ takes its cut (say 5%), then sends the rest to the Artisan’s wallet or bank.
+
+What if there’s a problem?
+
+If the Client isn’t satisfied, they raise a dispute.
+
+FixServ investigates with evidence (messages, photos, etc.).
+
+After reviewing, FixServ decides whether to:
+
+Refund the Client,
+
+Pay the Artisan,
+
+Or split the amount based on findings.
+
+If no response from Client
+
+If the Client disappears after the work is done, FixServ can auto-release the money after, say, 7-14 days.
+
+💸 How FixServ Makes Money (Explained Simply)
+Let’s say a Client pays ₦10,000 for a job.
+
+₦10,000 goes into FixServ’s escrow account.
+
+The Artisan finishes the work.
+
+The Client approves it.
+
+FixServ keeps 5% (₦500) as a platform fee.
+
+FixServ releases ₦9,500 to the Artisan.
+
+✅ Revenue for FixServ = ₦500.
+
+✅ Benefits of This Approach
+Trust for Clients: They know their money is safe.
+
+Security for Artisans: They are guaranteed payment after work.
+
+FixServ stays in control: Escrow + Dispute resolution keeps both parties accountable.
+
+Sustainable revenue: Each order makes money via fees.

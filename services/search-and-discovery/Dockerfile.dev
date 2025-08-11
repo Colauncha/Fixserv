@@ -1,0 +1,26 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
+
+COPY services/search-and-discovery/package.json ./services/search-and-discovery/
+
+
+COPY services/shared/package.json ./services/shared/
+
+# Install with --shamefully-flatten to completely avoid symlinks
+
+RUN npm install -g pnpm && \
+    pnpm install --shamefully-hoist 
+ 
+# COPY /app/node_modules ./node_modules
+     
+ COPY services/search-and-discovery ./services/search-and-discovery/
+
+WORKDIR /app/services/search-and-discovery
+
+
+
+
+CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]

@@ -1,0 +1,164 @@
+before we move forward i will like us to test what i have so far, firstly, i do not have any endpoint that suports callback_url. here is my orderRoutes:"import { Router } from "express";
+import express from "express";
+import { OrderController } from "../../controller/orderController";
+import { AuthMiddleware, requireRole } from "@fixserv-colauncha/shared";
+import { OrderService } from "../../../application/services/orderService";
+import { orderRepositoryImpls } from "../../../infrastructure/persistence/orderRepositoryImpl";
+import { OrderModel } from "../../../infrastructure/persistence/models/orderModel";
+import { PaymentService } from "../../../domain/services/paymentService";
+
+const router = Router();
+const authMiddleware = new AuthMiddleware();
+const orderRepo = new orderRepositoryImpls(OrderModel);
+const paymentRepo = new PaymentService();
+const orderService = new OrderService(orderRepo);
+const orderController = new OrderController(orderService);
+
+router.post(
+  "/create",
+  authMiddleware.protect,
+  requireRole("CLIENT"),
+  orderController.createOrder.bind(orderController)
+);
+
+router.get("/public", orderController.getPublicOrders.bind(orderController));
+
+router.post(
+  "/paystack/webhook",
+  express.json(),
+  //@ts-ignore
+  orderController.webHookHandler.bind(orderController)
+);
+
+router.get(
+  "/:orderId/getOrder",
+  authMiddleware.protect,
+  orderController.getAnOrder.bind(orderController)
+);
+router.patch(
+  "/:orderId/complete",
+  authMiddleware.protect,
+  orderController.markCompleted.bind(orderController)
+);
+router.post(
+  "/:orderId/release-payment",
+  authMiddleware.protect,
+  orderController.releasePayment.bind(orderController)
+);
+router.patch(
+  "/:orderId/dispute",
+  orderController.markDisputed.bind(orderController)
+);
+router.post(
+  "/:orderId/initiate-payment",
+  orderController.initiatePayment.bind(orderController)
+);
+
+export { router as orderRouter };. my controller logic:"verifySignature = async (req: Request, secret: string) => {
+  const hash = crypto
+    .createHmac("sha512", secret)
+    .update(JSON.stringify(req.body))
+    .digest("hex");
+  return hash === req.headers["x-paystack-signature"];
+};
+webHookHandler = async (req: Request, res: Response) => {
+  if (!(await this.verifySignature(req, process.env.
+PAYSTACK_SECRET_KEY!))) {
+    return res.status(401).send("Invalid signature");
+  }
+  const event = req.body;
+  if (event.event === "charge.success") {
+    const reference = event.data.reference;
+    const order = await OrderModel.findOne({ paymentReference: 
+reference });
+    if (!order) return res.status(404).send("Order not found");
+    // Optionally verify with Paystack (optional but safer)
+    const result = await PaystackClient.verifyTransaction(reference);
+    if (result.data.status === "success") {
+      order.status = "COMPLETED";
+      await order.save();
+      // Optionally emit event
+      // await eventBus.publish("order_events", new 
+PaymentInitiatedEvent(...));
+    }
+  }
+  res.sendStatus(200);
+}; " and lastly, my alreday paymentService suggested by you :" // src/infrastructure/services/payment-service.ts
+import { v4 as uuidv4 } from "uuid";
+import { IPaymentService } from "../repositories/IPaymentService";
+import { EscrowStatus } from "../repositories/IPaymentService";
+
+export class PaymentService implements IPaymentService {
+  private escrowAccounts: Map<string, EscrowAccount> = new Map();
+
+  async createEscrowPayment(params: {
+    escrowId: string;
+    amount: number;
+    clientId: string;
+    artisanId: string;
+    orderId: string;
+  }): Promise<void> {
+    this.escrowAccounts.set(params.escrowId, {
+      ...params,
+      status: "HELD",
+      createdAt: new Date(),
+    });
+    console.log(
+      `Escrow created for order ${params.orderId} with amount ${params.amount}`
+    );
+  }
+
+  async releaseEscrowPayment(escrowId: string): Promise<void> {
+    const account = this.escrowAccounts.get(escrowId);
+    if (!account) throw new Error("Escrow account not found");
+
+    account.status = "RELEASED";
+    account.releasedAt = new Date();
+    console.log(`Escrow ${escrowId} released to artisan ${account.artisanId}`);
+  }
+
+  async refundEscrowPayment(escrowId: string): Promise<void> {
+    const account = this.escrowAccounts.get(escrowId);
+    if (!account) throw new Error("Escrow account not found");
+
+    account.status = "REFUNDED";
+    account.refundedAt = new Date();
+    console.log(`Escrow ${escrowId} refunded to client ${account.clientId}`);
+  }
+
+  async getEscrowStatus(escrowId: string): Promise<EscrowStatus> {
+    const account = this.escrowAccounts.get(escrowId);
+    if (!account) throw new Error("Escrow account not found");
+
+    return {
+      status: account.status,
+      amount: account.amount,
+      orderId: account.orderId,
+      clientId: account.clientId,
+      artisanId: account.artisanId,
+    };
+  }
+  async verifyPayment(paymentId: string): Promise<boolean> {
+    return true;
+  }
+}
+
+interface EscrowAccount {
+  escrowId: string;
+  amount: number;
+  clientId: string;
+  artisanId: string;
+  orderId: string;
+  status: "HELD" | "RELEASED" | "REFUNDED";
+  createdAt: Date;
+  releasedAt?: Date;
+  refundedAt?: Date;
+}
+
+//interface EscrowStatus {
+//  status: string;
+//  amount: number;
+//  orderId: string;
+//}
+". i am lost and i need your help for clarity and how i can test this logic 
+"

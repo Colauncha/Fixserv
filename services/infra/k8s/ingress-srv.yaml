@@ -1,0 +1,132 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-service
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+    - host: fixserv.dev
+      http:
+        paths:
+          - path: /user/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-management-srv
+                port:
+                  number: 4000
+          - path: /api/admin/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-management-srv
+                port:
+                  number: 4000
+          - path: /api/users/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-management-srv
+                port:
+                  number: 4000
+          - path: /api/upload/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-management-srv
+                port:
+                  number: 4000
+          - path: /service/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: service-management-srv
+                port:
+                  number: 4001
+          - path: /api/service/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: service-management-srv
+                port:
+                  number: 4001
+          - path: /api/service/admin/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: service-management-srv
+                port:
+                  number: 4001
+          - path: /api/service/artisan/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: service-management-srv
+                port:
+                  number: 4001
+          - path: /review/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: review-and-feedback-srv
+                port:
+                  number: 4002
+          - path: /api/reviews/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: review-and-feedback-srv
+                port:
+                  number: 4002
+          - path: /search/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: search-and-discovery-srv
+                port:
+                  number: 4003
+          - path: /api/search/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: search-and-discovery-srv
+                port:
+                  number: 4003
+          - path: /order/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order-management-srv
+                port:
+                  number: 4004
+          - path: /api/orders/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order-management-srv
+                port:
+                  number: 4004
+          - path: /api/baseOrders/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order-management-srv
+                port:
+                  number: 4004
+          - path: /api/wallet/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: wallet-service-srv
+                port:
+                  number: 4005
+          - path: /api/notifications/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: notifications-service-srv
+                port:
+                  number: 4006

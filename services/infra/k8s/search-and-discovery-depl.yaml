@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-and-discovery-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search-and-discovery
+  template:
+    metadata:
+      labels:
+        app: search-and-discovery
+    spec:
+      containers:
+        - name: search-and-discovery
+          image: docker.io/ogkpos/search-and-discovery
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: MONGO_URI
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
+          ports:
+            - containerPort: 4003
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-and-discovery-srv
+spec:
+  selector:
+    app: search-and-discovery
+  ports:
+    - name: search-and-discovery
+      protocol: TCP
+      port: 4003
+      targetPort: 4003

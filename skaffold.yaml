@@ -1,0 +1,66 @@
+apiVersion: skaffold/v2alpha3
+kind: Config
+deploy:
+  kubectl:
+    manifests:
+      - ./services/infra/k8s/*
+build:
+  local:
+    push: false
+  artifacts:
+    - image: docker.io/ogkpos/user-management
+      context: .
+      docker:
+        dockerfile: services/user-management/Dockerfile.dev
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
+    - image: docker.io/ogkpos/service-management
+      context: .
+      docker:
+        dockerfile: services/service-management/Dockerfile.dev
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
+    - image: docker.io/ogkpos/review-and-feedback
+      context: .
+      docker:
+        dockerfile: services/review-and-feedback/Dockerfile.dev
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
+    - image: docker.io/ogkpos/search-and-discovery
+      context: .
+      docker:
+        dockerfile: services/search-and-discovery/Dockerfile.dev
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
+    - image: docker.io/ogkpos/order-management
+      context: .
+      docker:
+        dockerfile: services/order-management/Dockerfile.dev
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
+    - image: docker.io/ogkpos/wallet-service
+      context: .
+      docker:
+        dockerfile: services/wallet-service/Dockerfile.dev
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
+    - image: docker.io/ogkpos/notifications-service
+      context: .
+      docker:
+        dockerfile: services/notifications-service/Dockerfile.dev
+      sync:
+        manual:
+          - src: "src/**/*.ts"
+            dest: .
