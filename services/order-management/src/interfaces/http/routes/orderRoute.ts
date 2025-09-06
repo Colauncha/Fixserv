@@ -67,4 +67,48 @@ router.post(
   orderController.verifyPayment.bind(orderController)
 );
 
+// NEW ARTISAN RESPONSE ROUTES
+router.post(
+  "/:orderId/accept",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.acceptOrder.bind(orderController)
+);
+
+router.post(
+  "/:orderId/reject",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.rejectOrder.bind(orderController)
+);
+
+router.patch(
+  "/:orderId/start-work",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.startWork.bind(orderController)
+);
+
+// ORDER LISTING ROUTES
+router.get(
+  "/artisan/orders",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.getArtisanOrders.bind(orderController)
+);
+
+router.get(
+  "/artisan/pending",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.getPendingOrdersForArtisan.bind(orderController)
+);
+
+router.get(
+  "/client/orders",
+  authMiddleware.protect,
+  requireRole("CLIENT"),
+  orderController.getClientOrders.bind(orderController)
+);
+
 export { router as orderRouter };

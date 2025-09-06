@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 import { BaseOrder } from "../../../domain/entities/baseOrder";
 
 export interface BaseOrderDocument extends Document {
-  // id: string;
+  id: string;
   clientId: string;
   artisanId: string;
   offeredServiceId: string;
@@ -15,7 +16,7 @@ export interface BaseOrderDocument extends Document {
 
 const baseOrderSchema = new Schema<BaseOrderDocument>(
   {
-    // id: { type: String, required: true, unique: true },
+    id: { type: String, required: true, unique: true },
     clientId: { type: String, required: true },
     artisanId: { type: String, required: true },
     offeredServiceId: { type: String, required: true },

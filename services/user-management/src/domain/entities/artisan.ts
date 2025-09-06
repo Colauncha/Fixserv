@@ -16,7 +16,10 @@ export class Artisan extends User {
     public rating: number,
     public skillSet: SkillSet,
     public businessHours: BusinessHours,
-    public profilePicture?: string // Optional field for profile picture URL
+    public profilePicture?: string ,// Optional field for profile picture URL
+    public isEmailVerified?: boolean,
+public   emailVerificationToken?: string | null,
+public   emailVerifiedAt?: Date | null,
   ) {
     super(id, email, password, fullName, "ARTISAN",phoneNumber, profilePicture);
   }

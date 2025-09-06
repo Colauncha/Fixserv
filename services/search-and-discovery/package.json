@@ -14,7 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fixserv-colauncha/shared": "^1.0.20",
+    "@fixserv-colauncha/shared": "^1.0.21",
     "cookie-parser": "^1.4.7",
     "cookie-session": "^2.1.0",
     "cors": "^2.8.5",

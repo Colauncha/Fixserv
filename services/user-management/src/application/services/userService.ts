@@ -14,11 +14,14 @@ import { ArtisanCreatedEvent } from "../../events/artisanCreatedEvent";
 import { UserCreatedEvent } from "../../events/userCreatedEvent";
 import { RedisEventBus } from "@fixserv-colauncha/shared";
 import { EventAck } from "@fixserv-colauncha/shared";
+import { EmailService } from "../../infrastructure/services/emailServiceImpls";
+import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
 
 export class UserService implements IUserService {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private pendingEvents = new Map<string, Promise<EventAck>>();
-
+  private emailService = new EmailService();
+  private tokenService = new JwtTokenService();
   constructor(private userRepository: IUserRepository) {}
 
   async registerUser(
@@ -164,6 +167,25 @@ export class UserService implements IUserService {
       // Save user first
       await this.userRepository.save(user);
 
+      // Generate verification token and send verification email
+      const verificationToken = this.tokenService.generateVerificationToken(
+        user.id
+      );
+      user.setEmailVerificationToken(verificationToken);
+      //await this.emailService.sendVerificationEmail(
+      //  user.email,
+      //  verificationToken
+      //);
+
+      //Update user verification token
+      await this.userRepository.save(user);
+
+      //send verification emaail
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        verificationToken
+      );
+
       // Publish all events
       const publishPromises = eventsToPublish.map(
         async ({ channel, event }) => {
@@ -199,6 +221,9 @@ export class UserService implements IUserService {
       );
 
       await Promise.all(publishPromises);
+      return {
+        user,
+      };
     } catch (err: any) {
       // Clean up pending events on error
       eventsToPublish.forEach(({ event }) => {
@@ -206,8 +231,62 @@ export class UserService implements IUserService {
       });
       throw new BadRequestError(`User registration failed: ${err.message}`);
     }
+  }
 
-    return { user };
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const userId = this.tokenService.validateVerificationToken(token);
+    if (!userId) {
+      throw new BadRequestError("Invalid or expired verification token");
+    }
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestError("User not found");
+    }
+
+    if (user.isEmailVerified) {
+      return { message: "Email is already verified" };
+    }
+
+    user.markEmailAsVerified();
+    await this.userRepository.save(user);
+
+    return { message: "Email verified successfully" };
+  }
+
+  async resendVerificationEmail(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findByEmail(email);
+
+    if (!user) {
+      // Security: Don't reveal if email exists or not
+      return {
+        message: "If the email exists, a verification email has been sent.",
+      };
+    }
+
+    if (user.isEmailVerified) {
+      return { message: "Email is already verified" };
+    }
+
+    const verificationToken = this.tokenService.generateVerificationToken(
+      user.id
+    );
+    user.setEmailVerificationToken(verificationToken);
+
+    await this.userRepository.save(user);
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      verificationToken
+    );
+
+    console.log(`📧 Verification email resent to: ${user.email}`);
+    return { message: "Verification email sent successfully!" };
+  }
+  catch(error: any) {
+    console.error("Error resending verification email:", error);
+    return {
+      message: "If the email exists, a verification email has been sent.",
+    };
   }
 
   private setupEventAcknowledgment(eventId: string): Promise<EventAck> {

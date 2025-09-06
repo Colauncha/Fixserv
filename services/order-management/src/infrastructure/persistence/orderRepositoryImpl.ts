@@ -43,6 +43,26 @@ export class orderRepositoryImpls implements OrderRepository {
     await OrderModel.findByIdAndDelete(id);
   }
 
+  // New methods for artisan response feature
+  async findExpiredPendingOrders(): Promise<Order[]> {
+    const docs = await OrderModel.find({
+      status: "PENDING_ARTISAN_RESPONSE",
+      artisanResponseDeadline: { $lt: new Date() },
+    }).lean();
+
+    return docs.map((doc) => this.toDomain(doc));
+  }
+
+  async findPendingOrdersForArtisan(artisanId: string): Promise<Order[]> {
+    const docs = await OrderModel.find({
+      artisanId,
+      status: "PENDING_ARTISAN_RESPONSE",
+      artisanResponseDeadline: { $gt: new Date() }, // Only non-expired orders
+    }).lean();
+
+    return docs.map((doc) => this.toDomain(doc));
+  }
+
   toDomain(raw: any): Order {
     return new Order(
       raw._id,
@@ -57,7 +77,19 @@ export class orderRepositoryImpls implements OrderRepository {
       new Date(raw.createdAt),
       raw.completedAt ? new Date(raw.completedAt) : undefined,
       raw.disputeId,
-      raw.uploadedProducts || []
+      raw.uploadedProducts || [],
+      raw.artisanResponse
+        ? {
+            ...raw.artisanResponse,
+            respondedAt: new Date(raw.artisanResponse.respondedAt),
+            estimatedCompletionDate: raw.artisanResponse.estimatedCompletionDate
+              ? new Date(raw.artisanResponse.estimatedCompletionDate)
+              : undefined,
+          }
+        : undefined,
+      raw.artisanResponseDeadline
+        ? new Date(raw.artisanResponseDeadline)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000)
     );
   }
   toPersistence(order: Order): any {
@@ -81,6 +113,17 @@ export class orderRepositoryImpls implements OrderRepository {
         objectName: product.objectName,
         uploadedAt: product.uploadedAt,
       })),
+      artisanResponse: order.artisanResponse
+        ? {
+            status: order.artisanResponse.status,
+            respondedAt: order.artisanResponse.respondedAt,
+            rejectionReason: order.artisanResponse.rejectionReason,
+            rejectionNote: order.artisanResponse.rejectionNote,
+            estimatedCompletionDate:
+              order.artisanResponse.estimatedCompletionDate,
+          }
+        : undefined,
+      artisanResponseDeadline: order.artisanResponseDeadline,
     };
   }
 }

@@ -34,6 +34,20 @@ const adminSchema = new mongoose.Schema<IAdmin>(
       type: String,
       required: true,
     },
+    // ADD EMAIL VERIFICATION FIELDS
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      default: null,
+    },
+    // Optional: Add timestamps for verification
+    emailVerifiedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     toJSON: {

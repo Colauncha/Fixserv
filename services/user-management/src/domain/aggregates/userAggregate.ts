@@ -11,6 +11,8 @@ import { ServicePreferences } from "../value-objects/servicePreferences";
 import { SkillSet } from "../value-objects/skillSet";
 
 export class UserAggregate {
+  public isEmailVerified: boolean = false;
+  public emailVerificationToken?: string;
   private constructor(private readonly _user: User) {}
 
   static createClient(
@@ -22,7 +24,10 @@ export class UserAggregate {
     address: DeliveryAddress,
     preferences: ServicePreferences,
     profilePicture?: string | null,
-    uploadedProducts?: any[]
+    uploadedProducts?: any[],
+    isEmailVerified?: boolean,
+    emailVerificationToken?: string | null,
+    emailVerifiedAt?: Date | null
   ): UserAggregate {
     const client = new Client(
       id,
@@ -33,7 +38,10 @@ export class UserAggregate {
       address,
       preferences,
       profilePicture || undefined,
-      uploadedProducts || []
+      uploadedProducts || [],
+      isEmailVerified,
+      emailVerificationToken,
+      emailVerifiedAt
     );
     return new UserAggregate(client);
   }
@@ -49,7 +57,10 @@ export class UserAggregate {
     rating: number,
     skillSet: SkillSet,
     businessHours: BusinessHours,
-    profilePicture?: string | null
+    profilePicture?: string | null,
+    isEmailVerified?: boolean,
+    emailVerificationToken?: string | null,
+    emailVerifiedAt?: Date | null
   ): UserAggregate {
     const artisan = new Artisan(
       id,
@@ -62,7 +73,10 @@ export class UserAggregate {
       rating,
       skillSet,
       businessHours,
-      profilePicture || undefined
+      profilePicture || undefined,
+      isEmailVerified,
+      emailVerificationToken,
+      emailVerifiedAt
     );
     return new UserAggregate(artisan);
   }
@@ -74,7 +88,10 @@ export class UserAggregate {
     fullName: string,
     phoneNumber: string,
     permissions: string[],
-    profilePicture?: string | null
+    profilePicture?: string | null,
+    isEmailVerified?: boolean,
+    emailVerificationToken?: string | null,
+    emailVerifiedAt?: Date | null
   ) {
     const admin = new Admin(
       id,
@@ -83,9 +100,21 @@ export class UserAggregate {
       fullName,
       phoneNumber,
       permissions,
-      profilePicture || undefined
+      profilePicture || undefined,
+      isEmailVerified,
+      emailVerificationToken,
+      emailVerifiedAt
     );
     return new UserAggregate(admin);
+  }
+
+  markEmailAsVerified(): void {
+    this.isEmailVerified = true;
+    this.emailVerificationToken = undefined;
+  }
+
+  setEmailVerificationToken(token: string): void {
+    this.emailVerificationToken = token;
   }
 
   async changePassword(
@@ -458,6 +487,8 @@ export class UserAggregate {
     const password = Password.fromJSON(json.password || "");
     const profilePicture = json.profilePicture || null;
     const phoneNumber = json.phoneNumber || "";
+    const isEmailVerified = json.isEmailVerified || false;
+    const emailVerificationToken = json.emailVerificationToken || undefined;
 
     switch (role) {
       case "CLIENT":
@@ -475,7 +506,9 @@ export class UserAggregate {
           address,
           servicePreferences,
           profilePicture,
-          uploadedProducts
+          uploadedProducts,
+          isEmailVerified,
+          emailVerificationToken
         );
 
       case "ARTISAN":
@@ -498,7 +531,9 @@ export class UserAggregate {
           json.rating,
           skillSet,
           businessHours,
-          profilePicture
+          profilePicture,
+          isEmailVerified,
+          emailVerificationToken
         );
 
       case "ADMIN":
@@ -509,7 +544,9 @@ export class UserAggregate {
           fullName,
           phoneNumber,
           json.permissions || [],
-          profilePicture
+          profilePicture,
+          isEmailVerified,
+          emailVerificationToken
         );
 
       default:
@@ -540,6 +577,8 @@ export class UserAggregate {
       profilePicture: this.profilePicture,
       createdAt: this._user.createdAt,
       updatedAt: this._user.updatedAt,
+      isEmailVerified: this.isEmailVerified,
+      emailVerificationToken: this.emailVerificationToken,
       ...(this.isClient() && {
         deliveryAddress: this.deliveryAddress.toJSON(),
         servicePreferences: this.servicePreferences.toJSON(),

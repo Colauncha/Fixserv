@@ -19,4 +19,6 @@ router.post(
   controller.createOrder
 );
 
+router.get("/get/:id", controller.getBaseOrder);
+
 export { router as baseOrderRouter };

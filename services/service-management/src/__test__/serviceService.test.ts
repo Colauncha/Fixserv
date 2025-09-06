@@ -9,14 +9,17 @@ import { Service } from "../domain/entities/service";
 import { mockPublish } from "../test/__mocks__/redisBus";
 
 const mockSave = jest.fn();
+const mockCreate = jest.fn();
 const mockFindById = jest.fn();
 
 describe("serviceService", () => {
   const artisanRepository = { findById: mockFindById } as any;
   const serviceRepository = { save: mockSave } as any;
+  const offeredRepository = { create: mockCreate } as any;
   const serviceService = new ServiceService(
     serviceRepository,
-    artisanRepository
+    artisanRepository,
+    offeredRepository
   );
   it("should throw BadRequestError for invalid Artisan", async () => {
     mockFindById.mockResolvedValue(null);

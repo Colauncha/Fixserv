@@ -10,6 +10,8 @@ import { errorHandler } from "@fixserv-colauncha/shared";
 import morgan from "morgan";
 import helmet from "helmet";
 import { walletRouter } from "./routes/walletRoute";
+import { webhookRouter } from "./routes/webHookRoute";
+
 const app = express();
 
 app.set("trust proxy", true);
@@ -22,6 +24,8 @@ app.use(
     credentials: true,
   })
 );
+
+app.use("/api/wallet", webhookRouter);
 
 app.use(express.json());
 app.use(cookieParser());
