@@ -10,18 +10,32 @@ export class Artisan extends User {
     email: Email,
     password: Password,
     fullName: string,
-    phoneNumber:string,
+    phoneNumber: string,
     public businessName: string,
     public location: string,
     public rating: number,
     public skillSet: SkillSet,
     public businessHours: BusinessHours,
-    public profilePicture?: string ,// Optional field for profile picture URL
-    public isEmailVerified?: boolean,
-public   emailVerificationToken?: string | null,
-public   emailVerifiedAt?: Date | null,
+    public profilePicture?: string, // Optional field for profile picture URL
+    //public isEmailVerified?: boolean,
+    //public   emailVerificationToken?: string | null,
+    //public   emailVerifiedAt?: Date | null
+    isEmailVerified?: boolean,
+    emailVerificationToken?: string | null,
+    emailVerifiedAt?: Date | null
   ) {
-    super(id, email, password, fullName, "ARTISAN",phoneNumber, profilePicture);
+    super(
+      id,
+      email,
+      password,
+      fullName,
+      "ARTISAN",
+      phoneNumber,
+      profilePicture,
+      isEmailVerified,
+      emailVerificationToken,
+      emailVerifiedAt
+    );
   }
   addSkill(newSkill: string): Artisan {
     return new Artisan(
@@ -34,7 +48,12 @@ public   emailVerifiedAt?: Date | null,
       this.location,
       this.rating,
       this.skillSet.addSkill(newSkill),
-      this.businessHours
+      this.businessHours,
+      this.profilePicture,
+      // CRITICAL: Preserve email verification state when creating new instance
+      this.isEmailVerified,
+      this.emailVerificationToken,
+      this.emailVerifiedAt
     );
   }
   canProvideService(serviceType: string): boolean {

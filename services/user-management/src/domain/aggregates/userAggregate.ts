@@ -13,7 +13,7 @@ import { SkillSet } from "../value-objects/skillSet";
 export class UserAggregate {
   public isEmailVerified: boolean = false;
   public emailVerificationToken?: string;
-  private constructor(private readonly _user: User) {}
+  private constructor(public readonly _user: User) {}
 
   static createClient(
     id: string,

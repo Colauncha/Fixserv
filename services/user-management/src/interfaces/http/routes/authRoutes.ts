@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { UserRepositoryImpl } from "../../../infrastructure/persistence/userRepositoryImpl";
 import { JwtTokenService } from "../../../infrastructure/services/jwtTokenService";
 import { AuthService } from "../../../application/services/authService";
-import { AuthController } from "../../controllers/AuthController";
+import { AuthController } from "../../../interfaces/controllers/AuthController";
 import { AuthMiddleware } from "@fixserv-colauncha/shared";
 import { requireRole } from "@fixserv-colauncha/shared";
 import { ValidateRequest } from "@fixserv-colauncha/shared";

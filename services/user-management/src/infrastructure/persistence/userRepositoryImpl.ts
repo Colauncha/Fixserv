@@ -229,6 +229,10 @@ export class UserRepositoryImpl implements IUserRepository {
   }
 
   private toPersistence(user: UserAggregate): any {
+    console.log(
+      `Saving user ${user.id} - isEmailVerified: ${user.isEmailVerified}`
+    );
+
     const base = {
       _id: user.id,
       email: user.email,
@@ -239,7 +243,9 @@ export class UserRepositoryImpl implements IUserRepository {
       phoneNumber: user.phoneNumber,
       isEmailVerified: user.isEmailVerified,
       emailVerificationToken: user.emailVerificationToken,
-      emailVerifiedAt: user.isEmailVerified ? new Date() : null,
+      emailVerifiedAt: user.isEmailVerified
+        ? user._user.emailVerifiedAt || new Date()
+        : null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -387,6 +393,15 @@ export class UserRepositoryImpl implements IUserRepository {
   private toDomain(data: any): UserAggregate {
     let user: UserAggregate;
 
+    // CRITICAL: Extract email verification data first
+    const isEmailVerified = data.isEmailVerified || false;
+    const emailVerificationToken = data.emailVerificationToken || null;
+    const emailVerifiedAt = data.emailVerifiedAt || null;
+
+    console.log(
+      `Loading user ${data._id} - DB isEmailVerified: ${isEmailVerified}`
+    );
+
     if (data.role === "CLIENT") {
       console.log(
         "Database uploadedProducts:",
@@ -411,8 +426,9 @@ export class UserRepositoryImpl implements IUserRepository {
         ),
         data.profilePicture,
         data.uploadedProducts || [],
-        data.isEmailVerified,
-        data.emailVerificationToken
+        isEmailVerified,
+        emailVerificationToken,
+        emailVerifiedAt
       );
     } else if (data.role === "ARTISAN") {
       const skills = Array.isArray(data.skillSet)
@@ -431,8 +447,9 @@ export class UserRepositoryImpl implements IUserRepository {
         new SkillSet(skills),
         new BusinessHours(data.businessHours || {}),
         data.profilePicture,
-        data.isEmailVerified,
-        data.emailVerificationToken
+        isEmailVerified,
+        emailVerificationToken,
+        emailVerifiedAt
       );
     } else if (data.role === "ADMIN") {
       user = UserAggregate.createAdmin(
@@ -443,20 +460,27 @@ export class UserRepositoryImpl implements IUserRepository {
         data.phoneNumber,
         data.permissions || [],
         data.profilePicture,
-        data.isEmailVerified,
-        data.emailVerificationToken
+        // data.isEmailVerified,
+        // data.emailVerificationToken
+        isEmailVerified,
+        emailVerificationToken,
+        emailVerifiedAt
       );
     } else {
       throw new Error(`Unknown role ${data.role}`);
     }
 
-    // CRITICAL: Restore email verification state from database
-    if (data.isEmailVerified) {
-      user.markEmailAsVerified();
-    }
+    // CRITICAL: Restore email verification state from database AFTER creating the user
+    // This ensures the database state is preserved regardless of updates
+    user.isEmailVerified = data.isEmailVerified || false;
+
     if (data.emailVerificationToken) {
       user.setEmailVerificationToken(data.emailVerificationToken);
     }
+
+    console.log(
+      `User ${user.id} loaded - isEmailVerified: ${user.isEmailVerified}`
+    );
 
     return user;
   }
