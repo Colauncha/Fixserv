@@ -24,7 +24,29 @@ const start = async () => {
   try {
     await connectDB();
     await connectRedis();
-    app.use(rateLimiter());
+    // app.use(rateLimiter());
+    // Apply rate limiter only for public/external requests
+    app.use((req: any, res, next) => {
+      // Skip limiter for internal service-to-service calls
+      // In Docker, `req.hostname` or `req.ip` may be like 'user-management-srv' or internal IPs
+      const internalHosts = [
+        "user-management-srv",
+        "wallet-service-srv",
+        "service-management-srv",
+      ];
+      const internalIPs = ["127.0.0.1", "::1"];
+
+      if (
+        internalHosts.includes(req.hostname) ||
+        internalIPs.includes(req.ip)
+      ) {
+        return next();
+      }
+
+      // Otherwise, apply rate limiting
+      return rateLimiter()(req, res, next);
+    });
+
     app.listen(4000, () => {
       console.log("user-management is running on port 4000");
     });

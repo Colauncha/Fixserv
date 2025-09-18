@@ -10,6 +10,9 @@ export abstract class User {
     public role: "CLIENT" | "ARTISAN" | "ADMIN",
     public phoneNumber: string,
     public profilePicture?: string, // Optional field for profile picture URL
+    public isEmailVerified?: boolean,
+    public emailVerificationToken?: string | null,
+    public emailVerifiedAt?: Date | null,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date()
   ) {}

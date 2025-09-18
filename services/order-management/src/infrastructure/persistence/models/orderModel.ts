@@ -31,8 +31,15 @@ const OrderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
-      default: "PENDING",
+      enum: [
+        "PENDING_ARTISAN_RESPONSE",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "CANCELLED",
+        "REJECTED",
+        "ACCEPTED",
+      ],
+      default: "PENDING_ARTISAN_RESPONSE",
     },
     escrowStatus: {
       type: String,
@@ -65,6 +72,37 @@ const OrderSchema = new mongoose.Schema(
         uploadedAt: Date,
       },
     ],
+    // New fields for artisan response
+    artisanResponse: {
+      status: {
+        type: String,
+        enum: ["ACCEPTED", "REJECTED"],
+      },
+      respondedAt: {
+        type: Date,
+      },
+      rejectionReason: {
+        type: String,
+        enum: [
+          "TOO_BUSY",
+          "INSUFFICIENT_INFORMATION",
+          "OUT_OF_SERVICE_AREA",
+          "PRICE_TOO_LOW",
+          "OTHER",
+        ],
+      },
+      rejectionNote: {
+        type: String,
+      },
+      estimatedCompletionDate: {
+        type: Date,
+      },
+    },
+    artisanResponseDeadline: {
+      type: Date,
+      required: true,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+    },
   },
   { versionKey: false }
 );

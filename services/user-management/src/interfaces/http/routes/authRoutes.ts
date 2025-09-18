@@ -7,11 +7,11 @@ import { AuthMiddleware } from "@fixserv-colauncha/shared";
 import { requireRole } from "@fixserv-colauncha/shared";
 import { ValidateRequest } from "@fixserv-colauncha/shared";
 import { body } from "express-validator";
-import { ResendEmailService } from "../../../infrastructure/services/emailServiceImpls";
+import { EmailService } from "../../../infrastructure/services/emailServiceImpls";
 
 const router = express.Router();
 
-const emailService = new ResendEmailService();
+const emailService = new EmailService();
 const userRepository = new UserRepositoryImpl();
 const tokenService = new JwtTokenService();
 const authService = new AuthService(userRepository, tokenService, emailService);
@@ -55,8 +55,19 @@ router.post(
 
 router.post("/google-login", authController.googleLogin.bind(authController));
 
+router.get(
+  "/reset-password",
+  authController.showResetPasswordForm.bind(authController)
+);
+
 router.patch(
   "/reset-password",
+  [
+    body("newPassword")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters long"),
+  ],
+  validate.validateRequest,
   authController.resetPassword.bind(authController)
 );
 

@@ -16,7 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fixserv-colauncha/shared": "^1.0.20",
+    "@fixserv-colauncha/shared": "^1.0.21",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
@@ -35,9 +35,9 @@
     "mongodb-memory-server": "^10.1.4",
     "mongoose": "^8.13.3",
     "morgan": "^1.10.0",
+    "rate-limit-redis": "^4.2.1",
     "supertest": "^7.1.1",
     "ts-jest": "^29.4.0",
-    "rate-limit-redis": "^4.2.1",
     "uuid": "^11.1.0",
     "uuidv4": "^6.2.13"
   },

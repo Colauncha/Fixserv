@@ -7,9 +7,9 @@ export class ServiceCreatedEvent extends BaseEvent {
   constructor(
     public payload: {
       serviceId: string;
-       title: string;
-       artisanId:string,
-       serviceName:string
+      title: string;
+      artisanId: string;
+      serviceName: string;
       // createdAt: Date;
     }
   ) {

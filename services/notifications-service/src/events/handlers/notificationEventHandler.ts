@@ -158,17 +158,18 @@ export class NotificationEventHandler {
 
   private async handleOrderCreated(event: any): Promise<void> {
     try {
+      console.log("event:", event);
       // Notify artisan about new order
       await this.notificationService.createNotification({
         userId: event.payload.artisanId,
         type: "BOOKING_CONFIRMED",
         title: "New Order Received",
-        message: `You have received a new order for ${event.payload.serviceName}.`,
+        message: `You have received a new order for ${event.payload.title}.`,
         data: {
           orderId: event.payload.orderId,
           clientId: event.payload.clientId,
-          serviceName: event.payload.serviceName,
-          amount: event.payload.amount,
+          title: event.payload.title,
+          amount: event.payload.price,
         },
       });
 
@@ -177,12 +178,12 @@ export class NotificationEventHandler {
         userId: event.payload.clientId,
         type: "BOOKING_CONFIRMED",
         title: "Order Confirmed",
-        message: `Your order for ${event.payload.serviceName} has been confirmed.`,
+        message: `Your order for ${event.payload.title} has been confirmed.`,
         data: {
           orderId: event.payload.orderId,
           artisanId: event.payload.artisanId,
-          serviceName: event.payload.serviceName,
-          amount: event.payload.amount,
+          title: event.payload.title,
+          amount: event.payload.price,
         },
       });
 
@@ -261,7 +262,7 @@ export class NotificationEventHandler {
         message: `You have created a new service: ${event.payload.serviceName}.`,
         data: {
           serviceId: event.payload.serviceId,
-          serviceName: event.payload.serviceName||event.payload.title,
+          serviceName: event.payload.serviceName || event.payload.title,
         },
       });
 

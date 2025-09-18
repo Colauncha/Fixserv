@@ -4,6 +4,8 @@ import { OrderService } from "../../application/services/orderService";
 import { BadRequestError } from "@fixserv-colauncha/shared";
 import { PaystackClient } from "../../infrastructure/reuseableWrapper/paystackClient";
 import { OrderModel } from "../../infrastructure/persistence/models/orderModel";
+// Change this import to import the enum/object, not just the type
+import { RejectionReason } from "../../domain/entities/order";
 
 export class OrderController {
   constructor(private orderService: OrderService) {}
@@ -141,4 +143,161 @@ export class OrderController {
     }
     return res.status(400).json({ message: "Payment not successful" });
   }
+
+  // NEW METHODS FOR ARTISAN RESPONSE
+
+  acceptOrder = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { orderId } = req.params;
+      const { estimatedCompletionDate } = req.body;
+      const artisanId = req.currentUser!.id;
+
+      const completionDate = estimatedCompletionDate
+        ? new Date(estimatedCompletionDate)
+        : undefined;
+
+      await this.orderService.acceptOrder(orderId, artisanId, completionDate);
+
+      res.status(200).json({
+        message: "Order accepted successfully",
+        orderId,
+        estimatedCompletionDate: completionDate,
+      });
+    } catch (error: any) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Error accepting order:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    }
+  };
+
+  rejectOrder = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { orderId } = req.params;
+      const { reason, note } = req.body;
+      const artisanId = req.currentUser!.id;
+
+      //if (!reason || !Object.values(RejectionReason).includes(reason)) {
+      //  res.status(400).json({
+      //    error: "Valid rejection reason is required",
+      //    validReasons: Object.values(RejectionReason),
+      //  });
+      //}
+      await this.orderService.rejectOrder(orderId, artisanId, reason, note);
+
+      res.status(200).json({
+        message: "Order rejected successfully",
+        orderId,
+        reason,
+        note,
+      });
+    } catch (error: any) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Error rejecting order:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    }
+  };
+
+  startWork = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { orderId } = req.params;
+      const artisanId = req.currentUser!.id;
+
+      await this.orderService.startWork(orderId, artisanId);
+
+      res.status(200).json({
+        message: "Work started on order",
+        orderId,
+      });
+    } catch (error: any) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Error starting work:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    }
+  };
+
+  getArtisanOrders = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const artisanId = req.currentUser!.id;
+      const { status } = req.query;
+
+      const orders = await this.orderService.getArtisanOrders(
+        artisanId,
+        status as string
+      );
+
+      res.status(200).json({
+        artisanId,
+        totalOrders: orders.length,
+        status: status || "all",
+        orders,
+      });
+    } catch (error: any) {
+      console.error("Error fetching artisan orders:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  };
+
+  getClientOrders = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const clientId = req.currentUser!.id;
+      const { status } = req.query;
+
+      const orders = await this.orderService.getClientOrders(
+        clientId,
+        status as string
+      );
+
+      res.status(200).json({
+        clientId,
+        totalOrders: orders.length,
+        status: status || "all",
+        orders,
+      });
+    } catch (error: any) {
+      console.error("Error fetching client orders:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  };
+
+  getPendingOrdersForArtisan = async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const artisanId = req.currentUser!.id;
+
+      const orders = await this.orderService.getPendingOrdersForArtisan(
+        artisanId
+      );
+
+      res.status(200).json({
+        artisanId,
+        pendingOrders: orders.length,
+        orders: orders.map((order) => ({
+          ...order,
+          timeLeft:
+            order.artisanResponseDeadline.getTime() - new Date().getTime(),
+          timeLeftHours: Math.max(
+            0,
+            Math.ceil(
+              (order.artisanResponseDeadline.getTime() - new Date().getTime()) /
+                (1000 * 60 * 60)
+            )
+          ),
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error fetching pending orders:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  };
 }

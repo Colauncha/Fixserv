@@ -9,12 +9,12 @@ import { BadRequestError, redis } from "@fixserv-colauncha/shared";
 import { AuthService } from "../../application/services/authService";
 
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
-import { ResendEmailService } from "../../infrastructure/services/emailServiceImpls";
+import { EmailService } from "../../infrastructure/services/emailServiceImpls";
 
 const userRepository = new UserRepositoryImpl();
 const userService = new UserService(userRepository);
 const tokenService = new JwtTokenService();
-const emailService = new ResendEmailService();
+const emailService = new EmailService();
 
 const authService = new AuthService(userRepository, tokenService, emailService);
 

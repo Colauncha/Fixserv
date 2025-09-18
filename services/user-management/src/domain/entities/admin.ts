@@ -10,7 +10,10 @@ export class Admin extends User {
     fullName: string,
     phoneNumber: string,
     public permissions: string[],
-    public profilePicture?: string // Optional field for profile picture URL
+    public profilePicture?: string, // Optional field for profile picture URL
+    public isEmailVerified?: boolean,
+    public emailVerificationToken?: string | null,
+    public emailVerifiedAt?: Date | null
   ) {
     super(id, email, password, fullName, "ADMIN", phoneNumber, profilePicture);
   }

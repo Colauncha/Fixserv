@@ -6,6 +6,7 @@ import { NotFoundError, BadRequestError } from "@fixserv-colauncha/shared";
 import { getOfferedServiceById } from "../../infrastructure/reuseableWrapper/getUserProfile";
 import { BaseOrder } from "../../domain/entities/baseOrder";
 import { IBaseOrderRepository } from "../../domain/repositories/baseOrderRepository";
+import { WalletClient } from "../../infrastructure/reuseableWrapper/walletClient";
 
 export class OfferedOrder {
   constructor(private baseOrderRepository: IBaseOrderRepository) {}
@@ -26,8 +27,34 @@ export class OfferedOrder {
       offeredService.data.baseServiceId,
       offeredService.data.price
     );
+    console.log("baseOrder", baseOrder);
 
     await this.baseOrderRepository.create(baseOrder);
+    // Lock funds in client wallet
+    await WalletClient.lockFundsForOrder(
+      baseOrder.clientId,
+      baseOrder.id,
+      baseOrder.price
+    );
+    //PUBLISH Event
+    //const event = new BaseOrderCreatedEvent({
+    //  orderId: saveOrder.id,
+    //  clientId: client.id,
+    //  artisanId: service.artisanId,
+    //  serviceId: service.id,
+    //  price: service.details.price,
+    //  clientAddress: client.deliveryAddress,
+    //  createdAt: saveOrder.createdAt.toISOString(),
+    //});
+    // await this.eventBus.publish("base_order_events", event);
+    return baseOrder;
+  }
+
+  async getBaseOrderById(id: string): Promise<BaseOrder | null> {
+    const baseOrder = await this.baseOrderRepository.findById(id);
+    if (!baseOrder) {
+      throw new BadRequestError("Id does not belong to any base order");
+    }
     return baseOrder;
   }
 }

@@ -9,4 +9,10 @@ export interface IUser extends Document {
   profilePicture?: string; // Optional field for profile picture URL
   createdAt: Date;
   updatedAt: Date;
+
+  isEmailVerified: boolean;
+
+  emailVerificationToken: string;
+
+  emailVerifiedAt: Date;
 }

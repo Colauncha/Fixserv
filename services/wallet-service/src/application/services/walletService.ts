@@ -8,6 +8,9 @@ import {
   WalletTransactionModel,
 } from "../../infrastructure/persistence/models/walletModel";
 
+const userCache = new Map<string, { user: any; timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const verificationInProgress = new Map<string, Promise<any>>();
 export class WalletService {
   static async initiateTopup(amount: number, email: string) {
     try {
@@ -21,10 +24,16 @@ export class WalletService {
       throw new Error("Failed to initiate topup");
     }
   }
+  /*
   static async verifyTopup(reference: string) {
     try {
       const result = await PaystackService.verifyPayment(reference);
-      const { amount, customer } = result;
+      const { amount, customer, status } = result;
+      if (status !== "success") {
+        throw new BadRequestError(
+          `Payment status is '${status}', expected 'success'`
+        );
+      }
       const email = customer.email;
 
       const user = await this.getUserByEmail(email);
@@ -56,6 +65,134 @@ export class WalletService {
       throw new Error("Failed to verify topup");
     }
   }
+    */
+  // Add this to prevent duplicate verification attempts
+
+  static async verifyTopup(reference: string) {
+    try {
+      console.log(`Starting payment verification for reference: ${reference}`);
+
+      // Check if verification is already in progress
+      if (verificationInProgress.has(reference)) {
+        console.log(
+          `Verification already in progress for ${reference}, waiting...`
+        );
+        return await verificationInProgress.get(reference);
+      }
+
+      // Create verification promise
+      const verificationPromise = this.performVerification(reference);
+      verificationInProgress.set(reference, verificationPromise);
+
+      try {
+        const result = await verificationPromise;
+        return result;
+      } finally {
+        // Clean up after completion
+        verificationInProgress.delete(reference);
+      }
+    } catch (error: any) {
+      verificationInProgress.delete(reference);
+      throw error;
+    }
+  }
+
+  private static async performVerification(reference: string) {
+    const result = await PaystackService.verifyPayment(reference);
+    const { amount, customer, status } = result;
+
+    console.log(`Payment verification result:`, {
+      amount,
+      status,
+      email: customer.email,
+    });
+
+    if (status !== "success") {
+      throw new BadRequestError(
+        `Payment status is '${status}', expected 'success'`
+      );
+    }
+
+    const email = customer.email;
+
+    // Enhanced user fetching with retry logic
+    let user;
+    try {
+      user = await this.getUserByEmail(email);
+      console.log(`User found:`, { id: user.id, email: user.email });
+    } catch (userError: any) {
+      console.error(
+        `Failed to fetch user for email ${email}:`,
+        userError.message
+      );
+
+      // Provide more specific error messages
+      if (userError.message.includes("Rate limited")) {
+        throw new BadRequestError(
+          "User service is temporarily unavailable due to rate limiting. Please try again in a few minutes."
+        );
+      }
+
+      if (userError.message.includes("User not found")) {
+        throw new BadRequestError(`No user found with email: ${email}`);
+      }
+
+      throw new BadRequestError(
+        "Unable to verify user information. Please try again later."
+      );
+    }
+
+    if (!user) {
+      throw new BadRequestError("User not found");
+    }
+
+    // Check if this payment has already been processed
+    const existingWallet = await WalletModel.findOne({
+      userId: user.id,
+      "transactions.reference": reference,
+    });
+
+    if (existingWallet) {
+      console.log(`Payment ${reference} already processed for user ${user.id}`);
+      return {
+        message: "Payment already processed",
+        wallet: existingWallet,
+      };
+    }
+
+    // Proceed with wallet update
+    const wallet = await WalletModel.findOneAndUpdate(
+      { userId: user.id },
+      {
+        $inc: { balance: amount / 100 },
+        $push: {
+          transactions: {
+            type: "CREDIT",
+            amount: amount / 100,
+            reference,
+            createdAt: new Date(),
+          },
+        },
+        $setOnInsert: {
+          userId: user.id,
+          role: user.role,
+          lockedBalance: 0,
+          status: "ACTIVE",
+          createdAt: new Date(),
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    console.log(`Wallet updated successfully for user ${user.id}`);
+
+    return {
+      message: "Topup successful",
+      wallet,
+    };
+  }
+
+  /*
   static async getUserByEmail(email: string) {
     try {
       const response = await axios.get(
@@ -70,6 +207,96 @@ export class WalletService {
     } catch (error) {
       console.error("Error fetching user by email:", error);
       throw new Error("Failed to fetch user by email");
+    }
+  }
+    */
+  static async getUserByEmail(email: string, maxRetries = 3) {
+    // Check cache first
+    const cached = userCache.get(email);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log(`Returning cached user for ${email}`);
+      return cached.user;
+    }
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Fix the URL construction - make sure it matches your actual endpoint
+        const url = `${process.env.USER_MANAGEMENT_URL}/users/email/${email}`;
+        console.log(`Attempt ${attempt} - Fetching user from: ${url}`);
+
+        const response = await axios.get(url, {
+          timeout: 15000, // 15 second timeout
+          headers: {
+            "User-Agent": "WalletService/1.0",
+            Accept: "application/json",
+            "X-Internal-Service": "true",
+            "X-Service-Name": "wallet-service",
+            // If you have service-to-service authentication, add it here:
+            // 'Authorization': `Bearer ${process.env.INTERNAL_SERVICE_TOKEN}`
+          },
+        });
+
+        // Cache the successful response
+        userCache.set(email, {
+          user: response.data,
+          timestamp: Date.now(),
+        });
+
+        console.log(`Successfully fetched user for ${email}`);
+        return response.data;
+      } catch (error: any) {
+        console.error(`Attempt ${attempt} - Error fetching user by email:`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+          email: email,
+        });
+
+        // Handle rate limiting specifically
+        if (error.response?.status === 429) {
+          if (attempt < maxRetries) {
+            // Exponential backoff: 2^attempt * 2 seconds
+            const delayMs = Math.pow(2, attempt) * 2000;
+            console.log(`Rate limited. Retrying in ${delayMs}ms...`);
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+            continue;
+          } else {
+            // Check if we have any cached data, even if expired
+            const expiredCache = userCache.get(email);
+            if (expiredCache) {
+              console.log(
+                `Using expired cache for ${email} due to persistent rate limiting`
+              );
+              return expiredCache.user;
+            }
+            throw new Error(
+              `Rate limited after ${maxRetries} attempts. Please try again later.`
+            );
+          }
+        }
+
+        // Handle other HTTP errors
+        if (error.response?.status === 404) {
+          throw new Error("User not found");
+        }
+
+        if (error.response?.status >= 500) {
+          if (attempt < maxRetries) {
+            const delayMs = 1000 * attempt; // Linear backoff for server errors
+            console.log(`Server error. Retrying in ${delayMs}ms...`);
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+            continue;
+          }
+        }
+
+        // If we've exhausted retries or it's not a retryable error
+        if (attempt === maxRetries) {
+          throw new Error(
+            "Failed to fetch user by email after multiple attempts"
+          );
+        }
+      }
     }
   }
 
@@ -384,3 +611,62 @@ export class WalletService {
     }
   }
 }
+
+/*
+  // Simple in-memory cache
+const userCache = new Map<string, { user: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+static async getUserByEmail(email: string, maxRetries = 3) {
+  // Check cache first
+  const cached = userCache.get(email);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`Returning cached user for ${email}`);
+    return cached.user;
+  }
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios.get(
+        `${process.env.USER_MANAGEMENT_URL}/api/admin/users/email/${email}`,
+        {
+          timeout: 10000,
+          headers: {
+            'User-Agent': 'WalletService/1.0',
+          }
+        }
+      );
+
+      // Cache the successful response
+      userCache.set(email, {
+        user: response.data,
+        timestamp: Date.now()
+      });
+
+      return response.data;
+    } catch (error: any) {
+      // ... rest of error handling logic from previous example
+      console.error(`Attempt ${attempt} - Error fetching user by email:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        email: email
+      });
+
+      if (error.response?.status === 429) {
+        if (attempt < maxRetries) {
+          const delayMs = Math.pow(2, attempt) * 1000;
+          console.log(`Rate limited. Retrying in ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue;
+        } else {
+          throw new Error(`Rate limited after ${maxRetries} attempts. Please try again later.`);
+        }
+      }
+
+      if (attempt === maxRetries) {
+        throw new Error("Failed to fetch user by email after multiple attempts");
+      }
+    }
+  }
+}
+ */

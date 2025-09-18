@@ -9,7 +9,7 @@ import { NotAuthorizeError } from "@fixserv-colauncha/shared";
 import { BadRequestError } from "@fixserv-colauncha/shared";
 import { Password } from "../../domain/value-objects/password";
 import { redis, connectRedis } from "@fixserv-colauncha/shared";
-import { EmailService } from "../../infrastructure/services/emailService";
+import { IEmailService } from "../../infrastructure/services/emailService";
 import { Email } from "../../domain/value-objects/email";
 import { DeliveryAddress } from "../../domain/value-objects/deliveryAddress";
 import { ServicePreferences } from "../../domain/value-objects//servicePreferences";
@@ -20,9 +20,9 @@ export class AuthService implements IAuthService {
   constructor(
     private userRepository: IUserRepository,
     private tokenService: TokenService,
-    private emailService: EmailService
+    private emailService: IEmailService
   ) {}
-
+  /*
   async login(
     email: string,
     password: string
@@ -59,6 +59,10 @@ export class AuthService implements IAuthService {
     if (!isMatch) {
       throw new NotAuthorizeError();
     }
+    // Optional: Check if email is verified before allowing login
+    if (!user.isEmailVerified) {
+      throw new BadRequestError("Email not verified");
+    }
 
     const BearerToken = this.tokenService.generateBearerToken(
       user.id,
@@ -67,6 +71,54 @@ export class AuthService implements IAuthService {
     );
 
     return { user, BearerToken };
+  }
+    */
+  async login(
+    email: string,
+    password: string
+  ): Promise<{ user: UserAggregate; BearerToken: string }> {
+    if (!password) {
+      throw new BadRequestError("Password is required");
+    }
+
+    await connectRedis();
+
+    // ALWAYS fetch fresh user data for login to avoid cache issues
+    const foundUser = await this.userRepository.findByEmail(email);
+    if (!foundUser) {
+      throw new BadRequestError("No user with that email exists");
+    }
+
+    const passwordData = Password.fromHash(foundUser.password);
+    const isMatch = await passwordData.compare(password);
+
+    if (!isMatch) {
+      throw new NotAuthorizeError();
+    }
+
+    // Check if email is verified AFTER password validation
+    if (!foundUser.isEmailVerified) {
+      throw new BadRequestError("Email not verified");
+    }
+
+    // Update cache with fresh user data after successful login
+    const cacheKey = `user:email:${email}`;
+    const userIdCacheKey = `user:${foundUser.id}`;
+
+    await redis.set(cacheKey, JSON.stringify(foundUser.toJSON()), {
+      EX: 60 * 10, // 10 minutes
+    });
+    await redis.set(userIdCacheKey, JSON.stringify(foundUser.toJSON()), {
+      EX: 60 * 10, // 10 minutes
+    });
+
+    const BearerToken = this.tokenService.generateBearerToken(
+      foundUser.id,
+      foundUser.email,
+      foundUser.role
+    );
+
+    return { user: foundUser, BearerToken };
   }
 
   async findUserById(id: string): Promise<UserAggregate> {
@@ -224,8 +276,40 @@ export class AuthService implements IAuthService {
     console.log(`Cache invalidated for user:${userId}`);
   }
 
+  async invalidateEmailCache(email: string): Promise<void> {
+    const cacheKey = `user:email:${email}`;
+    await connectRedis();
+    await redis.del(cacheKey);
+    console.log(`Cache invalidated for email:${email}`);
+  }
+
   async refreshUserCache(userId: string): Promise<UserAggregate> {
     await this.invalidateUserCache(userId);
     return await this.findUserById(userId);
+  }
+
+  validatePasswordResetToken(token: string): string | null {
+    try {
+      return this.tokenService.validatePasswordResetToken(token);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Add this method for email verification
+  async markEmailAsVerified(userId: string): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestError("User not found");
+    }
+
+    user.markEmailAsVerified();
+    await this.userRepository.save(user);
+
+    // CRITICAL: Invalidate both caches after email verification
+    await this.invalidateUserCache(userId);
+    await this.invalidateEmailCache(user.email);
+
+    console.log(`Email verified and cache invalidated for user: ${userId}`);
   }
 }

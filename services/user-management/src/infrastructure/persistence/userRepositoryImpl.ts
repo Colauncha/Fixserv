@@ -237,6 +237,9 @@ export class UserRepositoryImpl implements IUserRepository {
       role: user.role,
       profilePicture: user.profilePicture || null,
       phoneNumber: user.phoneNumber,
+      isEmailVerified: user.isEmailVerified,
+      emailVerificationToken: user.emailVerificationToken,
+      emailVerifiedAt: user.isEmailVerified ? new Date() : null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -314,6 +317,7 @@ export class UserRepositoryImpl implements IUserRepository {
     throw new Error(`Unknown role ${data.role}`);
   }
     */
+  /*
   private toDomain(data: any): UserAggregate {
     if (data.role === "CLIENT") {
       console.log(
@@ -379,7 +383,83 @@ export class UserRepositoryImpl implements IUserRepository {
 
     throw new Error(`Unknown role ${data.role}`);
   }
+*/
+  private toDomain(data: any): UserAggregate {
+    let user: UserAggregate;
 
+    if (data.role === "CLIENT") {
+      console.log(
+        "Database uploadedProducts:",
+        data.uploadedProducts?.length || 0
+      );
+
+      user = UserAggregate.createClient(
+        data._id.toString(),
+        new Email(data.email),
+        Password.fromHash(data.password),
+        data.fullName,
+        data.phoneNumber,
+        new DeliveryAddress(
+          data.deliveryAddress?.street || "",
+          data.deliveryAddress?.city || "",
+          data.deliveryAddress?.postalCode || "",
+          data.deliveryAddress?.state || "",
+          data.deliveryAddress?.country || ""
+        ),
+        new ServicePreferences(
+          Array.isArray(data.servicePreferences) ? data.servicePreferences : []
+        ),
+        data.profilePicture,
+        data.uploadedProducts || [],
+        data.isEmailVerified,
+        data.emailVerificationToken
+      );
+    } else if (data.role === "ARTISAN") {
+      const skills = Array.isArray(data.skillSet)
+        ? data.skillSet
+        : ["General Repair"];
+
+      user = UserAggregate.createArtisan(
+        data._id.toString(),
+        new Email(data.email),
+        Password.fromHash(data.password),
+        data.fullName,
+        data.phoneNumber,
+        data.businessName || "",
+        data.location || "",
+        data.rating || 0,
+        new SkillSet(skills),
+        new BusinessHours(data.businessHours || {}),
+        data.profilePicture,
+        data.isEmailVerified,
+        data.emailVerificationToken
+      );
+    } else if (data.role === "ADMIN") {
+      user = UserAggregate.createAdmin(
+        data._id.toString(),
+        new Email(data.email),
+        Password.fromHash(data.password),
+        data.fullName,
+        data.phoneNumber,
+        data.permissions || [],
+        data.profilePicture,
+        data.isEmailVerified,
+        data.emailVerificationToken
+      );
+    } else {
+      throw new Error(`Unknown role ${data.role}`);
+    }
+
+    // CRITICAL: Restore email verification state from database
+    if (data.isEmailVerified) {
+      user.markEmailAsVerified();
+    }
+    if (data.emailVerificationToken) {
+      user.setEmailVerificationToken(data.emailVerificationToken);
+    }
+
+    return user;
+  }
   toJSON(user: UserAggregate): any {
     const base = {
       _id: user.id,
@@ -388,6 +468,7 @@ export class UserRepositoryImpl implements IUserRepository {
       role: user.role,
       phoneNumber: user.phoneNumber,
       profilePicture: user.profilePicture,
+      isEmailVerified: user.isEmailVerified,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
