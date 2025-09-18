@@ -1,12 +1,32 @@
+import axios from "axios";
 import { AuthMiddleware, ValidateRequest } from "@fixserv-colauncha/shared";
 import { Router } from "express";
-import { body } from "express-validator";
+import { body, param, query } from "express-validator";
 import express, { Request, Response } from "express";
 import { WalletService } from "../../../application/services/walletService";
 import { WalletController } from "../../../interfaces/controller/walletController";
 const authMiddleware = new AuthMiddleware();
 const validate = new ValidateRequest();
 const router = Router();
+
+const service = `${process.env.WALLET_SERVICE_URL}/api/wallet/health`;
+setInterval(async () => {
+  for (const url of [service]) {
+    try {
+      await axios.get(url, { timeout: 5000 });
+      console.log(`✅ Pinged ${url}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to ping ${url}:`, error.message);
+    }
+  }
+}, 2 * 60 * 1000); // every 5 minutes
+router.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "wallet-service",
+  });
+});
 
 router.post(
   "/top-up",
@@ -42,6 +62,96 @@ router.post(
 //  res.status(200).json(data);
 //});
 
+/////////////////////////////
+// ==================== WITHDRAWAL ROUTES ====================
+
+// Get banks list for withdrawal
+router.get("/withdrawal/banks", WalletController.getBanksListHandler);
+
+// Resolve account details
+router.post(
+  "/withdrawal/resolve-account",
+  [
+    body("accountNumber")
+      .isLength({ min: 10, max: 10 })
+      .withMessage("Account number must be 10 digits")
+      .matches(/^\d+$/)
+      .withMessage("Account number must contain only digits"),
+    body("bankCode").notEmpty().withMessage("Bank code is required"),
+  ],
+  validate.validateRequest,
+  WalletController.resolveAccountHandler
+);
+
+// Initiate withdrawal
+router.post(
+  "/withdrawal/initiate",
+  [
+    body("userId").notEmpty().withMessage("User ID is required"),
+    body("amount")
+      .isFloat({ min: 100 })
+      .withMessage("Amount must be at least 100 NGN"),
+    body("accountNumber")
+      .isLength({ min: 10, max: 10 })
+      .withMessage("Account number must be 10 digits")
+      .matches(/^\d+$/)
+      .withMessage("Account number must contain only digits"),
+    body("bankCode").notEmpty().withMessage("Bank code is required"),
+    body("pin")
+      .optional()
+      .isLength({ min: 4 })
+      .withMessage("PIN must be at least 4 characters"),
+  ],
+  validate.validateRequest,
+  WalletController.initiateWithdrawalHandler
+);
+
+// Process withdrawal (admin/automated endpoint)
+router.post(
+  "/withdrawal/process/:withdrawalId",
+  [param("withdrawalId").notEmpty().withMessage("Withdrawal ID is required")],
+  validate.validateRequest,
+  // authMiddleware.requireAdmin, // Uncomment if you have admin middleware
+  WalletController.processWithdrawalHandler
+);
+
+// Get withdrawal history for a user
+router.get(
+  "/withdrawal/history/:userId",
+  [
+    param("userId").notEmpty().withMessage("User ID is required"),
+    query("page")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("Page must be a positive integer"),
+    query("limit")
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage("Limit must be between 1 and 100"),
+  ],
+  validate.validateRequest,
+  WalletController.getWithdrawalHistoryHandler
+);
+
+// Get pending withdrawals (admin endpoint)
+router.get(
+  "/withdrawal/pending",
+  // authMiddleware.requireAdmin, // Uncomment if you have admin middleware
+  WalletController.getPendingWithdrawalsHandler
+);
+
+// Cancel withdrawal
+router.delete(
+  "/withdrawal/cancel/:userId/:withdrawalId",
+  [
+    param("userId").notEmpty().withMessage("User ID is required"),
+    param("withdrawalId").notEmpty().withMessage("Withdrawal ID is required"),
+  ],
+  validate.validateRequest,
+  WalletController.cancelWithdrawalHandler
+);
+///////////////////////////////////////////////////////
+
 router.post("/lock-funds", WalletController.lockFundsForOrderHandler);
 
 router.post("/release-funds", WalletController.releaseFundsToArtisanHandler);
@@ -71,6 +181,31 @@ router.get(
 
 // Health check for webhook
 router.get("/webhook/health", WalletController.webhookHealthCheck);
+
+// Add these routes to your existing router
+// routes/walletRoutes.ts (additional routes)
+
+// Referral and Fixpoints routes
+router.post("/signup", WalletController.handleNewUserSignupHandler);
+router.post(
+  "/artisan/verify",
+  WalletController.handleArtisanVerificationHandler
+);
+router.get(
+  "/fixpoints/balance/:userId",
+  WalletController.getFixpointsBalanceHandler
+);
+router.post("/fixpoints/redeem", WalletController.redeemFixpointsHandler);
+router.get("/referral/info/:userId", WalletController.getReferralInfoHandler);
+router.get(
+  "/fixpoints/history/:userId",
+  WalletController.getFixpointsTransactionHistoryHandler
+);
+router.get(
+  "/referral/validate/:code",
+  WalletController.validateReferralCodeHandler
+);
+router.get("/referral/analytics", WalletController.getReferralAnalyticsHandler); // Admin only
 
 //router.get("/paystack/webhook/test", (req, res) => {
 //  console.log("🧪 Webhook test endpoint called");

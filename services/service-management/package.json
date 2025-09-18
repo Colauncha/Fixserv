@@ -16,7 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fixserv-colauncha/shared": "^1.0.21",
+    "@fixserv-colauncha/shared": "^1.0.25",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",

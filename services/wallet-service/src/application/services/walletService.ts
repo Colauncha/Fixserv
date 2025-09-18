@@ -6,6 +6,7 @@ import { BadRequestError } from "@fixserv-colauncha/shared";
 import {
   WalletModel,
   WalletTransactionModel,
+  WithdrawalRequestModel,
 } from "../../infrastructure/persistence/models/walletModel";
 
 const userCache = new Map<string, { user: any; timestamp: number }>();
@@ -14,11 +15,11 @@ const verificationInProgress = new Map<string, Promise<any>>();
 export class WalletService {
   static async initiateTopup(amount: number, email: string) {
     try {
-      const paymentUrl = await PaystackService.initializePayment(
+      const paymentData = await PaystackService.initializePayment(
         amount * 100,
         email
       );
-      return paymentUrl;
+      return paymentData;
     } catch (error) {
       console.error("Error initiating topup:", error);
       throw new Error("Failed to initiate topup");
@@ -608,6 +609,561 @@ export class WalletService {
     } catch (error) {
       console.error("Error fetching transaction history:", error);
       throw new Error("Failed to fetch transaction history");
+    }
+  }
+  /**
+   * Get list of available banks for withdrawal
+   */
+  static async getBanksList() {
+    try {
+      return await PaystackService.getBanks();
+    } catch (error: any) {
+      console.error("Error fetching banks:", error);
+      throw new BadRequestError("Failed to fetch banks list");
+    }
+  }
+
+  /**
+   * Resolve account number to get account name
+   */
+  static async resolveAccountDetails(accountNumber: string, bankCode: string) {
+    try {
+      const result = await PaystackService.resolveAccountNumber(
+        accountNumber,
+        bankCode
+      );
+      return {
+        accountNumber: result.account_number,
+        accountName: result.account_name,
+        bankId: result.bank_id,
+      };
+    } catch (error: any) {
+      console.error("Error resolving account:", error);
+      throw new BadRequestError(
+        "Failed to resolve account details. Please check account number and bank code."
+      );
+    }
+  }
+
+  /**
+   * Initiate withdrawal request
+   */
+  static async initiateWithdrawal(
+    userId: string,
+    amount: number,
+    accountNumber: string,
+    bankCode: string,
+    pin?: string // Optional security PIN
+  ) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      console.log(
+        `Initiating withdrawal for user ${userId}, amount: ${amount}`
+      );
+
+      // Validate minimum withdrawal amount
+      const MIN_WITHDRAWAL = 100; // 100 NGN minimum
+      if (amount < MIN_WITHDRAWAL) {
+        throw new BadRequestError(
+          `Minimum withdrawal amount is ₦${MIN_WITHDRAWAL}`
+        );
+      }
+
+      // Get user wallet
+      const wallet = await WalletModel.findOne({ userId }).session(session);
+      if (!wallet) {
+        throw new BadRequestError("Wallet not found");
+      }
+
+      // Check if user has sufficient balance
+      const availableBalance = wallet.balance - wallet.lockedBalance;
+      if (availableBalance < amount) {
+        throw new BadRequestError(
+          `Insufficient balance. Available: ₦${availableBalance}`
+        );
+      }
+
+      // Resolve account details
+      const accountDetails = await this.resolveAccountDetails(
+        accountNumber,
+        bankCode
+      );
+
+      // Create transfer recipient
+      const recipient = await PaystackService.createTransferRecipient(
+        accountNumber,
+        bankCode,
+        accountDetails.accountName
+      );
+
+      // Generate unique reference
+      const reference = `WD_${userId}_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
+      // Create withdrawal request record
+      const withdrawalRequest = new WithdrawalRequestModel({
+        userId,
+        amount,
+        recipientCode: recipient.recipient_code,
+        accountNumber,
+        bankCode,
+        accountName: recipient.name,
+        reference,
+        status: "PENDING",
+      });
+
+      // Lock funds in wallet (similar to order escrow)
+      wallet.balance -= amount;
+      wallet.lockedBalance += amount;
+
+      // Add transaction record
+      wallet.transactions.push({
+        id: uuidv4(),
+        type: "DEBIT",
+        purpose: "WITHDRAWAL_PENDING",
+        amount,
+        reference,
+        description: `Withdrawal to ${recipient.name} - ${accountNumber}`,
+        createdAt: new Date(),
+        status: "PENDING",
+      });
+
+      // Save all changes
+      await wallet.save({ session });
+      await withdrawalRequest.save({ session });
+
+      await session.commitTransaction();
+
+      console.log(`Withdrawal request created: ${reference}`);
+
+      return {
+        message: "Withdrawal request created successfully",
+        withdrawalId: withdrawalRequest.id,
+        reference,
+        accountName: recipient.name,
+        amount,
+        status: "PENDING",
+      };
+    } catch (error: any) {
+      await session.abortTransaction();
+      console.error("Error initiating withdrawal:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async processWithdrawal(withdrawalId: string) {
+    try {
+      console.log(`Processing withdrawal: ${withdrawalId}`);
+
+      // Step 1: Validate and update withdrawal status
+      const withdrawalRequest = await this.updateWithdrawalToProcessing(
+        withdrawalId
+      );
+
+      // Step 2: Attempt the transfer
+      try {
+        const transferResult = await PaystackService.initializeTransfer(
+          withdrawalRequest.amount * 100, // Convert to kobo
+          withdrawalRequest.recipientCode,
+          withdrawalRequest.reason || "Wallet withdrawal"
+        );
+
+        // Step 3: Update with transfer details
+        await WithdrawalRequestModel.findByIdAndUpdate(withdrawalRequest._id, {
+          transferCode: transferResult.transfer_code,
+          status: "PROCESSING", // Will be updated to COMPLETED via webhook
+        });
+
+        console.log(`Transfer initiated: ${transferResult.transfer_code}`);
+
+        return {
+          message: "Withdrawal is being processed",
+          transferCode: transferResult.transfer_code,
+          reference: withdrawalRequest.reference,
+          status: "PROCESSING",
+        };
+      } catch (transferError: any) {
+        console.error("Transfer failed:", transferError);
+
+        // Handle the failure (revert status and refund user)
+        await this.handleWithdrawalFailure(
+          withdrawalRequest.reference,
+          transferError.message || "Transfer failed"
+        );
+
+        throw new BadRequestError(
+          `Withdrawal failed: ${transferError.message}`
+        );
+      }
+    } catch (error: any) {
+      console.error("Process withdrawal error:", error);
+      throw error;
+    }
+  }
+
+  private static async updateWithdrawalToProcessing(withdrawalId: string) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      // Get withdrawal request
+      const withdrawalRequest = await WithdrawalRequestModel.findOne({
+        $or: [{ id: withdrawalId }, { reference: withdrawalId }],
+      }).session(session);
+
+      if (!withdrawalRequest) {
+        throw new BadRequestError("Withdrawal request not found");
+      }
+
+      if (withdrawalRequest.status !== "PENDING") {
+        throw new BadRequestError(
+          `Withdrawal is ${withdrawalRequest.status.toLowerCase()}, cannot process`
+        );
+      }
+
+      // Update status to processing
+      withdrawalRequest.status = "PROCESSING";
+      await withdrawalRequest.save({ session });
+
+      await session.commitTransaction();
+
+      return withdrawalRequest;
+    } catch (error: any) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Process withdrawal (actually send the money via Paystack)
+   * This should be called after any required approvals/verifications
+   */
+  /*
+  static async processWithdrawal(withdrawalId: string) {
+    const session = await mongoose.startSession();
+    // let isTransactionCommitted = false;
+    session.startTransaction();
+
+    try {
+      console.log(`Processing withdrawal: ${withdrawalId}`);
+
+      // Get withdrawal request
+      const withdrawalRequest = await WithdrawalRequestModel.findOne({
+        $or: [{ id: withdrawalId }, { reference: withdrawalId }],
+      }).session(session);
+
+      if (!withdrawalRequest) {
+        throw new BadRequestError("Withdrawal request not found");
+      }
+
+      if (withdrawalRequest.status !== "PENDING") {
+        throw new BadRequestError(
+          `Withdrawal is ${withdrawalRequest.status.toLowerCase()}, cannot process`
+        );
+      }
+
+      // Update status to processing
+      withdrawalRequest.status = "PROCESSING";
+      await withdrawalRequest.save({ session });
+
+      await session.commitTransaction();
+      isTransactionCommitted = true;
+
+      // Make the actual transfer via Paystack (outside of DB transaction)
+      try {
+        const transferResult = await PaystackService.initializeTransfer(
+          withdrawalRequest.amount * 100, // Convert to kobo
+          withdrawalRequest.recipientCode,
+          withdrawalRequest.reason || "Wallet withdrawal"
+        );
+
+        // Update withdrawal request with transfer details
+        await WithdrawalRequestModel.findByIdAndUpdate(withdrawalRequest._id, {
+          transferCode: transferResult.transfer_code,
+          status: "PROCESSING", // Will be updated to COMPLETED via webhook
+        });
+
+        console.log(`Transfer initiated: ${transferResult.transfer_code}`);
+
+        return {
+          message: "Withdrawal is being processed",
+          transferCode: transferResult.transfer_code,
+          reference: withdrawalRequest.reference,
+          status: "PROCESSING",
+        };
+      } catch (transferError: any) {
+        console.error("Transfer failed:", transferError);
+
+        // Revert the withdrawal request status and refund user
+        await this.handleWithdrawalFailure(
+          withdrawalRequest.reference,
+          transferError.message || "Transfer failed"
+        );
+
+        throw new BadRequestError(
+          `Withdrawal failed: ${transferError.message}`
+        );
+      }
+    } catch (error: any) {
+      // await session.abortTransaction();
+      if (!isTransactionCommitted) {
+        await session.abortTransaction();
+      }
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+  */
+
+  /**
+   * Handle successful withdrawal (called by webhook)
+   */
+  static async handleWithdrawalSuccess(transferReference: string) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      console.log(`Handling successful withdrawal: ${transferReference}`);
+
+      // Find withdrawal request by transfer reference or our reference
+      const withdrawalRequest = await WithdrawalRequestModel.findOne({
+        $or: [
+          { reference: transferReference },
+          { transferCode: transferReference },
+        ],
+      }).session(session);
+
+      if (!withdrawalRequest) {
+        console.error(
+          `Withdrawal request not found for reference: ${transferReference}`
+        );
+        return;
+      }
+
+      // Get user wallet
+      const wallet = await WalletModel.findOne({
+        userId: withdrawalRequest.userId,
+      }).session(session);
+
+      if (!wallet) {
+        throw new BadRequestError("User wallet not found");
+      }
+
+      const amount = withdrawalRequest.amount;
+
+      // Remove from locked balance (money is now sent)
+      wallet.lockedBalance -= amount;
+
+      // Update transaction status to SUCCESS
+      const pendingTx = wallet.transactions.find(
+        (tx) =>
+          tx.reference === withdrawalRequest.reference &&
+          tx.purpose === "WITHDRAWAL_PENDING"
+      );
+
+      if (pendingTx) {
+        pendingTx.status = "SUCCESS";
+        pendingTx.purpose = "WITHDRAWAL_COMPLETED";
+        pendingTx.description = `Withdrawal completed - ${withdrawalRequest.accountName}`;
+      }
+
+      // Update withdrawal request status
+      withdrawalRequest.status = "COMPLETED";
+
+      // Save changes
+      await wallet.save({ session });
+      await withdrawalRequest.save({ session });
+
+      await session.commitTransaction();
+
+      console.log(`Withdrawal completed successfully: ${transferReference}`);
+    } catch (error: any) {
+      await session.abortTransaction();
+      console.error("Error handling withdrawal success:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Handle failed withdrawal (called by webhook or on transfer failure)
+   */
+  static async handleWithdrawalFailure(
+    transferReference: string,
+    failureReason: string
+  ) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      console.log(`Handling withdrawal failure: ${transferReference}`);
+
+      const withdrawalRequest = await WithdrawalRequestModel.findOne({
+        $or: [
+          { reference: transferReference },
+          { transferCode: transferReference },
+        ],
+      }).session(session);
+
+      if (!withdrawalRequest) {
+        console.error(
+          `Withdrawal request not found for reference: ${transferReference}`
+        );
+        return;
+      }
+
+      const wallet = await WalletModel.findOne({
+        userId: withdrawalRequest.userId,
+      }).session(session);
+
+      if (!wallet) {
+        throw new BadRequestError("User wallet not found");
+      }
+
+      const amount = withdrawalRequest.amount;
+
+      // Refund: move from locked balance back to available balance
+      wallet.balance += amount;
+      wallet.lockedBalance -= amount;
+
+      // Update transaction
+      const pendingTx = wallet.transactions.find(
+        (tx) =>
+          tx.reference === withdrawalRequest.reference &&
+          tx.purpose === "WITHDRAWAL_PENDING"
+      );
+
+      if (pendingTx) {
+        pendingTx.status = "FAILED";
+        pendingTx.purpose = "WITHDRAWAL_FAILED";
+        pendingTx.description = `Withdrawal failed: ${failureReason}`;
+      }
+
+      // Add refund transaction
+      wallet.transactions.push({
+        id: uuidv4(),
+        type: "CREDIT",
+        purpose: "WITHDRAWAL_REFUND",
+        amount,
+        reference: withdrawalRequest.reference,
+        description: `Refund for failed withdrawal - ${failureReason}`,
+        createdAt: new Date(),
+        status: "SUCCESS",
+      });
+
+      // Update withdrawal request
+      withdrawalRequest.status = "FAILED";
+      withdrawalRequest.failureReason = failureReason;
+
+      await wallet.save({ session });
+      await withdrawalRequest.save({ session });
+
+      await session.commitTransaction();
+
+      console.log(`Withdrawal failure handled: ${transferReference}`);
+    } catch (error: any) {
+      await session.abortTransaction();
+      console.error("Error handling withdrawal failure:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Get withdrawal history for a user
+   */
+  static async getWithdrawalHistory(userId: string, page = 1, limit = 20) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const withdrawals = await WithdrawalRequestModel.find({ userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const total = await WithdrawalRequestModel.countDocuments({ userId });
+
+      return {
+        withdrawals,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error: any) {
+      console.error("Error fetching withdrawal history:", error);
+      throw new BadRequestError("Failed to fetch withdrawal history");
+    }
+  }
+
+  /**
+   * Get pending withdrawals (for admin/processing)
+   */
+  static async getPendingWithdrawals() {
+    try {
+      return await WithdrawalRequestModel.find({
+        status: { $in: ["PENDING", "PROCESSING"] },
+      }).sort({ createdAt: 1 });
+    } catch (error: any) {
+      console.error("Error fetching pending withdrawals:", error);
+      throw new BadRequestError("Failed to fetch pending withdrawals");
+    }
+  }
+
+  /**
+   * Cancel withdrawal (only if still pending)
+   */
+  static async cancelWithdrawal(userId: string, withdrawalId: string) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const withdrawalRequest = await WithdrawalRequestModel.findOne({
+        $or: [{ id: withdrawalId }, { reference: withdrawalId }],
+        userId,
+      }).session(session);
+
+      if (!withdrawalRequest) {
+        throw new BadRequestError("Withdrawal request not found");
+      }
+
+      if (withdrawalRequest.status !== "PENDING") {
+        throw new BadRequestError(
+          `Cannot cancel ${withdrawalRequest.status.toLowerCase()} withdrawal`
+        );
+      }
+
+      // Refund the amount
+      await this.handleWithdrawalFailure(
+        withdrawalRequest.reference,
+        "Cancelled by user"
+      );
+
+      await session.commitTransaction();
+
+      return {
+        message: "Withdrawal cancelled successfully",
+        refundedAmount: withdrawalRequest.amount,
+      };
+    } catch (error: any) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
   }
 }

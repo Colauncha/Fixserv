@@ -1,5 +1,5 @@
-import { Router } from "express";
-import express from "express";
+import express, { Router, Request, Response } from "express";
+import axios from "axios";
 import { OrderController } from "../../controller/orderController";
 import { AuthMiddleware, requireRole } from "@fixserv-colauncha/shared";
 import { OrderService } from "../../../application/services/orderService";
@@ -14,6 +14,26 @@ const paymentRepo = new PaymentService();
 const orderService = new OrderService(orderRepo);
 const orderController = new OrderController(orderService);
 
+const service = `${process.env.ORDER_MANAGEMENT_URL}/
+api/orders/health`;
+setInterval(async () => {
+  for (const url of [service]) {
+    try {
+      await axios.get(url, { timeout: 5000 });
+      console.log(`✅ Pinged ${url}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to ping ${url}:`, error.message);
+    }
+  }
+}, 2 * 60 * 1000); // every 5 minutes
+router.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "order-management-service",
+  });
+});
+
 router.post(
   "/create",
   authMiddleware.protect,
@@ -22,6 +42,11 @@ router.post(
 );
 
 router.get("/public", orderController.getPublicOrders.bind(orderController));
+
+router.get(
+  "/test/:serviceId/:clientId/:userId",
+  orderController.testing.bind(orderController)
+);
 
 router.post(
   "/paystack/webhook",

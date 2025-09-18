@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
+import axios from "axios";
 import { UserRepositoryImpl } from "../../../infrastructure/persistence/userRepositoryImpl";
 import { JwtTokenService } from "../../../infrastructure/services/jwtTokenService";
 import { AuthService } from "../../../application/services/authService";
-import { AuthController } from "../../controllers/AuthController";
+import { AuthController } from "../../../interfaces/controllers/AuthController";
 import { AuthMiddleware } from "@fixserv-colauncha/shared";
 import { requireRole } from "@fixserv-colauncha/shared";
 import { ValidateRequest } from "@fixserv-colauncha/shared";
@@ -19,6 +20,26 @@ const authController = new AuthController(authService);
 
 const authMiddleware = new AuthMiddleware();
 const validate = new ValidateRequest();
+
+const service = `${process.env.USER_MANAGEMENT_URL}/
+api/admin/health`;
+setInterval(async () => {
+  for (const url of [service]) {
+    try {
+      await axios.get(url, { timeout: 5000 });
+      console.log(`✅ Pinged ${url}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to ping ${url}:`, error.message);
+    }
+  }
+}, 2 * 60 * 1000); // every 5 minutes
+router.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "user-management-service",
+  });
+});
 
 router.post(
   "/login",

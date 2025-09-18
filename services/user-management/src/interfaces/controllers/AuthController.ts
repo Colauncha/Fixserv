@@ -126,8 +126,19 @@ export class AuthController {
       // Validate updates based on role
       validateUpdateRequest(existingUser.role, updates);
 
+      // Preserve verification state
+      const wasEmailVerified = existingUser.isEmailVerified;
+      const verifiedAt = existingUser.emailVerifiedAt;
+
       // Apply updates
       const updatedUser = this.applyUpdates(existingUser, updates);
+
+      //delete password and emailverificationtoken fields
+
+      // Restore verification state
+      if (wasEmailVerified) {
+        updatedUser.markEmailAsVerified(verifiedAt ?? undefined);
+      }
 
       // Save updated user
       await this.userRepository.save(updatedUser);
@@ -139,7 +150,11 @@ export class AuthController {
       await this.authService.invalidateUserCache(updatedUser.id);
       await this.authService.invalidateEmailCache(updatedUser.email);
 
-      res.status(200).json(updatedUser);
+      // Re-fetch from DB (this will also repopulate cache)
+      const freshUser = await this.authService.findUserById(updatedUser.id);
+
+      // res.status(200).json(updatedUser);
+      res.status(200).json(freshUser);
     } catch (error: any) {
       res.status(error instanceof BadRequestError ? 400 : 500).json({
         success: false,
@@ -509,157 +524,159 @@ export class AuthController {
       }
 
       // Token is valid, show the password reset form
-     // res.send(`
-     //   <html>
-     //     <head>
-     //       <title>Reset Your Password - FixServ</title>
-     //       <meta name="viewport" content="width=device-width, //initial-scale=1">
-     //     </head>
-     //     <body style="font-family: Arial, sans-serif; background-color: //#f5f5f5; margin: 0; padding: 20px;">
-     //       <div style="max-width: 500px; margin: 50px auto; background: //white; padding: 40px; border-radius: 10px; box-shadow: 0 2px //10px rgba(0,0,0,0.1);">
-     //         <div style="text-align: center; margin-bottom: 30px;">
-     //           <h1 style="color: #dc3545; margin: 0;">FixServ</h1>
-     //           <h2 style="color: #333; margin: 10px 0;">Reset Your //Password</h2>
-     //           <p style="color: #666;">Enter your new password below<///p>
-     //         </div>
-//
-     //         <form id="resetForm" onsubmit="return false;">
-     //           <div style="margin-bottom: 20px;">
-     //             <label style="display: block; margin-bottom: 5px; //font-weight: bold; color: #333;">
-     //               New Password
-     //             </label>
-     //             <input 
-     //               type="password" 
-     //               id="newPassword" 
-     //               name="newPassword"
-     //               required
-     //               minlength="6"
-     //               style="width: 100%; padding: 12px; border: 1px solid //#ddd; border-radius: 5px; font-size: 16px; //box-sizing: border-box;"
-     //               placeholder="Enter your new password"
-     //               autocomplete="new-password"
-     //             />
-     //           </div>
-//
-     //           <div style="margin-bottom: 20px;">
-     //             <label style="display: block; margin-bottom: 5px; //font-weight: bold; color: #333;">
-     //               Confirm Password
-     //             </label>
-     //             <input 
-     //               type="password" 
-     //               id="confirmPassword" 
-     //               name="confirmPassword"
-     //               required
-     //               minlength="6"
-     //               style="width: 100%; padding: 12px; border: 1px solid //#ddd; border-radius: 5px; font-size: 16px; //box-sizing: border-box;"
-     //               placeholder="Confirm your new password"
-     //               autocomplete="new-password"
-     //             />
-     //           </div>
-//
-     //           <button 
-     //             type="button"
-     //             id="submitBtn"
-     //             style="width: 100%; background-color: #dc3545; color: //white; padding: 15px; border: none; border-radius: //5px; font-size: 16px; font-weight: bold; cursor: //pointer;">
-     //             Reset Password
-     //           </button>
-     //         </form>
-//
-     //         <div id="message" style="margin-top: 20px; padding: 15px; //border-radius: 5px; display: none;"></div>
-     //       </div>
-//
-     //                     <script>
-     //         // Wait for DOM to load
-     //         document.addEventListener('DOMContentLoaded', function() {
-     //           const form = document.getElementById('resetForm');
-     //           const submitBtn = document.getElementById('submitBtn');
-     //           const messageDiv = document.getElementById('message');
-//
-     //           if (!submitBtn) {
-     //             console.error('Submit button not found!');
-     //             return;
-     //           }
-//
-     //           // Handle button click
-     //           submitBtn.addEventListener('click', async function(e) {
-     //             e.preventDefault();
-     //             e.stopPropagation();
-     //             
-     //             console.log('Reset password button clicked');
-     //             
-     //             const newPassword = document.getElementById//('newPassword').value;
-     //             const confirmPassword = document.getElementById//('confirmPassword').value;
-     //             
-     //             // Reset message
-     //             messageDiv.style.display = 'none';
-     //             submitBtn.disabled = true;
-     //             submitBtn.textContent = 'Resetting...';
-     //             
-     //             // Validate passwords match
-     //             if (newPassword !== confirmPassword) {
-     //               showMessage('Passwords do not match', 'error');
-     //               resetButton();
-     //               return;
-     //             }
-//
-     //             // Validate password length
-     //             if (newPassword.length < 6) {
-     //               showMessage('Password must be at least 6 characters //long', 'error');
-     //               resetButton();
-     //               return;
-     //             }
-//
-     //             try {
-     //               console.log('Making PATCH request to:', "${process.//env.BASE_URL}/api/admin/reset-password?token=${token}//");
-     //               
-     //               const response = await fetch("${process.env.//BASE_URL}/api/admin/reset-password?token=${token}", {
-     //                 method: 'PATCH',
-     //                 headers: {
-     //                   'Content-Type': 'application/json',
-     //                 },
-     //                 body: JSON.stringify({ newPassword: newPassword })
-     //               });
-//
-     //               console.log('Response status:', response.status);
-     //               const data = await response.json();
-     //               console.log('Response data:', data);
-//
-     //               if (response.ok) {
-     //                 showMessage('Password reset successful! You can //now login with your new password.', 'success');
-     //                 form.style.display = 'none';
-     //               } else {
-     //                 throw new Error(data.message || 'Password reset //failed');
-     //               }
-     //             } catch (error) {
-     //               console.error('Reset error:', error);
-     //               showMessage(error.message || 'An error occurred. //Please try again.', 'error');
-     //               resetButton();
-     //             }
-     //           });
-//
-     //           function showMessage(text, type) {
-     //             if (type === 'success') {
-     //               messageDiv.style.backgroundColor = '#d4edda';
-     //               messageDiv.style.color = '#155724';
-     //               messageDiv.style.border = '1px solid #c3e6cb';
-     //             } else {
-     //               messageDiv.style.backgroundColor = '#f8d7da';
-     //               messageDiv.style.color = '#721c24';
-     //               messageDiv.style.border = '1px solid #f5c6cb';
-     //             }
-     //             messageDiv.textContent = text;
-     //             messageDiv.style.display = 'block';
-     //           }
-//
-     //           function resetButton() {
-     //             submitBtn.disabled = false;
-     //             submitBtn.textContent = 'Reset Password';
-     //           }
-     //         });
-     //       </script>
-     //     </body>
-     //   </html>
-     // `);
-     res.redirect(`${process.env.FIXSERV_FRONTEND}/auth/reset-password?token=${token}`)
+      // res.send(`
+      //   <html>
+      //     <head>
+      //       <title>Reset Your Password - FixServ</title>
+      //       <meta name="viewport" content="width=device-width, //initial-scale=1">
+      //     </head>
+      //     <body style="font-family: Arial, sans-serif; background-color: //#f5f5f5; margin: 0; padding: 20px;">
+      //       <div style="max-width: 500px; margin: 50px auto; background: //white; padding: 40px; border-radius: 10px; box-shadow: 0 2px //10px rgba(0,0,0,0.1);">
+      //         <div style="text-align: center; margin-bottom: 30px;">
+      //           <h1 style="color: #dc3545; margin: 0;">FixServ</h1>
+      //           <h2 style="color: #333; margin: 10px 0;">Reset Your //Password</h2>
+      //           <p style="color: #666;">Enter your new password below<///p>
+      //         </div>
+      //
+      //         <form id="resetForm" onsubmit="return false;">
+      //           <div style="margin-bottom: 20px;">
+      //             <label style="display: block; margin-bottom: 5px; //font-weight: bold; color: #333;">
+      //               New Password
+      //             </label>
+      //             <input
+      //               type="password"
+      //               id="newPassword"
+      //               name="newPassword"
+      //               required
+      //               minlength="6"
+      //               style="width: 100%; padding: 12px; border: 1px solid //#ddd; border-radius: 5px; font-size: 16px; //box-sizing: border-box;"
+      //               placeholder="Enter your new password"
+      //               autocomplete="new-password"
+      //             />
+      //           </div>
+      //
+      //           <div style="margin-bottom: 20px;">
+      //             <label style="display: block; margin-bottom: 5px; //font-weight: bold; color: #333;">
+      //               Confirm Password
+      //             </label>
+      //             <input
+      //               type="password"
+      //               id="confirmPassword"
+      //               name="confirmPassword"
+      //               required
+      //               minlength="6"
+      //               style="width: 100%; padding: 12px; border: 1px solid //#ddd; border-radius: 5px; font-size: 16px; //box-sizing: border-box;"
+      //               placeholder="Confirm your new password"
+      //               autocomplete="new-password"
+      //             />
+      //           </div>
+      //
+      //           <button
+      //             type="button"
+      //             id="submitBtn"
+      //             style="width: 100%; background-color: #dc3545; color: //white; padding: 15px; border: none; border-radius: //5px; font-size: 16px; font-weight: bold; cursor: //pointer;">
+      //             Reset Password
+      //           </button>
+      //         </form>
+      //
+      //         <div id="message" style="margin-top: 20px; padding: 15px; //border-radius: 5px; display: none;"></div>
+      //       </div>
+      //
+      //                     <script>
+      //         // Wait for DOM to load
+      //         document.addEventListener('DOMContentLoaded', function() {
+      //           const form = document.getElementById('resetForm');
+      //           const submitBtn = document.getElementById('submitBtn');
+      //           const messageDiv = document.getElementById('message');
+      //
+      //           if (!submitBtn) {
+      //             console.error('Submit button not found!');
+      //             return;
+      //           }
+      //
+      //           // Handle button click
+      //           submitBtn.addEventListener('click', async function(e) {
+      //             e.preventDefault();
+      //             e.stopPropagation();
+      //
+      //             console.log('Reset password button clicked');
+      //
+      //             const newPassword = document.getElementById//('newPassword').value;
+      //             const confirmPassword = document.getElementById//('confirmPassword').value;
+      //
+      //             // Reset message
+      //             messageDiv.style.display = 'none';
+      //             submitBtn.disabled = true;
+      //             submitBtn.textContent = 'Resetting...';
+      //
+      //             // Validate passwords match
+      //             if (newPassword !== confirmPassword) {
+      //               showMessage('Passwords do not match', 'error');
+      //               resetButton();
+      //               return;
+      //             }
+      //
+      //             // Validate password length
+      //             if (newPassword.length < 6) {
+      //               showMessage('Password must be at least 6 characters //long', 'error');
+      //               resetButton();
+      //               return;
+      //             }
+      //
+      //             try {
+      //               console.log('Making PATCH request to:', "${process.//env.BASE_URL}/api/admin/reset-password?token=${token}//");
+      //
+      //               const response = await fetch("${process.env.//BASE_URL}/api/admin/reset-password?token=${token}", {
+      //                 method: 'PATCH',
+      //                 headers: {
+      //                   'Content-Type': 'application/json',
+      //                 },
+      //                 body: JSON.stringify({ newPassword: newPassword })
+      //               });
+      //
+      //               console.log('Response status:', response.status);
+      //               const data = await response.json();
+      //               console.log('Response data:', data);
+      //
+      //               if (response.ok) {
+      //                 showMessage('Password reset successful! You can //now login with your new password.', 'success');
+      //                 form.style.display = 'none';
+      //               } else {
+      //                 throw new Error(data.message || 'Password reset //failed');
+      //               }
+      //             } catch (error) {
+      //               console.error('Reset error:', error);
+      //               showMessage(error.message || 'An error occurred. //Please try again.', 'error');
+      //               resetButton();
+      //             }
+      //           });
+      //
+      //           function showMessage(text, type) {
+      //             if (type === 'success') {
+      //               messageDiv.style.backgroundColor = '#d4edda';
+      //               messageDiv.style.color = '#155724';
+      //               messageDiv.style.border = '1px solid #c3e6cb';
+      //             } else {
+      //               messageDiv.style.backgroundColor = '#f8d7da';
+      //               messageDiv.style.color = '#721c24';
+      //               messageDiv.style.border = '1px solid #f5c6cb';
+      //             }
+      //             messageDiv.textContent = text;
+      //             messageDiv.style.display = 'block';
+      //           }
+      //
+      //           function resetButton() {
+      //             submitBtn.disabled = false;
+      //             submitBtn.textContent = 'Reset Password';
+      //           }
+      //         });
+      //       </script>
+      //     </body>
+      //   </html>
+      // `);
+      res.redirect(
+        `${process.env.FIXSERV_FRONTEND}/auth/reset-password?token=${token}`
+      );
     } catch (error: any) {
       console.error("Error showing reset form:", error);
       res.status(500).send(`

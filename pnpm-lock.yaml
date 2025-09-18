@@ -28,8 +28,8 @@ importers:
   services/notifications-service:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -128,8 +128,8 @@ importers:
   services/order-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -313,8 +313,11 @@ importers:
   services/search-and-discovery:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
+      axios:
+        specifier: ^1.9.0
+        version: 1.9.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -355,6 +358,9 @@ importers:
         specifier: ^6.2.13
         version: 6.2.13
     devDependencies:
+      '@types/axios':
+        specifier: ^0.14.4
+        version: 0.14.4
       '@types/cookie-parser':
         specifier: ^1.4.8
         version: 1.4.8(@types/express@5.0.1)
@@ -386,8 +392,8 @@ importers:
   services/service-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -501,11 +507,78 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
 
+  services/shared:
+    dependencies:
+      '@fixserv-colauncha/shared':
+        specifier: ^1.0.25
+        version: 1.0.25
+      '@redis/client':
+        specifier: ^5.8.2
+        version: 5.8.2
+      '@types/cookie-session':
+        specifier: ^2.0.49
+        version: 2.0.49
+      '@types/express':
+        specifier: ^5.0.1
+        version: 5.0.1
+      '@types/jsonwebtoken':
+        specifier: ^9.0.9
+        version: 9.0.9
+      '@types/mongoose':
+        specifier: ^5.11.97
+        version: 5.11.97
+      cookie-session:
+        specifier: ^2.1.0
+        version: 2.1.0
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.5.0
+      express:
+        specifier: ^4.21.2
+        version: 4.21.2
+      express-rate-limit:
+        specifier: ^7.5.1
+        version: 7.5.1(express@4.21.2)
+      express-validator:
+        specifier: ^7.2.1
+        version: 7.2.1
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.2
+      mongoose:
+        specifier: ^8.14.1
+        version: 8.14.1
+      rate-limit-redis:
+        specifier: ^4.2.1
+        version: 4.2.1(express-rate-limit@7.5.1(express@4.21.2))
+      redis:
+        specifier: ^5.8.2
+        version: 5.8.2
+      redis-cli:
+        specifier: ^2.1.2
+        version: 2.1.2
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
+      uuidv4:
+        specifier: ^6.2.13
+        version: 6.2.13
+    devDependencies:
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
+      del-cli:
+        specifier: ^6.0.0
+        version: 6.0.0
+      typescript:
+        specifier: ^5.8.2
+        version: 5.8.3
+
   services/user-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -646,8 +719,8 @@ importers:
   services/wallet-service:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -1084,11 +1157,11 @@ packages:
   '@emnapi/wasi-threads@1.0.3':
     resolution: {integrity: sha512-8K5IFFsQqF9wQNJptGbS6FNKgUTsSRYnTqNCG1vPP8jFdjSv18n2mQfJpkt2Oibo9iBEzcDnDxNwKTzC7svlJw==}
 
-  '@fixserv-colauncha/shared@1.0.20':
-    resolution: {integrity: sha512-VgMvQEWlLW7X78WRY/HjaxUsNNoDhhCQdEwIzB/YjSjKKOPAkh9GIjAFm/qguqt3ejBeYTqd7CT5q46nVHkAlA==}
-
   '@fixserv-colauncha/shared@1.0.21':
     resolution: {integrity: sha512-+ueGGuPHRDH2fzR+HIocT+ZoJmyLYeq1qRlGitcx+KKPH+YgF0baFAxMIMg0p4OFjFEZgUSAS/k3p+JV+tTIMw==}
+
+  '@fixserv-colauncha/shared@1.0.25':
+    resolution: {integrity: sha512-AfCVdkNDlyuARbZdiMyUR8lUlItdeRF6VkD282IBc1+w2+SeKT2VNRtdTYmipj8MXjbJr8Tpvb6JRFskwm7spA==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -1232,33 +1305,33 @@ packages:
       react: ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^18.0 || ^19.0 || ^19.0.0-rc
 
-  '@redis/bloom@5.0.0':
-    resolution: {integrity: sha512-YHlra6a7+brJ3Ustqa+jC68Pdnw2/wbnVLeULN0llP3gHpKxOSmiDyLwuHq5t/jFi6QUgjSprUQi2a8CieKFIA==}
+  '@redis/bloom@5.8.2':
+    resolution: {integrity: sha512-855DR0ChetZLarblio5eM0yLwxA9Dqq50t8StXKp5bAtLT0G+rZ+eRzzqxl37sPqQKjUudSYypz55o6nNhbz0A==}
     engines: {node: '>= 18'}
     peerDependencies:
-      '@redis/client': ^5.0.0
+      '@redis/client': ^5.8.2
 
-  '@redis/client@5.0.0':
-    resolution: {integrity: sha512-1MqfzOOoFBwWprigJ3S5hM+LuzaWwxyyx+74NDzCpmjKWyjjC07xkWsd5E9fr+61NUDtvUivRiyAxGiRIwJCaQ==}
+  '@redis/client@5.8.2':
+    resolution: {integrity: sha512-WtMScno3+eBpTac1Uav2zugXEoXqaU23YznwvFgkPwBQVwEHTDgOG7uEAObtZ/Nyn8SmAMbqkEubJaMOvnqdsQ==}
     engines: {node: '>= 18'}
 
-  '@redis/json@5.0.0':
-    resolution: {integrity: sha512-8YFjshsvWR9dWjOiQ50TfBxfl+z1mjCae8jDnfOYN1aCvUZWJXqM1OpL56v6mWRyXwZ5C9qJJKDGmHTr4PVskQ==}
-    engines: {node: '>= 18'}
-    peerDependencies:
-      '@redis/client': ^5.0.0
-
-  '@redis/search@5.0.0':
-    resolution: {integrity: sha512-oEop/S/0NB5p7vpTTlp5X5LQO4oTomJnFEOaKhQ5xZWROLXTgEVvPSfXVNBbtr9maU2+OupxXQR63HW3MGeTUg==}
+  '@redis/json@5.8.2':
+    resolution: {integrity: sha512-uxpVfas3I0LccBX9rIfDgJ0dBrUa3+0Gc8sEwmQQH0vHi7C1Rx1Qn8Nv1QWz5bohoeIXMICFZRcyDONvum2l/w==}
     engines: {node: '>= 18'}
     peerDependencies:
-      '@redis/client': ^5.0.0
+      '@redis/client': ^5.8.2
 
-  '@redis/time-series@5.0.0':
-    resolution: {integrity: sha512-DNsP4DH5CRfXlQDyvLJm2DltZm3kjpVKZsNTI3SPdbRxhc9i2c0NehUbM/gDECnEfG+jkNN/LUv6Em4LaLwPBQ==}
+  '@redis/search@5.8.2':
+    resolution: {integrity: sha512-cNv7HlgayavCBXqPXgaS97DRPVWFznuzsAmmuemi2TMCx5scwLiP50TeZvUS06h/MG96YNPe6A0Zt57yayfxwA==}
     engines: {node: '>= 18'}
     peerDependencies:
-      '@redis/client': ^5.0.0
+      '@redis/client': ^5.8.2
+
+  '@redis/time-series@5.8.2':
+    resolution: {integrity: sha512-g2NlHM07fK8H4k+613NBsk3y70R2JIM2dPMSkhIjl2Z17SYvaYKdusz85d7VYOrZBWtDrHV/WD2E3vGu+zni8A==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.2
 
   '@selderee/plugin-htmlparser2@0.11.0':
     resolution: {integrity: sha512-P33hHGdldxGabLFjPPpaTxVolMrzrcegejx+0GxjrIb9Zv48D8yAIA/QTDR2dFl7Uz7urX8aX6+5bCZslr+gWQ==}
@@ -1454,6 +1527,10 @@ packages:
 
   '@tybys/wasm-util@0.9.0':
     resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
+
+  '@types/axios@0.14.4':
+    resolution: {integrity: sha512-9JgOaunvQdsQ/qW2OPmE5+hCeUB52lQSolecrFrthct55QekhmXEwT203s20RL+UHtCQc15y3VXpby9E7Kkh/g==}
+    deprecated: This is a stub types definition. axios provides its own type definitions, so you do not need this installed.
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1877,10 +1954,6 @@ packages:
 
   bser@2.1.1:
     resolution: {integrity: sha512-gQxTNE/GAfIIrmHLUE3oJyp5FO6HRBfhjnw4/wMmA63ZGDJnWBmgY/lyQBpnDUkGmAhbSe39tx2d/iTOAfglwQ==}
-
-  bson@6.10.3:
-    resolution: {integrity: sha512-MTxGsqgYTwfshYWTRdmZRC+M7FnG1b4y7RO7p2k3X24Wq0yv1m77Wsj0BzlPzd/IowgESfsruQCUToa7vbOpPQ==}
-    engines: {node: '>=16.20.1'}
 
   bson@6.10.4:
     resolution: {integrity: sha512-WIsKqkSC0ABoBJuT1LEX+2HEvNmNKKgnTAyd0fL8qzK4SH2i9NXg+t08YtdZp/V9IZ33cxe3iV4yM0qg8lMQng==}
@@ -3298,8 +3371,8 @@ packages:
     resolution: {integrity: sha512-grn5KoZLr/qrRQVwoSkmzdbw6pwF+/rwODtrOr6vuBRiR/f3rjSTGupbF90Zpqm2oenix8Do6RV7pYEkGwlKkw==}
     engines: {node: '>=10'}
 
-  redis@5.0.0:
-    resolution: {integrity: sha512-J/fzf0cYeFw5NP4aYIvv9owYOcNUsaDqF4qmwbSuaV4yKBLaIHJQIFbAKLgjn99GDXdJBbfqCRXE7+BIlkpATA==}
+  redis@5.8.2:
+    resolution: {integrity: sha512-31vunZj07++Y1vcFGcnNWEf5jPoTkGARgfWI4+Tk55vdwHxhAvug8VEtW7Cx+/h47NuJTEg/JL77zAwC6E0OeA==}
     engines: {node: '>= 18'}
 
   require-directory@2.1.1:
@@ -4368,9 +4441,9 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@fixserv-colauncha/shared@1.0.20':
+  '@fixserv-colauncha/shared@1.0.21':
     dependencies:
-      '@fixserv-colauncha/shared': 1.0.21
+      '@fixserv-colauncha/shared': 1.0.25
       '@types/cookie-session': 2.0.49
       '@types/express': 5.0.1
       '@types/jsonwebtoken': 9.0.9
@@ -4383,7 +4456,7 @@ snapshots:
       jsonwebtoken: 9.0.2
       mongoose: 8.14.1
       rate-limit-redis: 4.2.1(express-rate-limit@7.5.1(express@4.21.2))
-      redis: 5.0.0
+      redis: 5.8.2
       redis-cli: 2.1.2
       uuid: 11.1.0
       uuidv4: 6.2.13
@@ -4397,8 +4470,9 @@ snapshots:
       - socks
       - supports-color
 
-  '@fixserv-colauncha/shared@1.0.21':
+  '@fixserv-colauncha/shared@1.0.25':
     dependencies:
+      '@redis/client': 5.8.2
       '@types/cookie-session': 2.0.49
       '@types/express': 5.0.1
       '@types/jsonwebtoken': 9.0.9
@@ -4411,7 +4485,7 @@ snapshots:
       jsonwebtoken: 9.0.2
       mongoose: 8.14.1
       rate-limit-redis: 4.2.1(express-rate-limit@7.5.1(express@4.21.2))
-      redis: 5.0.0
+      redis: 5.8.2
       redis-cli: 2.1.2
       uuid: 11.1.0
       uuidv4: 6.2.13
@@ -4687,25 +4761,25 @@ snapshots:
       react-dom: 19.1.0(react@19.1.0)
       react-promise-suspense: 0.3.4
 
-  '@redis/bloom@5.0.0(@redis/client@5.0.0)':
+  '@redis/bloom@5.8.2(@redis/client@5.8.2)':
     dependencies:
-      '@redis/client': 5.0.0
+      '@redis/client': 5.8.2
 
-  '@redis/client@5.0.0':
+  '@redis/client@5.8.2':
     dependencies:
       cluster-key-slot: 1.1.2
 
-  '@redis/json@5.0.0(@redis/client@5.0.0)':
+  '@redis/json@5.8.2(@redis/client@5.8.2)':
     dependencies:
-      '@redis/client': 5.0.0
+      '@redis/client': 5.8.2
 
-  '@redis/search@5.0.0(@redis/client@5.0.0)':
+  '@redis/search@5.8.2(@redis/client@5.8.2)':
     dependencies:
-      '@redis/client': 5.0.0
+      '@redis/client': 5.8.2
 
-  '@redis/time-series@5.0.0(@redis/client@5.0.0)':
+  '@redis/time-series@5.8.2(@redis/client@5.8.2)':
     dependencies:
-      '@redis/client': 5.0.0
+      '@redis/client': 5.8.2
 
   '@selderee/plugin-htmlparser2@0.11.0':
     dependencies:
@@ -5006,6 +5080,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
     optional: true
+
+  '@types/axios@0.14.4':
+    dependencies:
+      axios: 1.9.0
+    transitivePeerDependencies:
+      - debug
 
   '@types/babel__core@7.20.5':
     dependencies:
@@ -5466,8 +5546,6 @@ snapshots:
   bser@2.1.1:
     dependencies:
       node-int64: 0.4.0
-
-  bson@6.10.3: {}
 
   bson@6.10.4: {}
 
@@ -6700,7 +6778,7 @@ snapshots:
       find-cache-dir: 3.3.2
       follow-redirects: 1.15.9(debug@4.4.0)
       https-proxy-agent: 7.0.6
-      mongodb: 6.16.0
+      mongodb: 6.18.0
       new-find-package-json: 2.0.0
       semver: 7.7.2
       tar-stream: 3.1.7
@@ -6733,7 +6811,7 @@ snapshots:
   mongodb@6.16.0:
     dependencies:
       '@mongodb-js/saslprep': 1.2.2
-      bson: 6.10.3
+      bson: 6.10.4
       mongodb-connection-string-url: 3.0.2
 
   mongodb@6.18.0:
@@ -6744,7 +6822,7 @@ snapshots:
 
   mongoose@8.14.1:
     dependencies:
-      bson: 6.10.3
+      bson: 6.10.4
       kareem: 2.6.3
       mongodb: 6.16.0
       mpath: 0.9.0
@@ -7020,13 +7098,13 @@ snapshots:
       redis-errors: 1.2.0
       redis-parser: 3.0.0
 
-  redis@5.0.0:
+  redis@5.8.2:
     dependencies:
-      '@redis/bloom': 5.0.0(@redis/client@5.0.0)
-      '@redis/client': 5.0.0
-      '@redis/json': 5.0.0(@redis/client@5.0.0)
-      '@redis/search': 5.0.0(@redis/client@5.0.0)
-      '@redis/time-series': 5.0.0(@redis/client@5.0.0)
+      '@redis/bloom': 5.8.2(@redis/client@5.8.2)
+      '@redis/client': 5.8.2
+      '@redis/json': 5.8.2(@redis/client@5.8.2)
+      '@redis/search': 5.8.2(@redis/client@5.8.2)
+      '@redis/time-series': 5.8.2(@redis/client@5.8.2)
 
   require-directory@2.1.1: {}
 

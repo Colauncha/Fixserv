@@ -50,7 +50,7 @@ const OrderSchema = new mongoose.Schema(
     paymentReference: {
       type: String,
       // required: true,
-      unique: true, // Optional but helps prevent duplicates
+      // unique: true, // Optional but helps prevent duplicates
     },
     createdAt: {
       type: Date,

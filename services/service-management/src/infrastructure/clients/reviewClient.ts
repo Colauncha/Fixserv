@@ -11,6 +11,7 @@ export class ReviewRepositoryClient implements IReviewRepository {
       timeout: 8000,
       headers: {
         "Content-Type": "application/json",
+        "X-Internal-Service": "true",
       },
     });
   }

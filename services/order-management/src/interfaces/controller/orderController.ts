@@ -300,4 +300,9 @@ export class OrderController {
       res.status(500).json({ error: "Internal Server Error" });
     }
   };
+  async testing(req: Request, res: Response): Promise<void> {
+    const { serviceId, clientId, userId } = req.params;
+    const result = await this.orderService.testing(serviceId, clientId, userId);
+    res.status(200).json(result);
+  }
 }
