@@ -11,8 +11,10 @@ import { ServicePreferences } from "../value-objects/servicePreferences";
 import { SkillSet } from "../value-objects/skillSet";
 
 export class UserAggregate {
-  public isEmailVerified: boolean = false;
-  public emailVerificationToken?: string;
+  // public isEmailVerified: boolean = false;
+  //public isEmailVerified?: boolean;
+  //public emailVerifiedAt?: Date;
+  //public emailVerificationToken?: string;
   private constructor(public readonly _user: User) {}
 
   static createClient(
@@ -108,13 +110,14 @@ export class UserAggregate {
     return new UserAggregate(admin);
   }
 
-  markEmailAsVerified(): void {
-    this.isEmailVerified = true;
-    this.emailVerificationToken = undefined;
+  markEmailAsVerified(verifiedAt?: Date): void {
+    this._user.isEmailVerified = true;
+    this._user.emailVerificationToken = this._user.emailVerificationToken;
+    this._user.emailVerifiedAt = verifiedAt || new Date();
   }
 
   setEmailVerificationToken(token: string): void {
-    this.emailVerificationToken = token;
+    this._user.emailVerificationToken = token;
   }
 
   async changePassword(
@@ -220,6 +223,18 @@ export class UserAggregate {
 
   get phoneNumber(): string {
     return this._user.phoneNumber;
+  }
+
+  get emailVerificationToken(): string | null | undefined {
+    return this._user.emailVerificationToken;
+  }
+
+  get emailVerifiedAt(): Date | null | undefined {
+    return this._user.emailVerifiedAt;
+  }
+
+  get isEmailVerified(): boolean {
+    return this._user.isEmailVerified || false;
   }
 
   setUploadedProducts(products: any[]): void {
@@ -489,6 +504,7 @@ export class UserAggregate {
     const phoneNumber = json.phoneNumber || "";
     const isEmailVerified = json.isEmailVerified || false;
     const emailVerificationToken = json.emailVerificationToken || undefined;
+    const emailVerifiedAt = json.emailVerifiedAt || new Date();
 
     switch (role) {
       case "CLIENT":
@@ -508,7 +524,8 @@ export class UserAggregate {
           profilePicture,
           uploadedProducts,
           isEmailVerified,
-          emailVerificationToken
+          emailVerificationToken,
+          emailVerifiedAt
         );
 
       case "ARTISAN":
@@ -533,7 +550,8 @@ export class UserAggregate {
           businessHours,
           profilePicture,
           isEmailVerified,
-          emailVerificationToken
+          emailVerificationToken,
+          emailVerifiedAt
         );
 
       case "ADMIN":
@@ -546,7 +564,8 @@ export class UserAggregate {
           json.permissions || [],
           profilePicture,
           isEmailVerified,
-          emailVerificationToken
+          emailVerificationToken,
+          emailVerifiedAt
         );
 
       default:
@@ -579,6 +598,7 @@ export class UserAggregate {
       updatedAt: this._user.updatedAt,
       isEmailVerified: this.isEmailVerified,
       emailVerificationToken: this.emailVerificationToken,
+      emailVerifiedAt: this.emailVerifiedAt,
       ...(this.isClient() && {
         deliveryAddress: this.deliveryAddress.toJSON(),
         servicePreferences: this.servicePreferences.toJSON(),

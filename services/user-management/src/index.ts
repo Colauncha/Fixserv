@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import app from "./interfaces/http/expressApp";
-import { connectDB,disconnectDB } from "@fixserv-colauncha/shared";
+import { connectDB, disconnectDB } from "@fixserv-colauncha/shared";
 
 import { ServiceEventsHandler } from "./events/handlers/serviceEventHandler";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
@@ -17,31 +17,31 @@ process.on("uncaughtException", async (err) => {
   console.error("💀 Uncaught Exception:", err.name, err.message);
   console.error("Stack:", err.stack);
 
-  await cleanup();
-  process.exit(1);
+  // await cleanup();
+  // process.exit(1);
 });
 
 process.on("unhandledRejection", async (reason, promise) => {
   console.error("💀 Unhandled Rejection at:", promise, "reason:", reason);
 
-  await cleanup();
-  process.exit(1);
+  // await cleanup();
+  // process.exit(1);
 });
 
-const cleanup = async (): Promise<void> => {
-  console.log("🧹 Starting graceful shutdown...");
-  try {
-    await disconnectDB();
-
-    console.log("✅ Cleanup completed");
-  } catch (error) {
-    console.error("❌ Error during cleanup:", error);
-  }
-};
+//const cleanup = async (): Promise<void> => {
+//  console.log("🧹 Starting graceful shutdown...");
+//  try {
+//    await disconnectDB();
+//
+//    console.log("✅ Cleanup completed");
+//  } catch (error) {
+//    console.error("❌ Error during cleanup:", error);
+//  }
+//};
 
 // Handle shutdown signals
-process.on("SIGTERM", cleanup);
-process.on("SIGINT", cleanup);
+//process.on("SIGTERM", cleanup);
+//process.on("SIGINT", cleanup);
 
 if (!process.env.JWT_KEY) {
   throw new Error("JWT SECRET must be defined");
@@ -137,7 +137,7 @@ const start = async (): Promise<void> => {
     });
 
     // Start server
-    server = app.listen(4000, "0.0.0.0", () => {
+    server = app.listen(4000, () => {
       console.log("✅ user-management is running on port 4000");
     });
 
@@ -165,41 +165,32 @@ const start = async (): Promise<void> => {
     //     console.warn("⚠️ Redis health check failed");
     //   }
     // }, 30000); // Check every 30 seconds
+    // Graceful shutdown handling
+    const gracefulShutdown = (signal: string) => {
+      console.log(`📴 Received ${signal}, shutting down gracefully...`);
+      server.close(async () => {
+        console.log("✅ HTTP server closed");
+        await connectDB();
+        process.exit(0);
+      });
+      // Force close after 10 seconds
+      setTimeout(() => {
+        console.log("⚡ Force closing server");
+        process.exit(1);
+      }, 10000);
+    };
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
   } catch (error) {
     console.error("💀 Failed to start service:", error);
 
-    await cleanup();
+    // await cleanup();
     process.exit(1);
   }
-
-  // Handle server shutdown
-  const gracefulShutdown = async (signal: string): Promise<void> => {
-    console.log(`🛑 Received ${signal}, starting graceful shutdown...`);
-
-    if (server) {
-      server.close(async () => {
-        console.log("🚪 HTTP server closed");
-        await cleanup();
-        process.exit(0);
-      });
-
-      // Force close after 10 seconds
-      setTimeout(() => {
-        console.log("⏰ Force closing due to timeout");
-        process.exit(1);
-      }, 10000);
-    } else {
-      await cleanup();
-      process.exit(0);
-    }
-  };
-
-  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 };
 
 start().catch(async (error) => {
   console.error("💀 Startup failed:", error);
-  await cleanup();
-  process.exit(1);
+  // await cleanup();
+  // process.exit(1);
 });

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { NotificationController } from "../../controllers/notificationController";
 import { AuthMiddleware, requireRole } from "@fixserv-colauncha/shared";
 import { NotificationService } from "../../../application/services/notificationService";
@@ -6,6 +6,7 @@ import { NotificationRepositoryImpl } from "../../../infrastructure/persistence/
 import { NotificationModel } from "../../../infrastructure/persistence/models/notificationModel";
 import { NotificationDomainService } from "../../../application/services/notificationDomainService";
 import { RedisEventBus } from "@fixserv-colauncha/shared";
+import axios from "axios";
 
 const router = Router();
 const authMiddleware = new AuthMiddleware();
@@ -20,6 +21,25 @@ const notificationService = new NotificationService(
   eventBus
 );
 const notificationController = new NotificationController(notificationService);
+
+const service = `${process.env.NOTIFICATIONS_SERVICE_URL}/api/notifications/health`;
+setInterval(async () => {
+  for (const url of [service]) {
+    try {
+      await axios.get(url, { timeout: 5000 });
+      console.log(`✅ Pinged ${url}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to ping ${url}:`, error.message);
+    }
+  }
+}, 2 * 60 * 1000); // every 5 minutes
+router.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "notifications-service",
+  });
+});
 
 // Get user notifications (authenticated users only)
 router.get(

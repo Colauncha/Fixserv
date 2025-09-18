@@ -472,11 +472,13 @@ export class UserRepositoryImpl implements IUserRepository {
 
     // CRITICAL: Restore email verification state from database AFTER creating the user
     // This ensures the database state is preserved regardless of updates
-    user.isEmailVerified = data.isEmailVerified || false;
-
-    if (data.emailVerificationToken) {
-      user.setEmailVerificationToken(data.emailVerificationToken);
-    }
+    //user.isEmailVerified = data.isEmailVerified || false;
+    //
+    //if (data.emailVerificationToken) {
+    //  user.setEmailVerificationToken(data.emailVerificationToken);
+    //}
+    //
+    //user.emailVerifiedAt = data.emailVerifiedAt;
 
     console.log(
       `User ${user.id} loaded - isEmailVerified: ${user.isEmailVerified}`
@@ -484,6 +486,7 @@ export class UserRepositoryImpl implements IUserRepository {
 
     return user;
   }
+
   toJSON(user: UserAggregate): any {
     const base = {
       _id: user.id,

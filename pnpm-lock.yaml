@@ -25,8 +25,8 @@ importers:
   services/notifications-service:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -125,8 +125,8 @@ importers:
   services/order-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -310,8 +310,11 @@ importers:
   services/search-and-discovery:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
+      axios:
+        specifier: ^1.9.0
+        version: 1.9.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -352,6 +355,9 @@ importers:
         specifier: ^6.2.13
         version: 6.2.13
     devDependencies:
+      '@types/axios':
+        specifier: ^0.14.4
+        version: 0.14.4
       '@types/cookie-parser':
         specifier: ^1.4.8
         version: 1.4.8(@types/express@5.0.1)
@@ -383,8 +389,8 @@ importers:
   services/service-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.22
-        version: 1.0.22
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -501,8 +507,8 @@ importers:
   services/shared:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.20
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       '@redis/client':
         specifier: ^5.8.2
         version: 5.8.2
@@ -568,8 +574,8 @@ importers:
   services/user-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.22
-        version: 1.0.22
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -710,8 +716,8 @@ importers:
   services/wallet-service:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.21
-        version: 1.0.21
+        specifier: ^1.0.25
+        version: 1.0.25
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -1151,8 +1157,8 @@ packages:
   '@fixserv-colauncha/shared@1.0.21':
     resolution: {integrity: sha512-+ueGGuPHRDH2fzR+HIocT+ZoJmyLYeq1qRlGitcx+KKPH+YgF0baFAxMIMg0p4OFjFEZgUSAS/k3p+JV+tTIMw==}
 
-  '@fixserv-colauncha/shared@1.0.22':
-    resolution: {integrity: sha512-vIZK/rixmMcNr1XJGErZse/HXH6imol7LOcnyiN/TpYzTopVJtS0dAO1YZKgja+APM2U7THeUQ23Iyx8zL24+Q==}
+  '@fixserv-colauncha/shared@1.0.25':
+    resolution: {integrity: sha512-AfCVdkNDlyuARbZdiMyUR8lUlItdeRF6VkD282IBc1+w2+SeKT2VNRtdTYmipj8MXjbJr8Tpvb6JRFskwm7spA==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -1534,6 +1540,10 @@ packages:
 
   '@tybys/wasm-util@0.9.0':
     resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
+
+  '@types/axios@0.14.4':
+    resolution: {integrity: sha512-9JgOaunvQdsQ/qW2OPmE5+hCeUB52lQSolecrFrthct55QekhmXEwT203s20RL+UHtCQc15y3VXpby9E7Kkh/g==}
+    deprecated: This is a stub types definition. axios provides its own type definitions, so you do not need this installed.
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -4512,6 +4522,7 @@ snapshots:
 
   '@fixserv-colauncha/shared@1.0.21':
     dependencies:
+      '@fixserv-colauncha/shared': 1.0.25
       '@types/cookie-session': 2.0.49
       '@types/express': 5.0.1
       '@types/jsonwebtoken': 9.0.9
@@ -4538,7 +4549,7 @@ snapshots:
       - socks
       - supports-color
 
-  '@fixserv-colauncha/shared@1.0.22':
+  '@fixserv-colauncha/shared@1.0.25':
     dependencies:
       '@redis/client': 5.8.2
       '@types/cookie-session': 2.0.49
@@ -5162,6 +5173,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
     optional: true
+
+  '@types/axios@0.14.4':
+    dependencies:
+      axios: 1.9.0
+    transitivePeerDependencies:
+      - debug
 
   '@types/babel__core@7.20.5':
     dependencies:
