@@ -279,4 +279,56 @@ export class OrderService {
       await this.eventBus.publish("order_events", event);
     }
   }
+  //async testing(serviceId: string, clientId: string, userId: string) {
+  //  const service = await getServiceById(serviceId);
+  //  const client = await getClientById(clientId);
+  //  const wallet = await WalletClient.getTransactionHistory(userId);
+  //  return { service, client, wallet };
+  //}
+  async testing(serviceId: string, clientId: string, userId: string) {
+    const results: any = {};
+    const errors: any = {};
+
+    // Fetch all services concurrently but handle errors individually
+    const promises = [
+      getServiceById(serviceId)
+        .then((data) => ({ service: data }))
+        .catch((err) => ({ serviceError: err.message })),
+      getClientById(clientId)
+        .then((data) => ({ client: data }))
+        .catch((err) => ({ clientError: err.message })),
+      WalletClient.getTransactionHistory(userId)
+        .then((data) => ({ wallet: data }))
+        .catch((err) => ({ walletError: err.message })),
+    ];
+
+    const responses = await Promise.allSettled(promises);
+
+    responses.forEach((response, index) => {
+      if (response.status === "fulfilled") {
+        Object.assign(results, response.value);
+      } else {
+        const errorKey = ["serviceError", "clientError", "walletError"][index];
+        errors[errorKey] = response.reason?.message || "Unknown error";
+      }
+    });
+
+    // Log partial failures but don't throw unless everything failed
+    if (Object.keys(errors).length > 0) {
+      console.warn("⚠️ Some service calls failed:", errors);
+    }
+
+    // If we have at least some data, return it with error info
+    if (Object.keys(results).length > 0) {
+      return {
+        ...results,
+        ...(Object.keys(errors).length > 0 && { errors }),
+      };
+    }
+
+    // All calls failed
+    throw new BadRequestError(
+      "Unable to fetch required data. Please try again later."
+    );
+  }
 }

@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import axios from "axios";
 import { ServiceService } from "../../../application/services/serviceService";
 import { ArtisanRepositoryImpl } from "../../../infrastructure/artisanRepositoryImpl";
 import { ServiceRepositoryImpl } from "../../../infrastructure/serviceRepositoryImpl";
@@ -20,6 +21,26 @@ const serviceService = new ServiceService(
   offeredRepository
 );
 const serviceController = new ServiceController(serviceService);
+
+const service = `${process.env.SERVICE_MANAGEMENT_URL_HEALTH}/
+api/service/health`;
+setInterval(async () => {
+  for (const url of [service]) {
+    try {
+      await axios.get(url, { timeout: 5000 });
+      console.log(`✅ Pinged ${url}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to ping ${url}:`, error.message);
+    }
+  }
+}, 2 * 60 * 1000); // every 5 minutes
+router.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "service-management-service",
+  });
+});
 
 router.post(
   "/createService",

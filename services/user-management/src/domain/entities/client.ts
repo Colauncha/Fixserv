@@ -15,11 +15,26 @@ export class Client extends User {
     public servicePreferences: ServicePreferences,
     public profilePicture?: string, // Optional field for profile picture URL
     public uploadedProducts: any[] = [], // Optional field for uploaded products
-    public isEmailVerified?: boolean,
-    public emailVerificationToken?: string | null,
-    public emailVerifiedAt?: Date | null
+    //public isEmailVerified?: boolean,
+    //public emailVerificationToken?: string | null,
+    //public emailVerifiedAt?: Date | null
+    isEmailVerified?: boolean,
+    emailVerificationToken?: string | null,
+    emailVerifiedAt?: Date | null
   ) {
-    super(id, email, password, fullName, "CLIENT", phoneNumber, profilePicture);
+    // super(id, email, password, fullName, "CLIENT", phoneNumber, profilePicture);
+    super(
+      id,
+      email,
+      password,
+      fullName,
+      "CLIENT",
+      phoneNumber,
+      profilePicture,
+      isEmailVerified,
+      emailVerificationToken,
+      emailVerifiedAt
+    );
   }
 
   updatePreferences(newPreferences: string[]): Client {
@@ -32,7 +47,11 @@ export class Client extends User {
       this.deliveryAddress,
       new ServicePreferences(newPreferences),
       this.profilePicture,
-      this.uploadedProducts
+      this.uploadedProducts,
+      //critical:preserve email verification state when creating new instances
+      this.isEmailVerified,
+      this.emailVerificationToken,
+      this.emailVerifiedAt
     );
   }
 }

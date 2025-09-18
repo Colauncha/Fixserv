@@ -234,7 +234,7 @@ export class UserService implements IUserService {
   }
 
   async verifyEmail(token: string): Promise<{ message: string }> {
-    const userId = this.tokenService.validateVerificationToken(token);
+    const userId = await this.tokenService.validateVerificationToken(token);
     if (!userId) {
       throw new BadRequestError("Invalid or expired verification token");
     }
@@ -245,11 +245,16 @@ export class UserService implements IUserService {
     }
 
     if (user.isEmailVerified) {
+      // Still invalidate the token even if already verified
+      await this.tokenService.invalidateVerificationToken(userId);
       return { message: "Email is already verified" };
     }
 
     user.markEmailAsVerified();
     await this.userRepository.save(user);
+
+    // IMPORTANT: Invalidate the token after successful verification
+    await this.tokenService.invalidateVerificationToken(userId);
 
     return { message: "Email verified successfully" };
   }

@@ -19,9 +19,9 @@ const start = async () => {
     await connectDB();
     await connectRedis();
 
-    app.use(rateLimiter());
+    // app.use(rateLimiter())
 
-    app.listen(4001, () => {
+    const server = app.listen(4001, () => {
       console.log("service-management is running on port 4001");
     });
 
@@ -31,9 +31,28 @@ const start = async () => {
     await artisanEventsHandler.setupSubscriptions();
     await reviewEventHandler.setupSubscriptions();
     await orderEventHandler.setupSubscriptions();
+
+    // Graceful shutdown handling
+    const gracefulShutdown = (signal: string) => {
+      console.log(`📴 Received ${signal}, shutting down gracefully...`);
+      server.close(async () => {
+        console.log("✅ HTTP server closed");
+        await connectDB();
+        process.exit(0);
+      });
+      // Force close after 10 seconds
+      setTimeout(() => {
+        console.log("⚡ Force closing server");
+        process.exit(1);
+      }, 10000);
+    };
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
   } catch (error) {
     console.log(error);
   }
 };
 
-start();
+start().catch(() => {
+  console.log("Startup Server failed");
+});
