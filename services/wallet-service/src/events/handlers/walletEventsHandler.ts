@@ -4,6 +4,7 @@ import {
   RedisEventBus,
 } from "@fixserv-colauncha/shared";
 import { WalletModel } from "../../infrastructure/persistence/models/walletModel";
+import { ReferralService } from "../../application/services/referralService";
 
 export class WalletEventsHandler {
   constructor() {}
@@ -25,6 +26,9 @@ export class WalletEventsHandler {
           //    new ReviewPublishedEvent(evt.payload)
           //  );
           // break;
+          case "ArtisanVerifiedEvent":
+            await this.handleArtisanVerified(event);
+            break;
           default:
             console.log("Unknown event type:", event.eventName);
         }
@@ -55,7 +59,26 @@ export class WalletEventsHandler {
 
   private async handleUserCreatedEvent(event: any) {
     try {
-      const { userId, role, fullName } = event.payload;
+      const { userId, role, fullName, referralCode } = event.payload;
+      console.log(
+        `📨 Processing user creation for ${userId}, role: ${role}, referral: ${
+          referralCode || "none"
+        }`
+      );
+
+      // Process referral signup (creates fixpoints balance and handles referrals)
+      const result = await ReferralService.handleUserSignup(
+        userId,
+        role as "CLIENT" | "ARTISAN",
+        referralCode
+      );
+
+      console.log(`✅ Referral system setup complete for user ${userId}:`, {
+        points: result.fixpointsBalance.points,
+        referralCode: result.referralCode.code,
+        referrerReward: result.referrerReward?.pointsAwarded || 0,
+      });
+
       const existingWallet = await WalletModel.findOne({ userId });
       // if (!existing) return;
       if (existingWallet) {
@@ -127,6 +150,22 @@ export class WalletEventsHandler {
         error
       );
       await this.publishAck(event.id, "failed", error.message);
+    }
+  }
+
+  private async handleArtisanVerified(event: any) {
+    const { userId } = event.data;
+
+    try {
+      // Award verification bonus
+      await ReferralService.handleArtisanVerification(userId);
+
+      console.log(`✅ Verification bonus awarded to artisan ${userId}`);
+    } catch (error) {
+      console.error(
+        `❌ Failed to award verification bonus to ${userId}:`,
+        error
+      );
     }
   }
 }

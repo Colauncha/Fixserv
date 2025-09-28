@@ -4,7 +4,8 @@ import crypto from "crypto";
 import { BadRequestError } from "@fixserv-colauncha/shared";
 import { WalletService } from "../../application/services/walletService";
 import { WalletModel } from "src/infrastructure/persistence/models/walletModel";
-import { ReferralService } from "src/application/services/referralService";
+import { ReferralService } from "../../application/services/referralService";
+import { ReferralCodeModel } from "../../infrastructure/persistence/models/referralModel";
 
 export class WalletController {
   static async lockFundsForOrderHandler(req: any, res: any) {
@@ -1588,8 +1589,8 @@ export class WalletController {
       }
 
       // Check if code exists and is active
-      const ReferralCodeModel =
-        require("../../infrastructure/persistence/models/referralModels").ReferralCodeModel;
+      //const ReferralCodeModel =
+      //  require("../../infrastructure/persistence///models/referralModel").ReferralCodeModel;
       const referralCode = await ReferralCodeModel.findOne({
         code: code.toUpperCase(),
         isActive: true,

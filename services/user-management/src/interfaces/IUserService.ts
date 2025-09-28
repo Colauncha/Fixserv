@@ -7,6 +7,7 @@ export interface IUserService {
     fullName: string,
     role: "CLIENT" | "ARTISAN" | "ADMIN",
     phoneNumber: string,
+    referralCode?: string,
     clientData?: {
       deliveryAddress: {
         street: string;

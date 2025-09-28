@@ -30,6 +30,7 @@ export class UserService implements IUserService {
     fullName: string,
     role: "CLIENT" | "ARTISAN" | "ADMIN",
     phoneNumber: string,
+    referralCode?: string,
     clientData?: {
       deliveryAddress: {
         street: string;
@@ -50,6 +51,7 @@ export class UserService implements IUserService {
     adminData?: {
       permissions: string[];
     }
+    // referralCode?: string
   ): Promise<{ user: UserAggregate }> {
     const emailData = new Email(email);
     const passwordData = await Password.create(password);
@@ -82,6 +84,7 @@ export class UserService implements IUserService {
           email: user.email,
           fullName: user.fullName,
           role: "CLIENT",
+          referralCode,
           additionalData: {
             servicePreferences: clientData.servicePreferences,
           },
@@ -113,6 +116,7 @@ export class UserService implements IUserService {
           email: user.email,
           fullName: user.fullName,
           role: "ARTISAN",
+          referralCode,
           additionalData: {
             businessName: artisanData.businessName,
             skills: artisanData.skillSet,

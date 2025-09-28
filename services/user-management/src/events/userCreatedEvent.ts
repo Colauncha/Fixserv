@@ -10,6 +10,7 @@ export class UserCreatedEvent extends BaseEvent {
       email: string;
       fullName: string;
       role: "CLIENT" | "ARTISAN" | "ADMIN";
+      referralCode?: string;
       // Optional additional data based on role
       additionalData?: {
         businessName?: string;

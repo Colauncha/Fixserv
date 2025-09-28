@@ -12,8 +12,15 @@ export class UserController {
   constructor(private userService: UserService) {}
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, fullName, role, phoneNumber, ...roleData } =
-        req.body;
+      const {
+        email,
+        password,
+        fullName,
+        role,
+        phoneNumber,
+        referralCode,
+        ...roleData
+      } = req.body;
 
       const { user } = await this.userService.registerUser(
         email,
@@ -21,6 +28,7 @@ export class UserController {
         fullName,
         role,
         phoneNumber,
+        referralCode,
         roleData.clientData,
         roleData.artisanData,
         roleData.adminData
@@ -38,6 +46,7 @@ export class UserController {
         message:
           "User registered successfully. Please check your email to verify your account.",
         user: this.response.toJSON(user),
+        referralCode: user.id,
       });
     } catch (error: any) {
       if (error.code === 11000) {
