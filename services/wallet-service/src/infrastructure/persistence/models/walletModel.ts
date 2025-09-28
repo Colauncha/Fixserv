@@ -215,7 +215,14 @@ const WalletSchema = new mongoose.Schema(
     pinHash: { type: String }, // Hashed withdrawal PIN
     twoFactorEnabled: { type: Boolean, default: false },
     //Wallet referral
-    walletReferral: WalletReferralFields,
+    // walletReferral: WalletReferralFields,
+    walletReferral: {
+      referralCode: { type: String, index: true }, // The user's referral code
+      referredBy: { type: String }, // Who referred this user
+      referralRewardsEarned: { type: Number, default: 0 }, // Total referral rewards earned
+      hasReceivedSignupBonus: { type: Boolean, default: false },
+      hasReceivedVerificationBonus: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );

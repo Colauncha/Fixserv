@@ -53,7 +53,8 @@ export class OrderService {
       service.id,
       service.details.price,
       client.deliveryAddress,
-      client.uploadedProducts
+      // client.uploadedProducts.id
+      [matchedProduct]
     );
 
     const saveOrder = await this.orderRepository.save(orderAggregate.order);

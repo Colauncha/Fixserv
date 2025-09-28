@@ -2,7 +2,6 @@
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 import { BadRequestError } from "@fixserv-colauncha/shared";
-ReferralCodeModel;
 import { WalletModel } from "../../infrastructure/persistence/models/walletModel";
 import {
   FixpointsBalanceModel,
@@ -573,6 +572,7 @@ export class ReferralService {
       throw error;
     }
   }
+
   /**
    * Enhanced wallet creation that integrates with referral system
    * Call this instead of creating wallet directly
