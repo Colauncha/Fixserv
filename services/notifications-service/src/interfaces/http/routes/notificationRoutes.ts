@@ -24,6 +24,7 @@ const notificationController = new NotificationController(notificationService);
 
 const service = `${process.env.NOTIFICATIONS_SERVICE_URL}/api/notifications/health`;
 setInterval(async () => {
+  if (process.env.ENV !== "development") return;
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });

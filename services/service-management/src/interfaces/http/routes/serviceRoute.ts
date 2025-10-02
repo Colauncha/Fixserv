@@ -25,6 +25,7 @@ const serviceController = new ServiceController(serviceService);
 const service = `${process.env.SERVICE_MANAGEMENT_URL_HEALTH}/
 api/service/health`;
 setInterval(async () => {
+  if (process.env.ENV !== "development") return;
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });

@@ -17,6 +17,7 @@ const orderController = new OrderController(orderService);
 const service = `${process.env.ORDER_MANAGEMENT_URL}/
 api/orders/health`;
 setInterval(async () => {
+  if (process.env.ENV !== "development") return;
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });

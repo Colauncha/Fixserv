@@ -10,6 +10,7 @@ const searchController = new SearchController(searchService);
 const service = `${process.env.SEARCH_AND_DISCOVERY_URL}/
 api/search/health`;
 setInterval(async () => {
+  if (process.env.ENV !== "development") return;
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });

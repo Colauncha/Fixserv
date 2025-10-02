@@ -24,6 +24,7 @@ const validate = new ValidateRequest();
 const service = `${process.env.USER_MANAGEMENT_URL}/
 api/admin/health`;
 setInterval(async () => {
+  if (process.env.ENV !== "development") return;
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });

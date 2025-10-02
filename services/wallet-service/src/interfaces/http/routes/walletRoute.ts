@@ -11,6 +11,7 @@ const router = Router();
 
 const service = `${process.env.WALLET_SERVICE_URL}/api/wallet/health`;
 setInterval(async () => {
+  if (process.env.ENV !== "development") return;
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });
