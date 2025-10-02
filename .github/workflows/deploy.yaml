@@ -1,0 +1,46 @@
+name: Build and Deploy backend docker containers to AWS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.FIXSERV_AWS_HOST }}
+          username: ${{ secrets.FIXSERV_AWS_USER }}
+          key: ${{ secrets.FIXSERV_AWS_KEY }}
+          script: |
+            cd /var/www/fixserv/Fixserv || exit 1
+            git fetch --all
+            git reset --hard origin/main
+
+            # Stop and remove old containers
+            docker stop fixserv-user fixserv-order fixserv-service fixserv-notification fixserv-wallet fixserv-search || true
+            docker rm -f fixserv-user fixserv-order fixserv-service fixserv-notification fixserv-wallet fixserv-search || true
+
+            # Build services
+            docker build -t fixserv/user-services -f services/user-management/Dockerfile .
+            docker build -t fixserv/order-services -f services/order-management/Dockerfile .
+            docker build -t fixserv/service-services -f services/service-management/Dockerfile .
+            docker build -t fixserv/notification-services -f services/notifications-service/Dockerfile .
+            docker build -t fixserv/wallet-services -f services/wallet-service/Dockerfile .
+            docker build -t fixserv/search-services -f services/search-and-discovery/Dockerfile .
+            docker build -t fixserv/review-services -f services/review-and-feedback/Dockerfile .
+
+            # Run services
+            docker run -d -p 4000:4000 --name fixserv-user fixserv/user-services
+            docker run -d -p 4004:4004 --name fixserv-order fixserv/order-services
+            docker run -d -p 4001:4001 --name fixserv-service fixserv/service-services
+            docker run -d -p 4006:4006 --name fixserv-notification fixserv/notification-services
+            docker run -d -p 4005:4005 --name fixserv-wallet fixserv/wallet-services
+            docker run -d -p 4003:4003 --name fixserv-search fixserv/search-services
+            # docker run -d -p 4007:4007 --name fixserv-review fixserv/review-services
