@@ -37,10 +37,10 @@ jobs:
             docker build -t fixserv/review-services -f services/review-and-feedback/Dockerfile .
 
             # Run services
-            docker run -d -p 4000:4000 --name fixserv-user fixserv/user-services
-            docker run -d -p 4004:4004 --name fixserv-order fixserv/order-services
-            docker run -d -p 4001:4001 --name fixserv-service fixserv/service-services
-            docker run -d -p 4006:4006 --name fixserv-notification fixserv/notification-services
-            docker run -d -p 4005:4005 --name fixserv-wallet fixserv/wallet-services
-            docker run -d -p 4003:4003 --name fixserv-search fixserv/search-services
-            # docker run -d -p 4007:4007 --name fixserv-review fixserv/review-services
+            docker run --env-file services/user-management/.env -d -p 4000:4000 --name fixserv-user fixserv/user-services
+            docker run --env-file services/order-management/.env -d -p 4004:4004 --name fixserv-order fixserv/order-services
+            docker run --env-file services/service-management/.env -d -p 4001:4001 --name fixserv-service fixserv/service-services
+            docker run --env-file services/notifications-service/.env -d -p 4006:4006 --name fixserv-notification fixserv/notification-services
+            docker run --env-file services/wallet-service/.env -d -p 4005:4005 --name fixserv-wallet fixserv/wallet-services
+            docker run --env-file services/search-and-discovery/.env -d -p 4003:4003 --name fixserv-search fixserv/search-services
+            # docker run --env-file services/review-and-feedback/.env -d -p 4007:4007 --name fixserv-review fixserv/review-services
