@@ -17,7 +17,12 @@ const orderController = new OrderController(orderService);
 const service = `${process.env.ORDER_MANAGEMENT_URL}/
 api/orders/health`;
 setInterval(async () => {
-  if (process.env.ENV !== "development") return;
+  const ENV = process.env.ENV?.toLowerCase();
+  console.log(ENV);
+  if (ENV !== "development") {
+    console.log("Skipping health check pings in non-development environment");
+    return
+  }
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });
