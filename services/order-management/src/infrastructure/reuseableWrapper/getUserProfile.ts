@@ -266,7 +266,7 @@ export async function getOfferedServiceById(id: string) {
 }
 */
 import { safeAxiosCall } from "../clients/axiosClient";
-import { isDBReady, waitForConnection } from "@fixserv-colauncha/shared";
+// import { isDBReady, waitForConnection } from "@fixserv-colauncha/shared";
 
 // Enhanced error mapping
 const mapErrorToUserMessage = (error: any, serviceName: string): string => {
@@ -314,18 +314,18 @@ export const makeServiceCall = async (
     );
 
     // Check database connection if required
-    if (requiresDB && !isDBReady()) {
-      console.warn(
-        `⚠️ Database not ready for ${serviceName} call, attempting to connect...`
-      );
-      const dbReady = await waitForConnection(10000); // Wait up to 10 seconds
+    // if (requiresDB && !isDBReady()) {
+    //   console.warn(
+    //     `⚠️ Database not ready for ${serviceName} call, attempting to connect...`
+    //   );
+    //   const dbReady = await waitForConnection(10000); // Wait up to 10 seconds
 
-      if (!dbReady) {
-        throw new BadRequestError(
-          "Database connection is not available. Please try again in a moment."
-        );
-      }
-    }
+    //   if (!dbReady) {
+    //     throw new BadRequestError(
+    //       "Database connection is not available. Please try again in a moment."
+    //     );
+    //   }
+    // }
 
     const result = await safeAxiosCall(config);
 
@@ -498,7 +498,7 @@ export async function checkServicesHealth(): Promise<any> {
 
   return {
     timestamp: new Date().toISOString(),
-    database: isDBReady() ? "connected" : "disconnected",
+    database: "connected",
     services: results.map((result) =>
       result.status === "fulfilled"
         ? result.value

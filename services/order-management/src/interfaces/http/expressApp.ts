@@ -7,7 +7,7 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import mongoSanitize from "express-mongo-sanitize";
 
-import { NotFoundError, isDBReady } from "@fixserv-colauncha/shared";
+import { NotFoundError } from "@fixserv-colauncha/shared";
 import { errorHandler } from "@fixserv-colauncha/shared";
 import { orderRouter } from "./routes/orderRoute";
 import { baseOrderRouter } from "./routes/baseOrderRoute";
