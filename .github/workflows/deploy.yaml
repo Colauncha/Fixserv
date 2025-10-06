@@ -23,14 +23,34 @@ jobs:
             git fetch --all
             git reset --hard origin/main
 
-            # remove old dist files
-            rm -rf services/notifications-service/dist
-            rm -rf services/order-management/dist
-            rm -rf services/wallet-service/dist
-            rm -rf services/user-management/dist
-            rm -rf services/service-management/dist
-            rm -rf services/search-and-discovery/dist
-            rm -rf services/review-and-feedback/dist
+            # remove old dist files and recompile
+            cd services/notifications-service/
+            rm -rf /dist
+            pnpm run build
+
+            cd ../order-management
+            rm -rf /dist
+            pnpm run build
+
+            cd ../wallet-service
+            rm -rf /dist
+            pnpm run build
+
+            cd ../user-management
+            rm -rf /dist
+            pnpm run build
+
+            cd ../service-management
+            rm -rf /dist
+            pnpm run build
+
+            cd ../search-and-discovery
+            rm -rf /dist
+            pnpm run build
+
+            cd ../review-and-feedback
+            rm -rf /dist
+            pnpm run build
 
             # Stop and remove old containers
             docker stop $(docker ps -q)
