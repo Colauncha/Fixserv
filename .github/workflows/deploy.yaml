@@ -23,35 +23,6 @@ jobs:
             git fetch --all
             git reset --hard origin/main
 
-            # remove old dist files and recompile
-            cd services/notifications-service/
-            rm -rf /dist
-            pnpm run build
-
-            cd ../order-management
-            rm -rf /dist
-            pnpm run build
-
-            cd ../wallet-service
-            rm -rf /dist
-            pnpm run build
-
-            cd ../user-management
-            rm -rf /dist
-            pnpm run build
-
-            cd ../service-management
-            rm -rf /dist
-            pnpm run build
-
-            cd ../search-and-discovery
-            rm -rf /dist
-            pnpm run build
-
-            cd ../review-and-feedback
-            rm -rf /dist
-            pnpm run build
-
             # Stop and remove old containers
             docker stop $(docker ps -q)
             docker rm -f $(docker ps -aq)
@@ -59,13 +30,13 @@ jobs:
             docker system prune -a
 
             # Build services
-            docker build -t fixserv/user-services -f services/user-management/Dockerfile .
-            docker build -t fixserv/order-services -f services/order-management/Dockerfile .
-            docker build -t fixserv/service-services -f services/service-management/Dockerfile .
-            docker build -t fixserv/notification-services -f services/notifications-service/Dockerfile .
-            docker build -t fixserv/wallet-services -f services/wallet-service/Dockerfile .
-            docker build -t fixserv/search-services -f services/search-and-discovery/Dockerfile .
-            docker build -t fixserv/review-services -f services/review-and-feedback/Dockerfile .
+            docker build --no-cache -t fixserv/user-services -f services/user-management/Dockerfile .
+            docker build --no-cache -t fixserv/order-services -f services/order-management/Dockerfile .
+            docker build --no-cache -t fixserv/service-services -f services/service-management/Dockerfile .
+            docker build --no-cache -t fixserv/notification-services -f services/notifications-service/Dockerfile .
+            docker build --no-cache -t fixserv/wallet-services -f services/wallet-service/Dockerfile .
+            docker build --no-cache -t fixserv/search-services -f services/search-and-discovery/Dockerfile .
+            docker build --no-cache -t fixserv/review-services -f services/review-and-feedback/Dockerfile .
 
             # Run services
             docker run --env-file services/user-management/.env -d -p 4000:4000 --name fixserv-user fixserv/user-services
