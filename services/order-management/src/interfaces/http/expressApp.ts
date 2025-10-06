@@ -47,7 +47,7 @@ const requireDB = (
 };
 
 app.use("/order", rootRouter);
-app.use("/api/orders", requireDB as any, orderRouter);
+app.use("/api/orders", orderRouter);
 app.use("/api/baseOrders", baseOrderRouter);
 
 app.all("*", async () => {
