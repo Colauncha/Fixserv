@@ -23,9 +23,16 @@ jobs:
             git fetch --all
             git reset --hard origin/main
 
+            # remove old dist files
+            rm -rf services/notifications-service/dist
+            rm -rf services/order-management/dist
+            rm -rf services/wallet-service/dist
+            rm -rf services/user-management/dist
+            rm -rf services/service-management/dist
+            rm -rf services/search-and-discovery/dist
+            rm -rf services/review-and-feedback/dist
+
             # Stop and remove old containers
-            # docker stop fixserv-user fixserv-order fixserv-service fixserv-notification fixserv-wallet fixserv-search || true
-            # docker rm -f fixserv-user fixserv-order fixserv-service fixserv-notification fixserv-wallet fixserv-search || true
             docker stop $(docker ps -q)
             docker rm -f $(docker ps -aq)
             docker image prune -a
