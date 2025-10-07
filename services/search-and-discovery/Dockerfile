@@ -83,7 +83,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/search-and-discovery/dist ./dist
 COPY --from=builder /app/services/search-and-discovery/package.json ./
-COPY --from=builder /app/services/search-and-discovery/.env .env
+# COPY --from=builder /app/services/search-and-discovery/.env .env
 
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]

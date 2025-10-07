@@ -84,7 +84,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/review-and-feedback/dist ./dist
 COPY --from=builder /app/services/review-and-feedback/package.json ./
-COPY --from=builder /app/services/review-and-feedback/.env .env
+# COPY --from=builder /app/services/review-and-feedback/.env .env
 
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]

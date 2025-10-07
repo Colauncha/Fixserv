@@ -86,7 +86,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/notifications-service/dist ./dist
 COPY --from=builder /app/services/notifications-service/package.json ./
-COPY --from=builder /app/services/notifications-service/.env .env
+# COPY --from=builder /app/services/notifications-service/.env .env
 
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]
