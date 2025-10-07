@@ -89,13 +89,13 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       # 4️⃣ Build and Push each service image
       - name: Build and push ${{ matrix.service }}
         run: |
-          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/fixserv-${{ matrix.service }}
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/fixserv-${{ matrix.service }}
 
           echo "🏗️ Building image for ${{ matrix.service }}..."
           
