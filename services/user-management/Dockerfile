@@ -11,7 +11,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy all service-level package.json files for dependency resolution
 COPY services/user-management/package.json ./services/user-management/
-COPY services/shared/package.json ./services/shared/
+# COPY services/shared/package.json ./services/shared/
 
 # Install all workspace dependencies (dev + prod)
 RUN pnpm install --shamefully-hoist
@@ -21,9 +21,10 @@ COPY services ./services
 
 # Build shared package first
 # RUN cd services/shared && pnpm run build
-RUN pnpm --filter services/shared run build
+# RUN pnpm --filter services/shared run build
 
 # 🔥 Run the build script from the root using workspace filter
+RUN pnpm --filter services/user-management install --shamefully-hoist
 RUN pnpm --filter services/user-management run build
 
 # ---- STAGE 2: Runtime ----
@@ -44,8 +45,8 @@ COPY --from=builder /app/services/user-management/dist ./dist
 COPY --from=builder /app/services/user-management/package.json ./
 
 # Copy shared package into node_modules to simulate npm install
-COPY --from=builder /app/services/shared/build ./node_modules/@fixserv-colauncha/shared/build
-COPY --from=builder /app/services/shared/package.json ./node_modules/@fixserv-colauncha/shared/package.json
+# COPY --from=builder /app/services/shared/build ./node_modules/@fixserv-colauncha/shared/build
+# COPY --from=builder /app/services/shared/package.json ./node_modules/@fixserv-colauncha/shared/package.json
 
 
 # COPY --from=builder /app/services/shared/build ./node_modules/@fixserv-colauncha/shared
