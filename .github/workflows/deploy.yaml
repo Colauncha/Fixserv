@@ -1,12 +1,18 @@
 name: Build and Deploy backend docker containers to AWS
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Build and Push Docker Images to Docker Hub"]
+    types:
+      - completed
 
 jobs:
   build-and-deploy:
+    if: >
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,8 +26,6 @@ jobs:
           key: ${{ secrets.FIXSERV_AWS_KEY }}
           script: |
             cd /var/www/fixserv/Fixserv || exit 1
-            git fetch --all
-            git reset --hard origin/main
 
             # Stop and remove old containers
             docker stop $(docker ps -q)
@@ -30,19 +34,28 @@ jobs:
             docker system prune -a
 
             # Build services
-            docker build --no-cache -t fixserv/user-services -f services/user-management/Dockerfile .
-            docker build --no-cache -t fixserv/order-services -f services/order-management/Dockerfile .
-            docker build --no-cache -t fixserv/service-services -f services/service-management/Dockerfile .
-            docker build --no-cache -t fixserv/notification-services -f services/notifications-service/Dockerfile .
-            docker build --no-cache -t fixserv/wallet-services -f services/wallet-service/Dockerfile .
-            docker build --no-cache -t fixserv/search-services -f services/search-and-discovery/Dockerfile .
-            docker build --no-cache -t fixserv/review-services -f services/review-and-feedback/Dockerfile .
+            # docker build --no-cache -t fixserv/user-services -f services/user-management/Dockerfile .
+            # docker build --no-cache -t fixserv/order-services -f services/order-management/Dockerfile .
+            # docker build --no-cache -t fixserv/service-services -f services/service-management/Dockerfile .
+            # docker build --no-cache -t fixserv/notification-services -f services/notifications-service/Dockerfile .
+            # docker build --no-cache -t fixserv/wallet-services -f services/wallet-service/Dockerfile .
+            # docker build --no-cache -t fixserv/search-services -f services/search-and-discovery/Dockerfile .
+            # docker build --no-cache -t fixserv/review-services -f services/review-and-feedback/Dockerfile .
+
+            # Pull services
+            docker pull colauncha/fixserv-user-management:latest
+            docker pull colauncha/fixserv-order-management:latest
+            docker pull colauncha/fixserv-service-management:latest
+            docker pull colauncha/fixserv-notifications-service:latest
+            docker pull colauncha/fixserv-wallet-service:latest
+            docker pull colauncha/fixserv-search-and-discovery:latest
+            docker pull colauncha/fixserv-review-and-feedback:latest
 
             # Run services
-            docker run --env-file services/user-management/.env -d -p 4000:4000 --name fixserv-user fixserv/user-services
-            docker run --env-file services/order-management/.env -d -p 4004:4004 --name fixserv-order fixserv/order-services
-            docker run --env-file services/service-management/.env -d -p 4001:4001 --name fixserv-service fixserv/service-services
-            docker run --env-file services/notifications-service/.env -d -p 4006:4006 --name fixserv-notification fixserv/notification-services
-            docker run --env-file services/wallet-service/.env -d -p 4005:4005 --name fixserv-wallet fixserv/wallet-services
-            docker run --env-file services/search-and-discovery/.env -d -p 4003:4003 --name fixserv-search fixserv/search-services
-            # docker run --env-file services/review-and-feedback/.env -d -p 4007:4007 --name fixserv-review fixserv/review-services
+            docker run --env-file services/user-management/.env -d -p 4000:4000 --name fixserv-user colauncha/fixserv-user-management:latest
+            docker run --env-file services/order-management/.env -d -p 4004:4004 --name fixserv-order colauncha/fixserv-order-management:latest
+            docker run --env-file services/service-management/.env -d -p 4001:4001 --name fixserv-service colauncha/fixserv-service-management:latest
+            docker run --env-file services/notifications-service/.env -d -p 4006:4006 --name fixserv-notification colauncha/fixserv-notifications-service:latest
+            docker run --env-file services/wallet-service/.env -d -p 4005:4005 --name fixserv-wallet colauncha/fixserv-wallet-service:latest
+            docker run --env-file services/search-and-discovery/.env -d -p 4003:4003 --name fixserv-search colauncha/fixserv-search-and-discovery:latest
+            # docker run --env-file services/review-and-feedback/.env -d -p 4002:4002 --name fixserv-review colauncha/fixserv-review-and-feedback:latest
