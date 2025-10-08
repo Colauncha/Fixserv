@@ -75,8 +75,6 @@ COPY services ./services
 RUN cd services/review-and-feedback && pnpm install --shamefully-hoist
 RUN cd services/review-and-feedback && pnpm run build
 
-RUN ls -R /app/services/review-and-feedback  # 🔍 debug line
-
 # ---- STAGE 2: Runtime ----
 FROM node:18-alpine
 WORKDIR /app
@@ -84,7 +82,6 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/review-and-feedback/dist ./dist
 COPY --from=builder /app/services/review-and-feedback/package.json ./
-# COPY --from=builder /app/services/review-and-feedback/.env .env
 
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]

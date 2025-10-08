@@ -77,8 +77,6 @@ COPY services ./services
 RUN cd services/notifications-service && pnpm install --shamefully-hoist
 RUN cd services/notifications-service && pnpm run build
 
-RUN ls -R /app/services/notifications-service  # 🔍 debug line
-
 # ---- STAGE 2: Runtime ----
 FROM node:18-alpine
 WORKDIR /app
@@ -86,7 +84,6 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/notifications-service/dist ./dist
 COPY --from=builder /app/services/notifications-service/package.json ./
-# COPY --from=builder /app/services/notifications-service/.env .env
 
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]

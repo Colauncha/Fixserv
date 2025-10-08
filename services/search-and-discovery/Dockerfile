@@ -74,8 +74,6 @@ COPY services ./services
 RUN cd services/search-and-discovery && pnpm install --shamefully-hoist
 RUN cd services/search-and-discovery && pnpm run build
 
-RUN ls -R /app/services/search-and-discovery  # 🔍 debug line
-
 # ---- STAGE 2: Runtime ----
 FROM node:18-alpine
 WORKDIR /app
@@ -83,7 +81,6 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/search-and-discovery/dist ./dist
 COPY --from=builder /app/services/search-and-discovery/package.json ./
-# COPY --from=builder /app/services/search-and-discovery/.env .env
 
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]

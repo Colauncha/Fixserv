@@ -77,8 +77,6 @@ COPY services ./services
 RUN cd services/order-management && pnpm install --shamefully-hoist
 RUN cd services/order-management && pnpm run build
 
-RUN ls -R /app/services/order-management  # 🔍 debug line
-
 # ---- STAGE 2: Runtime ----
 FROM node:18-alpine
 WORKDIR /app
@@ -86,7 +84,6 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/order-management/dist ./dist
 COPY --from=builder /app/services/order-management/package.json ./
-# COPY --from=builder /app/services/order-management/.env .env
 
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]
