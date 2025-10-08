@@ -44,7 +44,7 @@ jobs:
       # 4️⃣ Build and Push each service image
       - name: Build and push ${{ matrix.service }}
         run: |
-          IMAGE=${{ secrets.DOCKER_USERNAME }}/fixserv/${{ matrix.service }}
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/fixserv-${{ matrix.service }}
 
           echo "🏗️ Building image for ${{ matrix.service }}..."
           
