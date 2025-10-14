@@ -1,0 +1,72 @@
+
+services:
+  # User Management Service
+  user-management:
+    image: colauncha/fixserv-user-management:latest
+    container_name: fixserv-user
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./services/user-management/.env
+    restart: always
+
+  # Order Management Service
+  order-management:
+    image: colauncha/fixserv-order-management:latest
+    container_name: fixserv-order
+    ports:
+      - "4004:4004"
+    env_file:
+      - ./services/order-management/.env
+    restart: always
+
+  # Service Management Service
+  service-management:
+    image: colauncha/fixserv-service-management:latest
+    container_name: fixserv-service
+    ports:
+      - "4001:4001"
+    env_file:
+      - ./services/service-management/.env
+    restart: always
+
+  # Notifications Service
+  notifications-service:
+    image: colauncha/fixserv-notifications-service:latest
+    container_name: fixserv-notification
+    ports:
+      - "4006:4006"
+    env_file:
+      - ./services/notifications-service/.env
+    restart: always
+
+  # Wallet Service
+  wallet-service:
+    image: colauncha/fixserv-wallet-service:latest
+    container_name: fixserv-wallet
+    ports:
+      - "4005:4005"
+    env_file:
+      - ./services/wallet-service/.env
+    restart: always
+
+  # Search and Discovery Service
+  search-and-discovery:
+    image: colauncha/fixserv-search-and-discovery:latest
+    container_name: fixserv-search
+    ports:
+      - "4003:4003"
+    env_file:
+      - ./services/search-and-discovery/.env
+    restart: always
+
+  # Review and Feedback Service
+  # review-and-feedback:
+  #   image: colauncha/fixserv-review-and-feedback:latest
+  #   container_name: fixserv-review
+  #   ports:
+  #     - "4002:4002"
+  #   env_file:
+  #     - ./services/review-and-feedback/.env
+  #   restart: always
+    
