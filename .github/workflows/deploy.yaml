@@ -1,4 +1,4 @@
-name: Build and Deploy backend docker containers to AWS
+name: Deploy Backend Services to AWS
 
 on:
   workflow_run:
@@ -18,44 +18,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Deploy via SSH
+      - name: Deploy to AWS VM via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.FIXSERV_AWS_HOST }}
           username: ${{ secrets.FIXSERV_AWS_USER }}
           key: ${{ secrets.FIXSERV_AWS_KEY }}
           script: |
+            # Navigate to the project directory. This is a crucial first step.
             cd /var/www/fixserv/Fixserv || exit 1
 
-            # Stop and remove old containers
-            docker stop $(docker ps -q)
-            docker rm -f $(docker ps -aq)
-            docker image prune -a
-            docker system prune -a
+            # 1. Pull the latest images from Docker Hub as defined in your compose file.
+            echo "Pulling latest Docker images..."
+            docker-compose -f docker-compose.yaml pull
 
-            # Build services
-            # docker build --no-cache -t fixserv/user-services -f services/user-management/Dockerfile .
-            # docker build --no-cache -t fixserv/order-services -f services/order-management/Dockerfile .
-            # docker build --no-cache -t fixserv/service-services -f services/service-management/Dockerfile .
-            # docker build --no-cache -t fixserv/notification-services -f services/notifications-service/Dockerfile .
-            # docker build --no-cache -t fixserv/wallet-services -f services/wallet-service/Dockerfile .
-            # docker build --no-cache -t fixserv/search-services -f services/search-and-discovery/Dockerfile .
-            # docker build --no-cache -t fixserv/review-services -f services/review-and-feedback/Dockerfile .
+            # 2. Gracefully restart the services with the new images.
+            echo "Restarting services with updated images..."
+            docker-compose -f docker-compose.yaml up -d --remove-orphans
 
-            # Pull services
-            docker pull colauncha/fixserv-user-management:latest
-            docker pull colauncha/fixserv-order-management:latest
-            docker pull colauncha/fixserv-service-management:latest
-            docker pull colauncha/fixserv-notifications-service:latest
-            docker pull colauncha/fixserv-wallet-service:latest
-            docker pull colauncha/fixserv-search-and-discovery:latest
-            docker pull colauncha/fixserv-review-and-feedback:latest
-
-            # Run services
-            docker run --env-file services/user-management/.env -d -p 4000:4000 --name fixserv-user colauncha/fixserv-user-management:latest
-            docker run --env-file services/order-management/.env -d -p 4004:4004 --name fixserv-order colauncha/fixserv-order-management:latest
-            docker run --env-file services/service-management/.env -d -p 4001:4001 --name fixserv-service colauncha/fixserv-service-management:latest
-            docker run --env-file services/notifications-service/.env -d -p 4006:4006 --name fixserv-notification colauncha/fixserv-notifications-service:latest
-            docker run --env-file services/wallet-service/.env -d -p 4005:4005 --name fixserv-wallet colauncha/fixserv-wallet-service:latest
-            docker run --env-file services/search-and-discovery/.env -d -p 4003:4003 --name fixserv-search colauncha/fixserv-search-and-discovery:latest
-            # docker run --env-file services/review-and-feedback/.env -d -p 4002:4002 --name fixserv-review colauncha/fixserv-review-and-feedback:latest
+            # 3. Clean up old, unused Docker images to save server disk space.
+            echo "Cleaning up unused Docker images..."
+            docker image prune -af
