@@ -83,6 +83,10 @@ export class OrderAggregate {
     this.order.markInProgress();
   }
 
+  markWorkCompleted(): void {
+    this.order.markAsWorkCompleted();
+  }
+
   expireOrder(): void {
     this.order.expireOrder();
   }

@@ -16,6 +16,7 @@ import {
   OrderRejectedEvent,
   PaymentInitiatedEvent,
   PaymentReleasedEvent,
+  WorkCompletedEvent,
   WorkStartedEvent,
 } from "../../events/orderEvents";
 import { WalletClient } from "../../infrastructure/reuseableWrapper/walletClient";
@@ -130,6 +131,13 @@ export class OrderService {
 
     //const aggregate = new OrderAggregate(order);
     //aggregate.releasePayment();
+
+    if (order.status !== "WORK_COMPLETED") {
+      throw new BadRequestError(
+        "Order must be marked as WORK_COMPLETED before releasing payment"
+      );
+    }
+
     await WalletClient.releaseFundsToArtisan(order.id, order.artisanId);
 
     //previous working fix
@@ -154,6 +162,7 @@ export class OrderService {
 
     await this.orderRepository.update(aggregate.order);
   }
+
   // New methods for artisan response
   async acceptOrder(
     orderId: string,
@@ -241,6 +250,31 @@ export class OrderService {
       artisanId: order.artisanId,
       clientId: order.clientId,
       startedAt: new Date().toISOString(),
+    });
+    await this.eventBus.publish("order_events", event);
+  }
+
+  async completeWork(orderId: string, artisanId: string): Promise<void> {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) throw new BadRequestError("Order not found");
+
+    if (order.artisanId !== artisanId) {
+      throw new BadRequestError(
+        "You are not authorized to complete this order"
+      );
+    }
+
+    const aggregate = new OrderAggregate(order);
+    aggregate.markWorkCompleted();
+
+    await this.orderRepository.update(aggregate.order);
+
+    // Publish work completed event
+    const event = new WorkCompletedEvent({
+      orderId: order.id,
+      artisanId: order.artisanId,
+      clientId: order.clientId,
+      completedAt: new Date().toISOString(),
     });
     await this.eventBus.publish("order_events", event);
   }

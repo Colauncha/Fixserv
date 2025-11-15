@@ -16,8 +16,6 @@ export class OfferedOrder {
 
     const offeredService = await getOfferedServiceById(id);
 
-    console.log(offeredService.data);
-
     // 2. Create the order
     const baseOrder = new BaseOrder(
       uuidv4(),

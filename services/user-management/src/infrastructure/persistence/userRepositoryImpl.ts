@@ -273,123 +273,6 @@ export class UserRepositoryImpl implements IUserRepository {
     }
   }
 
-  /*
-  private toDomain(data: any): UserAggregate {
-    if (data.role === "CLIENT") {
-      return UserAggregate.createClient(
-        data._id.toString(),
-        new Email(data.email),
-        Password.fromHash(data.password),
-        data.fullName,
-        new DeliveryAddress(
-          data.deliveryAddress.street,
-          data.deliveryAddress.city,
-          data.deliveryAddress.postalCode,
-          data.deliveryAddress.state,
-          data.deliveryAddress.country
-        ),
-        new ServicePreferences(
-          Array.isArray(data.servicePreferences) ? data.servicePreferences : []
-        ),
-        data.profilePicture,
-        data.uploadedProducts || []
-      );
-    } else if (data.role === "ARTISAN") {
-      const skills = Array.isArray(data.skillSet)
-        ? data.skillSet
-        : ["General Repair"];
-      return UserAggregate.createArtisan(
-        data._id.toString(),
-        new Email(data.email),
-        Password.fromHash(data.password),
-        data.fullName,
-        data.businessName,
-        data.location,
-        data.rating,
-        new SkillSet(skills),
-        new BusinessHours(data.businessHours),
-        data.profilePicture
-      );
-    } else if (data.role === "ADMIN") {
-      return UserAggregate.createAdmin(
-        data._id.toString(),
-        new Email(data.email),
-        Password.fromHash(data.password),
-        data.fullName,
-        data.permissions,
-        data.profilePicture
-      );
-    }
-    throw new Error(`Unknown role ${data.role}`);
-  }
-    */
-  /*
-  private toDomain(data: any): UserAggregate {
-    if (data.role === "CLIENT") {
-      console.log(
-        "Database uploadedProducts:",
-        data.uploadedProducts?.length || 0
-      );
-      console.log(
-        "Raw uploadedProducts:",
-        JSON.stringify(data.uploadedProducts, null, 2)
-      );
-
-      // Create the client with ALL required fields including profilePicture and uploadedProducts
-      const client = UserAggregate.createClient(
-        data._id.toString(),
-        new Email(data.email),
-        Password.fromHash(data.password),
-        data.fullName,
-        data.phoneNumber,
-        new DeliveryAddress(
-          data.deliveryAddress?.street || "",
-          data.deliveryAddress?.city || "",
-          data.deliveryAddress?.postalCode || "",
-          data.deliveryAddress?.state || "",
-          data.deliveryAddress?.country || ""
-        ),
-        new ServicePreferences(
-          Array.isArray(data.servicePreferences) ? data.servicePreferences : []
-        ),
-        data.profilePicture, // CRITICAL: Pass profilePicture from database
-        data.uploadedProducts || [] // CRITICAL: Pass uploadedProducts from database
-      );
-
-      return client;
-    } else if (data.role === "ARTISAN") {
-      const skills = Array.isArray(data.skillSet)
-        ? data.skillSet
-        : ["General Repair"];
-
-      return UserAggregate.createArtisan(
-        data._id.toString(),
-        new Email(data.email),
-        Password.fromHash(data.password),
-        data.fullName,
-        data.phoneNumber,
-        data.businessName || "",
-        data.location || "",
-        data.rating || 0,
-        new SkillSet(skills),
-        new BusinessHours(data.businessHours || {}),
-        data.profilePicture // CRITICAL: Pass profilePicture from database
-      );
-    } else if (data.role === "ADMIN") {
-      return UserAggregate.createAdmin(
-        data._id.toString(),
-        new Email(data.email),
-        Password.fromHash(data.password),
-        data.fullName,
-        data.phoneNumber,
-        data.permissions || [],
-        data.profilePicture // CRITICAL: Pass profilePicture from database
-      );
-    }
-
-    throw new Error(`Unknown role ${data.role}`);
-  }
-*/
   private toDomain(data: any): UserAggregate {
     let user: UserAggregate;
 
@@ -398,9 +281,9 @@ export class UserRepositoryImpl implements IUserRepository {
     const emailVerificationToken = data.emailVerificationToken || null;
     const emailVerifiedAt = data.emailVerifiedAt || null;
 
-    console.log(
-      `Loading user ${data._id} - DB isEmailVerified: ${isEmailVerified}`
-    );
+    //console.log(
+    //  `Loading user ${data._id} - DB isEmailVerified: ${isEmailVerified}`
+    //);
 
     if (data.role === "CLIENT") {
       console.log(

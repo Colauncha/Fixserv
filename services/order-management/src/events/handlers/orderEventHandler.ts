@@ -7,9 +7,9 @@ import {
 } from "../orderEvents";
 
 export class OrderEventsHandler {
-  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+  // private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
-  constructor() {}
+  constructor(private eventBus: RedisEventBus) {}
 
   async setupSubscriptions() {
     const sub = await this.eventBus.subscribe(

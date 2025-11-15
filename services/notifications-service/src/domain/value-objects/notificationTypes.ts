@@ -28,4 +28,5 @@ export class NotificationType {
   static BOOKING_CANCELLED = new NotificationType("BOOKING_CANCELLED");
   static PAYMENT_PROCESSED = new NotificationType("PAYMENT_PROCESSED");
   static SYSTEM_ALERT = new NotificationType("SYSTEM_ALERT");
+  static SERVICE_CREATED = new NotificationType("SERVICE_CREATED");
 }

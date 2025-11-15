@@ -14,18 +14,18 @@ const paymentRepo = new PaymentService();
 const orderService = new OrderService(orderRepo);
 const orderController = new OrderController(orderService);
 
-const service = `${process.env.ORDER_MANAGEMENT_URL}/
-api/orders/health`;
-setInterval(async () => {
-  for (const url of [service]) {
-    try {
-      await axios.get(url, { timeout: 5000 });
-      console.log(`✅ Pinged ${url}`);
-    } catch (error: any) {
-      console.error(`❌ Failed to ping ${url}:`, error.message);
-    }
-  }
-}, 2 * 60 * 1000); // every 5 minutes
+//const service = `${process.env.ORDER_MANAGEMENT_URL}/
+//api/orders/health`;
+//setInterval(async () => {
+//  for (const url of [service]) {
+//    try {
+//      await axios.get(url, { timeout: 5000 });
+//      console.log(`✅ Pinged ${url}`);
+//    } catch (error: any) {
+//      console.error(`❌ Failed to ping ${url}:`, //error.message);
+//    }
+//  }
+//}, 2 * 60 * 1000); // every 5 minutes
 router.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     status: "OK",
@@ -48,18 +48,6 @@ router.get(
   orderController.testing.bind(orderController)
 );
 
-router.post(
-  "/paystack/webhook",
-  express.json(),
-  //@ts-ignore
-  orderController.webHookHandler.bind(orderController)
-);
-
-router.get(
-  "/get-signature",
-  //@ts-ignore
-  orderController.verifySignature.bind(orderController)
-);
 
 router.get(
   "/:orderId/getOrder",
@@ -86,11 +74,6 @@ router.post(
   requireRole("CLIENT"),
   orderController.initiatePayment.bind(orderController)
 );
-router.post(
-  "/verify/:reference",
-  //@ts-ignore
-  orderController.verifyPayment.bind(orderController)
-);
 
 // NEW ARTISAN RESPONSE ROUTES
 router.post(
@@ -112,6 +95,13 @@ router.patch(
   authMiddleware.protect,
   requireRole("ARTISAN"),
   orderController.startWork.bind(orderController)
+);
+
+router.patch(
+  "/:orderId/complete-work",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.completeWork.bind(orderController)
 );
 
 // ORDER LISTING ROUTES

@@ -141,3 +141,19 @@ export class WorkStartedEvent extends BaseEvent {
     super(payload);
   }
 }
+
+export class WorkCompletedEvent extends BaseEvent {
+  eventName = "WorkCompleted";
+  version = 1;
+
+  constructor(
+    public payload: {
+      orderId: string;
+      artisanId: string;
+      clientId: string;
+      completedAt: string;
+    }
+  ) {
+    super(payload);
+  }
+}
