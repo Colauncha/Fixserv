@@ -14,18 +14,24 @@ const paymentRepo = new PaymentService();
 const orderService = new OrderService(orderRepo);
 const orderController = new OrderController(orderService);
 
-//const service = `${process.env.ORDER_MANAGEMENT_URL}/
-//api/orders/health`;
-//setInterval(async () => {
-//  for (const url of [service]) {
-//    try {
-//      await axios.get(url, { timeout: 5000 });
-//      console.log(`✅ Pinged ${url}`);
-//    } catch (error: any) {
-//      console.error(`❌ Failed to ping ${url}:`, //error.message);
-//    }
-//  }
-//}, 2 * 60 * 1000); // every 5 minutes
+const service = `${process.env.ORDER_MANAGEMENT_URL}/
+api/orders/health`;
+setInterval(async () => {
+  const ENV = process.env.ENV?.toLowerCase();
+  console.log(ENV);
+  if (ENV !== "development") {
+    console.log("Skipping health check pings in non-development environment");
+    return;
+  }
+  for (const url of [service]) {
+    try {
+      await axios.get(url, { timeout: 5000 });
+      console.log(`✅ Pinged ${url}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to ping ${url}:`, error.message);
+    }
+  }
+}, 2 * 60 * 1000); // every 5 minutes
 router.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     status: "OK",
@@ -47,7 +53,6 @@ router.get(
   "/test/:serviceId/:clientId/:userId",
   orderController.testing.bind(orderController)
 );
-
 
 router.get(
   "/:orderId/getOrder",

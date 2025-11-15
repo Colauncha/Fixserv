@@ -1,0 +1,41 @@
+name: Deploy Backend Services to AWS
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images to Docker Hub"]
+    types:
+      - completed
+
+jobs:
+  build-and-deploy:
+    if: >
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to AWS VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.FIXSERV_AWS_HOST }}
+          username: ${{ secrets.FIXSERV_AWS_USER }}
+          key: ${{ secrets.FIXSERV_AWS_KEY }}
+          script: |
+            # Navigate to the project directory. This is a crucial first step.
+            cd /var/www/fixserv/Fixserv || exit 1
+
+            # 1. Pull the latest images from Docker Hub as defined in your compose file.
+            echo "Pulling latest Docker images..."
+            docker-compose -f docker-compose.yaml pull
+
+            # 2. Gracefully restart the services with the new images.
+            echo "Restarting services with updated images..."
+            docker-compose -f docker-compose.yaml up -d --remove-orphans
+
+            # 3. Clean up old, unused Docker images to save server disk space.
+            echo "Cleaning up unused Docker images..."
+            docker image prune -af

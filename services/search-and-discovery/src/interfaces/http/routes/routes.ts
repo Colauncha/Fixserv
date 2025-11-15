@@ -10,6 +10,12 @@ const searchController = new SearchController(searchService);
 const service = `${process.env.SEARCH_AND_DISCOVERY_URL}/
 api/search/health`;
 setInterval(async () => {
+  const ENV = process.env.ENV?.toLowerCase();
+  console.log(ENV);
+  if (ENV !== "development") {
+    console.log("Skipping health check pings in non-development environment");
+    return
+  }
   for (const url of [service]) {
     try {
       await axios.get(url, { timeout: 5000 });
