@@ -318,184 +318,26 @@ export class UserAggregate {
     this._user.phoneNumber = phoneNumber;
   }
 
-  /*
-  static fromJSON(json: any): UserAggregate {
-    const { id, fullName, role } = json;
-
-    const email = Email.fromJSON(json.email || "");
-
-    const password = Password.fromJSON(json.password || "");
-
-    switch (role) {
-      case "CLIENT": {
-        const address = DeliveryAddress.fromJSON(json.deliveryAddress || {});
-
-        const servicePreferences = ServicePreferences.fromJSON(
-          json.servicePreferences || []
-        );
-        const client = UserAggregate.createClient(
-          id,
-          email,
-          password,
-          fullName,
-          address,
-          servicePreferences
-        );
-        // Optional fields
-        if (json.profilePicture)
-          client.updateProfilePicture(json.profilePicture);
-        if (json.uploadedProducts)
-          client.setUploadedProducts(json.uploadedProducts);
-
-        return client;
-      }
-      case "ARTISAN": {
-        const skillSet = new SkillSet(json.skills || []);
-        const businessHours = BusinessHours.fromJSON(json.businessHours || {});
-        const artisan = UserAggregate.createArtisan(
-          id,
-          email,
-          password,
-          fullName,
-          json.businessName,
-          json.location,
-          json.rating,
-          skillSet,
-          businessHours
-        );
-        if (json.profilePicture)
-          artisan.updateProfilePicture(json.profilePicture);
-
-        return artisan;
-      }
-      case "ADMIN": {
-        const admin = UserAggregate.createAdmin(
-          id,
-          email,
-          password,
-          fullName,
-          json.permissions || []
-        );
-        if (json.profilePicture)
-          admin.updateProfilePicture(json.profilePicture);
-
-        return admin;
-      }
-      default:
-        throw new BadRequestError(`Unknown role: ${role}`);
+  isProfileComplete(): boolean {
+    if (this.role == "CLIENT") {
+      return (
+        this.deliveryAddress?.city !== "" &&
+        this.deliveryAddress?.country !== "" &&
+        this.deliveryAddress?.postalCode !== "" &&
+        this.deliveryAddress?.state !== "" &&
+        this.deliveryAddress?.street !== ""
+      );
+    } else if (this.role === "ARTISAN") {
+      return (
+        this.businessName !== "" &&
+        this.location !== "" &&
+        this.rating !== undefined &&
+        this.skills.skills.length > 0
+      );
     }
+    return true;
   }
 
-  toJSON(): any {
-    const base = {
-      id: this.id,
-      email: this.email,
-      password: this.password,
-      fullName: this.fullName,
-      role: this.role,
-      profilePicture: this.profilePicture,
-      createdAt: this._user.createdAt,
-      updatedAt: this._user.updatedAt,
-    };
-
-    switch (this.role) {
-      case "CLIENT":
-        return {
-          ...base,
-          deliveryAddress: this.deliveryAddress,
-          servicePreferences: this.servicePreferences,
-          uploadedProducts: this.uploadedProducts,
-        };
-      case "ARTISAN":
-        return {
-          ...base,
-          businessName: this.businessName,
-          location: this.location,
-          rating: this.rating,
-          skills: this.skills,
-          businessHours: this.businessHours,
-        };
-      case "ADMIN":
-        return {
-          ...base,
-          permissions: this.permissions,
-        };
-      default:
-        return base;
-    }
-  }
-    */
-  /*
-  static fromJSON(json: any): UserAggregate {
-    const { id, fullName, role } = json;
-    const email = Email.fromJSON(json.email || "");
-    const password = Password.fromJSON(json.password || "");
-    const profilePicture = json.profilePicture;
-
-    switch (role) {
-      case "CLIENT":
-        const address = DeliveryAddress.fromJSON(json.deliveryAddress || {});
-        const servicePreferences = ServicePreferences.fromJSON(
-          json.servicePreferences || []
-        );
-        const uploadedProducts = json.uploadedProducts || [];
-
-        const client = UserAggregate.createClient(
-          id,
-          email,
-          password,
-          fullName,
-          address,
-          servicePreferences
-        );
-        client.updateProfilePicture(profilePicture);
-        client.setUploadedProducts(uploadedProducts);
-        return client;
-
-      case "ARTISAN":
-        const skillSet = new SkillSet(json.skills || []);
-        const businessHours = BusinessHours.fromJSON(json.businessHours || {});
-        const artisan = UserAggregate.createArtisan(
-          id,
-          email,
-          password,
-          fullName,
-          json.businessName,
-          json.location,
-          json.rating,
-          skillSet,
-          businessHours
-        );
-        artisan.updateProfilePicture(profilePicture);
-        return artisan;
-
-      case "ADMIN":
-        const admin = UserAggregate.createAdmin(
-          id,
-          email,
-          password,
-          fullName,
-          json.permissions || []
-        );
-        admin.updateProfilePicture(profilePicture);
-        return admin;
-
-      default:
-        throw new BadRequestError(`Unknown role: ${role}`);
-    }
-  }
-  isClient(): boolean {
-    return this._user.role === "CLIENT";
-  }
-
-  isArtisan(): boolean {
-    return this._user.role === "ARTISAN";
-  }
-
-  isAdmin(): boolean {
-    return this._user.role === "ADMIN";
-  }
-    */
   static fromJSON(json: any): UserAggregate {
     const { id, fullName, role } = json;
     const email = Email.fromJSON(json.email || "");

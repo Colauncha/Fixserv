@@ -18,6 +18,7 @@ export class UserCreatedEvent extends BaseEvent {
         location?: string;
         servicePreferences?: string[];
         permissions?: string[];
+        profileIncomplete?: boolean;
       };
     }
   ) {

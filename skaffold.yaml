@@ -11,7 +11,7 @@ build:
     - image: docker.io/ogkpos/user-management
       context: .
       docker:
-        dockerfile: services/user-management/Dockerfile
+        dockerfile: services/user-management/Dockerfile.dev
       sync:
         manual:
           - src: "src/**/*.ts"
@@ -43,7 +43,7 @@ build:
     - image: docker.io/ogkpos/order-management
       context: .
       docker:
-        dockerfile: services/order-management/Dockerfile
+        dockerfile: services/order-management/Dockerfile.dev
       sync:
         manual:
           - src: "src/**/*.ts"

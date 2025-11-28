@@ -53,6 +53,6 @@ const start = async () => {
   }
 };
 
-start().catch(() => {
-  console.log("Startup Server failed");
-});
+// start().catch(() => {
+// console.log("Startup Server failed");
+// });

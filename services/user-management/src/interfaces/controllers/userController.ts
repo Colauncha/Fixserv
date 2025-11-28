@@ -101,4 +101,27 @@ export class UserController {
       });
     }
   }
+  async registerUserWaitlist(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, fullName, role, phoneNumber, password } = req.body;
+
+      const result = await this.userService.registerUserWaitingList(
+        email.toLowerCase(),
+        password,
+        fullName,
+        role,
+        phoneNumber
+      );
+
+      res.status(201).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to register user waitlist",
+      });
+    }
+  }
 }
