@@ -15,14 +15,10 @@ export class Client extends User {
     public servicePreferences: ServicePreferences,
     public profilePicture?: string, // Optional field for profile picture URL
     public uploadedProducts: any[] = [], // Optional field for uploaded products
-    //public isEmailVerified?: boolean,
-    //public emailVerificationToken?: string | null,
-    //public emailVerifiedAt?: Date | null
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null
   ) {
-    // super(id, email, password, fullName, "CLIENT", phoneNumber, profilePicture);
     super(
       id,
       email,

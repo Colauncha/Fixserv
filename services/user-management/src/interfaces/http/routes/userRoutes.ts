@@ -13,6 +13,11 @@ const validate = new ValidateRequest();
 
 router.post("/register", userController.register.bind(userController));
 
+router.post(
+  "/register-waitlist",
+  userController.registerUserWaitlist.bind(userController)
+);
+
 // Email verification route
 router.get("/verify-email", userController.verifyEmail.bind(userController));
 

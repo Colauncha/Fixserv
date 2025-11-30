@@ -6,6 +6,7 @@ import {
   connectRedis,
   disconnectDB,
   rateLimiter,
+  RedisEventBus,
 } from "@fixserv-colauncha/shared";
 import { WalletEventsHandler } from "./events/handlers/walletEventsHandler";
 
@@ -125,10 +126,14 @@ const start = async (): Promise<void> => {
       console.log(`🕒 Service started at: ${new Date().toISOString()}`);
     });
 
+    // CREATE A SINGLE EVENT BUS INSTANCE
+    const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+    await eventBus.connect();
+
     // Setup event handlers
     console.log("📡 Setting up event handlers...");
     try {
-      const walletEventsHandler = new WalletEventsHandler();
+      const walletEventsHandler = new WalletEventsHandler(eventBus);
       await walletEventsHandler.setupSubscriptions();
       console.log("📡 Event handlers initialized successfully");
     } catch (eventError) {
@@ -136,33 +141,33 @@ const start = async (): Promise<void> => {
     }
 
     // Graceful shutdown handling
-    const gracefulShutdown = (signal: string) => {
-      console.log(`📴 Received ${signal}, shutting down gracefully...`);
-
-      server.close(async () => {
-        console.log("✅ HTTP server closed");
-        await connectDB();
-        process.exit(0);
-      });
-
-      // Force close after 10 seconds
-      setTimeout(() => {
-        console.log("⚡ Force closing server");
-        process.exit(1);
-      }, 10000);
-    };
-
-    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+    // const gracefulShutdown = (signal: string) => {
+    //   console.log(`📴 Received ${signal}, shutting //down gracefully...`);
+    //
+    //   server.close(async () => {
+    //     console.log("✅ HTTP server closed");
+    //     await connectDB();
+    //     process.exit(0);
+    //   });
+    //
+    //   // Force close after 10 seconds
+    //   setTimeout(() => {
+    //     console.log("⚡ Force closing server");
+    //     process.exit(1);
+    //   }, 10000);
+    // };
+    //
+    //process.on("SIGTERM", () => gracefulShutdown//("SIGTERM"));
+    //process.on("SIGINT", () => gracefulShutdown//("SIGINT"));
   } catch (error: any) {
     console.error(
       "❌ MongoDB connection failed, but service will continue:",
       error
     );
-    const server = app.listen(4005, () => {
-      console.log(`⚠️ Server running in degraded mode on 4005 ${4005}`);
-      console.log("🔄 Database reconnection will be attempted automatically");
-    });
+    // const server = app.listen(4005, () => {
+    //   console.log(`⚠️ Server running in degraded //mode on 4005 ${4005}`);
+    //   console.log("🔄 Database reconnection will be //attempted automatically");
+    // });
   }
 
   // Rate limiter middleware - BYPASS for internal services

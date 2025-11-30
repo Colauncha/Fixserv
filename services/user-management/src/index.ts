@@ -1,7 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 import app from "./interfaces/http/expressApp";
-import { connectDB, disconnectDB } from "@fixserv-colauncha/shared";
+import {
+  connectDB,
+  disconnectDB,
+  RedisEventBus,
+} from "@fixserv-colauncha/shared";
 
 import { ServiceEventsHandler } from "./events/handlers/serviceEventHandler";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
@@ -111,6 +115,10 @@ const start = async (): Promise<void> => {
       console.log("⚠️ Primary Redis connection failed, trying alternative...");
     }
 
+    // CREATE A SINGLE EVENT BUS INSTANCE
+    const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+    await eventBus.connect();
+
     // Rate limiter middleware (simplified to avoid Redis dependency issues)
     app.use((req: any, res, next) => {
       const internalHosts = [
@@ -144,8 +152,8 @@ const start = async (): Promise<void> => {
     // Setup event handlers with error handling
     console.log("📡 Setting up event handlers...");
     try {
-      const eventsHandler = new ServiceEventsHandler();
-      const reviewEventHandler = new ReviewEventsHandler();
+      const eventsHandler = new ServiceEventsHandler(eventBus);
+      const reviewEventHandler = new ReviewEventsHandler(eventBus);
 
       await eventsHandler.setupSubscriptions();
       await reviewEventHandler.setupSubscriptions();
@@ -166,26 +174,26 @@ const start = async (): Promise<void> => {
     //   }
     // }, 30000); // Check every 30 seconds
     // Graceful shutdown handling
-    const gracefulShutdown = (signal: string) => {
-      console.log(`📴 Received ${signal}, shutting down gracefully...`);
-      server.close(async () => {
-        console.log("✅ HTTP server closed");
-        await connectDB();
-        process.exit(0);
-      });
-      // Force close after 10 seconds
-      setTimeout(() => {
-        console.log("⚡ Force closing server");
-        process.exit(1);
-      }, 10000);
-    };
-    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+    // const gracefulShutdown = (signal: string) => {
+    //   console.log(`📴 Received ${signal}, shutting down gracefully...`);
+    //   server.close(async () => {
+    //     console.log("✅ HTTP server closed");
+    //     await connectDB();
+    //     process.exit(0);
+    //   });
+    //   // Force close after 10 seconds
+    //   setTimeout(() => {
+    //     console.log("⚡ Force closing server");
+    //     process.exit(1);
+    //   }, 10000);
+    // };
+    // process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    // process.on("SIGINT", () => gracefulShutdown("SIGINT"));
   } catch (error) {
     console.error("💀 Failed to start service:", error);
 
     // await cleanup();
-    process.exit(1);
+    // process.exit(1);
   }
 };
 

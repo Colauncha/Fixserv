@@ -260,6 +260,17 @@ export class UserService implements IUserService {
     // IMPORTANT: Invalidate the token after successful verification
     await this.tokenService.invalidateVerificationToken(userId);
 
+    // ⭐ NEW: Send welcome email in background (non-blocking)
+    this.emailService
+      .sendWaitlistWelcomeEmail(user.email, user.fullName)
+      .catch((error) => {
+        console.error(
+          `Failed to send welcome email to ${user.email}:`,
+          error.message
+        );
+        // Don't throw - this shouldn't block the verification success
+      });
+
     return { message: "Email verified successfully" };
   }
 
@@ -332,5 +343,164 @@ export class UserService implements IUserService {
     user.updateProfilePicture(imageUrl);
     await this.userRepository.save(user);
     return user;
+  }
+  async registerUserWaitingList(
+    email: string,
+    password: string,
+    fullName: string,
+    role: "CLIENT" | "ARTISAN",
+    phoneNumber: string,
+    referralCode?: string
+  ): Promise<{ user: UserAggregate }> {
+    const emailData = new Email(email);
+    const passwordData = await Password.create(password);
+    let user: UserAggregate;
+    let eventsToPublish: any[] = [];
+
+    switch (role) {
+      case "CLIENT":
+        // Create client with default/empty values for optional fields
+        user = UserAggregate.createClient(
+          uuidv4(),
+          emailData,
+          passwordData,
+          fullName,
+          phoneNumber,
+          // Default delivery address - user will update later
+          new DeliveryAddress(
+            "", // city
+            "", // country
+            "", // postalCode
+            "", // state
+            "" // street
+          ),
+          // Empty service preferences - user will update later
+          new ServicePreferences([])
+        );
+
+        const clientUserEvent = new UserCreatedEvent({
+          userId: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: "CLIENT",
+          referralCode,
+          additionalData: {
+            servicePreferences: [],
+            profileIncomplete: true,
+          },
+        });
+
+        eventsToPublish.push({
+          channel: "user_events",
+          event: clientUserEvent,
+        });
+        break;
+
+      case "ARTISAN":
+        // Create artisan with default/placeholder values
+        user = UserAggregate.createArtisan(
+          uuidv4(),
+          emailData,
+          passwordData,
+          fullName,
+          phoneNumber,
+          "", // businessName - to be filled later
+          "", // location - to be filled later
+          0, // rating - default 0
+          new SkillSet([]), // empty skills - to be filled later
+          new BusinessHours({}) // empty business hours - to be filled later
+        );
+
+        const artisanUserEvent = new UserCreatedEvent({
+          userId: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: "ARTISAN",
+          referralCode,
+          additionalData: {
+            businessName: "",
+            skills: [],
+            location: "",
+            profileIncomplete: true,
+          },
+        });
+
+        const artisanEvent = new ArtisanCreatedEvent({
+          userId: user.id,
+          fullName: user.fullName,
+          skills: [],
+          businessName: "",
+        });
+
+        eventsToPublish.push(
+          { channel: "user_events", event: artisanUserEvent },
+          { channel: "artisan_events", event: artisanEvent }
+        );
+        break;
+
+      default:
+        throw new BadRequestError("Invalid role. Must be CLIENT or ARTISAN");
+    }
+
+    try {
+      // Save user first
+      await this.userRepository.save(user);
+
+      // Generate verification token and send verification email
+      const verificationToken = this.tokenService.generateVerificationToken(
+        user.id
+      );
+      user.setEmailVerificationToken(verificationToken);
+
+      // Update user with verification token
+      await this.userRepository.save(user);
+
+      // Send verification email
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        verificationToken
+      );
+
+      // Publish all events
+      const publishPromises = eventsToPublish.map(
+        async ({ channel, event }) => {
+          if (channel === "artisan_events") {
+            const ackPromise = this.setupEventAcknowledgment(event.id);
+            this.pendingEvents.set(event.id, ackPromise);
+          }
+
+          await this.eventBus.publish(channel, event);
+
+          if (channel === "artisan_events") {
+            try {
+              const ack = await Promise.race([
+                this.pendingEvents.get(event.id)!,
+                this.timeout(8000),
+              ]);
+              this.pendingEvents.delete(event.id);
+
+              if (ack && ack.status === "failed") {
+                console.error(`Event processing failed: ${ack.error}`);
+              }
+            } catch (timeoutError) {
+              console.error(
+                `Event acknowledgment timeout for event ${event.id}`
+              );
+              this.pendingEvents.delete(event.id);
+            }
+          }
+        }
+      );
+
+      await Promise.all(publishPromises);
+
+      return { user };
+    } catch (err: any) {
+      // Clean up pending events on error
+      eventsToPublish.forEach(({ event }) => {
+        this.pendingEvents.delete(event.id);
+      });
+      throw new BadRequestError(`User registration failed: ${err.message}`);
+    }
   }
 }

@@ -7,9 +7,9 @@ import { WalletModel } from "../../infrastructure/persistence/models/walletModel
 import { ReferralService } from "../../application/services/referralService";
 
 export class WalletEventsHandler {
-  constructor() {}
+  constructor(private eventBus: RedisEventBus) {}
 
-  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+  // private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {

@@ -7,9 +7,9 @@ export class SkillSet {
     if (!Array.isArray(skills)) {
       throw new BadRequestError("Skills must be an array");
     }
-    if (!skills || skills.length === 0) {
-      throw new BadRequestError("At least one skill is required");
-    }
+    // if (!skills || skills.length === 0) {
+    // // throw new BadRequestError("At least one skill is required");
+    // }
     skills.forEach((skill) => {
       if (typeof skill !== "string") {
         throw new BadRequestError(`Invalid skill: ${skill}`);
@@ -20,9 +20,9 @@ export class SkillSet {
       .filter((s) => typeof s === "string" && s.trim().length > 0)
       .map((s) => s.trim());
 
-    if (sanitized.length === 0) {
-      throw new BadRequestError("At least one valid skill is required");
-    }
+    // if (sanitized.length === 0) {
+    //   throw new BadRequestError("At least one valid //skill is required");
+    // }
 
     this._skills = [...new Set(skills)];
   }

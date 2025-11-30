@@ -8,9 +8,9 @@ export class DeliveryAddress {
     public readonly state: string,
     public readonly country: string
   ) {
-    if (!street || !city || !postalCode) {
-      throw new Error("Address fields cannot be empty");
-    }
+    // if (!street || !city || !postalCode) {
+    // // throw new Error("Address fields cannot be empty");
+    // }
     this.validatePostalCode(postalCode, country);
   }
 

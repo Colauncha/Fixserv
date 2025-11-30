@@ -120,9 +120,101 @@ export class EmailService implements IEmailService {
       });
 
       console.log(`✅ Verification email sent successfully to: ${email}`);
-    } catch (error) {
-      console.error("❌ Failed to send verification email:", error);
-      throw new BadRequestError("Failed to send verification email");
+    } catch (error: any) {
+      console.error("❌ Failed to send verification email:", error.message);
+      // throw new BadRequestError("Failed to send verification email");
+    }
+  }
+
+  async sendWaitlistWelcomeEmail(
+    email: string,
+    fullName: string
+  ): Promise<void> {
+    console.log("🎉 Sending waitlist welcome email to:", email);
+
+    try {
+      await transporter.sendMail({
+        from: `"FixServ Team" <${process.env.MAIL_USERNAME}>`,
+        to: email,
+        subject: "🎉 Welcome to FixServ Waitlist!",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #007bff; margin: 0; font-size: 32px;">🎉 FixServ</h1>
+            </div>
+            
+            <!-- Main Content -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+              <h2 style="margin: 0 0 10px 0; font-size: 28px;">Welcome to FixServ!</h2>
+              <p style="margin: 0; font-size: 18px; opacity: 0.95;">You're now on our exclusive waitlist</p>
+            </div>
+
+            <div style="padding: 0 20px;">
+              <p style="font-size: 16px; line-height: 1.8; color: #333;">
+                Hey ${fullName}! 👋
+              </p>
+              
+              <p style="font-size: 16px; line-height: 1.8; color: #333;">
+                Thank you for verifying your email and joining the FixServ waitlist! We're thrilled to have you as part of our early community.
+              </p>
+
+              <div style="background-color: #f0f7ff; padding: 25px; border-radius: 10px; margin: 30px 0; border-left: 4px solid #007bff;">
+                <h3 style="color: #007bff; margin-top: 0; font-size: 20px;">🚀 What's Next?</h3>
+                <ul style="color: #333; line-height: 1.8; padding-left: 20px;">
+                  <li style="margin-bottom: 10px;">You'll be among the first to know when FixServ V2 launches</li>
+                  <li style="margin-bottom: 10px;">Get exclusive early access to new features</li>
+                  <li style="margin-bottom: 10px;">Receive updates on our development progress</li>
+                  <li style="margin-bottom: 10px;">Be part of shaping the future of FixServ</li>
+                </ul>
+              </div>
+
+              <div style="background-color: #fff3cd; padding: 20px; border-radius: 10px; margin: 30px 0; border-left: 4px solid #ffc107;">
+                <p style="color: #856404; margin: 0; font-size: 15px;">
+                  <strong>💡 Stay Tuned!</strong><br>
+                  We're working hard to bring you an amazing experience. Keep an eye on your inbox for exciting updates, 
+                  exclusive sneak peeks, and early access opportunities.
+                </p>
+              </div>
+
+              <p style="font-size: 16px; line-height: 1.8; color: #333;">
+                Have questions or feedback? We'd love to hear from you! Simply reply to this email.
+              </p>
+
+              <p style="font-size: 16px; line-height: 1.8; color: #333; margin-top: 30px;">
+                Best regards,<br>
+                <strong>The FixServ Team</strong>
+              </p>
+            </div>
+
+            <!-- Social Links (Optional) -->
+            <div style="text-align: center; margin: 40px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+              <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Follow us for updates:</p>
+              <div style="display: inline-block;">
+                <!-- Add your social media links here -->
+                <a href="#" style="margin: 0 10px; color: #007bff; text-decoration: none;">Twitter</a>
+                <a href="#" style="margin: 0 10px; color: #007bff; text-decoration: none;">LinkedIn</a>
+                <a href="#" style="margin: 0 10px; color: #007bff; text-decoration: none;">Instagram</a>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 40px;">
+              <p style="color: #999; font-size: 12px; text-align: center; margin: 5px 0;">
+                You're receiving this email because you joined the FixServ waitlist.
+              </p>
+              <p style="color: #999; font-size: 12px; text-align: center; margin: 5px 0;">
+                © 2025 FixServ. All rights reserved.
+              </p>
+            </div>
+          </div>
+        `,
+      });
+
+      console.log(`✅ Waitlist welcome email sent successfully to: ${email}`);
+    } catch (error: any) {
+      console.error("❌ Failed to send waitlist welcome email:", error.message);
+      // Don't throw - email is optional, don't block the verification process
     }
   }
 }

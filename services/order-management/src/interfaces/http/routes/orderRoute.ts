@@ -21,7 +21,7 @@ setInterval(async () => {
   console.log(ENV);
   if (ENV !== "development") {
     console.log("Skipping health check pings in non-development environment");
-    return
+    return;
   }
   for (const url of [service]) {
     try {
@@ -54,19 +54,6 @@ router.get(
   orderController.testing.bind(orderController)
 );
 
-router.post(
-  "/paystack/webhook",
-  express.json(),
-  //@ts-ignore
-  orderController.webHookHandler.bind(orderController)
-);
-
-router.get(
-  "/get-signature",
-  //@ts-ignore
-  orderController.verifySignature.bind(orderController)
-);
-
 router.get(
   "/:orderId/getOrder",
   authMiddleware.protect,
@@ -92,11 +79,6 @@ router.post(
   requireRole("CLIENT"),
   orderController.initiatePayment.bind(orderController)
 );
-router.post(
-  "/verify/:reference",
-  //@ts-ignore
-  orderController.verifyPayment.bind(orderController)
-);
 
 // NEW ARTISAN RESPONSE ROUTES
 router.post(
@@ -118,6 +100,13 @@ router.patch(
   authMiddleware.protect,
   requireRole("ARTISAN"),
   orderController.startWork.bind(orderController)
+);
+
+router.patch(
+  "/:orderId/complete-work",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.completeWork.bind(orderController)
 );
 
 // ORDER LISTING ROUTES

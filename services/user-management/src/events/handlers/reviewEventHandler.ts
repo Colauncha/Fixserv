@@ -9,9 +9,8 @@ import { ReviewPublishedEvent } from "../reviewPublishedEvent";
 import { ArtisanRatedEvent } from "../artisanRatedEvent";
 
 export class ReviewEventsHandler {
-  constructor() {}
   private userRepository = new UserRepositoryImpl();
-  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+  // private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   private reviewClient = new ReviewRepositoryClient(
@@ -19,20 +18,25 @@ export class ReviewEventsHandler {
   );
   private ratingCalculator = new RatingCalculator(this.reviewClient);
 
-  async setupSubscriptions() {
-    await this.eventBus.subscribe("review_events", async (evt: any) => {
-      switch (evt.eventName) {
-        case "ReviewCreated":
-          await this.handleReviewCreated(new ReviewCreatedEvent(evt.payload));
-          break;
-        case "ReviewPublished":
-          await this.handleReviewPublished(
-            new ReviewPublishedEvent(evt.payload)
-          );
-          break;
-      }
-    });
+  constructor(private eventBus: RedisEventBus) {}
 
+  async setupSubscriptions() {
+    const sub = await this.eventBus.subscribe(
+      "review_events",
+      async (evt: any) => {
+        switch (evt.eventName) {
+          case "ReviewCreated":
+            await this.handleReviewCreated(new ReviewCreatedEvent(evt.payload));
+            break;
+          case "ReviewPublished":
+            await this.handleReviewPublished(
+              new ReviewPublishedEvent(evt.payload)
+            );
+            break;
+        }
+      }
+    );
+    this.subscriptions.push(sub);
     console.log("User-Management subscribed to review_events");
   }
 

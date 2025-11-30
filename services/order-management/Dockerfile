@@ -77,7 +77,7 @@ COPY services ./services
 RUN cd services/order-management && pnpm install --shamefully-hoist
 RUN cd services/order-management && pnpm run build
 
-# ---- STAGE 2: Runtime ----
+# ---- STAGE 3: Runtime ----
 FROM node:18-alpine
 WORKDIR /app
 

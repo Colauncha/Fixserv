@@ -21,6 +21,7 @@ const authController = new AuthController(authService);
 const authMiddleware = new AuthMiddleware();
 const validate = new ValidateRequest();
 
+/*
 const service = `${process.env.USER_MANAGEMENT_URL}/
 api/admin/health`;
 setInterval(async () => {
@@ -28,7 +29,7 @@ setInterval(async () => {
   console.log(ENV);
   if (ENV !== "development") {
     console.log("Skipping health check pings in non-development environment");
-    return
+    return;
   }
   for (const url of [service]) {
     try {
@@ -39,6 +40,7 @@ setInterval(async () => {
     }
   }
 }, 2 * 60 * 1000); // every 5 minutes
+
 router.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     status: "OK",
@@ -46,7 +48,7 @@ router.get("/health", (req: Request, res: Response) => {
     service: "user-management-service",
   });
 });
-
+*/
 router.post(
   "/login",
   [

@@ -1,7 +1,8 @@
 import { RedisEventBus } from "@fixserv-colauncha/shared";
 
 export class ServiceEventsHandler {
-  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+  // private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+  constructor(private eventBus: RedisEventBus) {}
 
   async setupSubscriptions() {
     await this.eventBus.subscribe("service_events", (event: any) => {

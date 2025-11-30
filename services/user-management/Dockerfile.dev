@@ -20,6 +20,7 @@ RUN npm install -g pnpm && \
 
 WORKDIR /app/services/user-management
 
+# ENV ENV=development
 
 EXPOSE 4000
 

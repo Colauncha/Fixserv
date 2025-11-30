@@ -23,4 +23,6 @@ WORKDIR /app/services/service-management
 
 EXPOSE 4001
 
+ENV ENV=development
+
 CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]

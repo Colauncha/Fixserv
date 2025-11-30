@@ -7,6 +7,7 @@ export type OrderStatus =
   | "ACCEPTED"
   | "REJECTED"
   | "IN_PROGRESS"
+  | "WORK_COMPLETED"
   | "COMPLETED"
   | "CANCELLED";
 
@@ -66,6 +67,15 @@ export class Order {
       throw new BadRequestError("Order must be accepted by artisan to start.");
     }
     this.status = "IN_PROGRESS";
+  }
+
+  markAsWorkCompleted() {
+    if (this.status !== "IN_PROGRESS") {
+      throw new BadRequestError(
+        "Order must be in progress to mark work completed."
+      );
+    }
+    this.status = "WORK_COMPLETED";
   }
 
   markCompleted() {

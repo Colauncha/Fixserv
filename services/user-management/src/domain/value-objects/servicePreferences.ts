@@ -3,9 +3,9 @@ import { BadRequestError } from "@fixserv-colauncha/shared";
 export class ServicePreferences {
   private readonly _categories: string[];
   constructor(categories: string[]) {
-    if (!categories || categories.length === 0) {
-      throw new BadRequestError("At least one service preference is required");
-    }
+    // if (!categories || categories.length === 0) {
+    // // throw new BadRequestError("At least one service preference is required");
+    // }
 
     this._categories = [...new Set(categories)];
   }
