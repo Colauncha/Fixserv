@@ -30,11 +30,11 @@ jobs:
 
             # 1. Pull the latest images from Docker Hub as defined in your compose file.
             echo "Pulling latest Docker images..."
-            docker-compose -f docker-compose.yaml pull
+            docker-compose -f docker-compose.yaml pull || exit 1
 
             # 2. Gracefully restart the services with the new images.
             echo "Restarting services with updated images..."
-            docker-compose -f docker-compose.yaml up -d --remove-orphans
+            docker-compose -f docker-compose.yaml up -d --remove-orphans || exit 1
 
             # 3. Clean up old, unused Docker images to save server disk space.
             echo "Cleaning up unused Docker images..."
