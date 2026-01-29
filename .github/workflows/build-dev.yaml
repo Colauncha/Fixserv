@@ -16,13 +16,13 @@ jobs:
       max-parallel: 4
       matrix:
         service:
-          - dev-user-management
-          - dev-order-management
-          - dev-service-management
-          - dev-notifications-service
-          - dev-wallet-service
-          - dev-search-and-discovery
-          - dev-review-and-feedback
+          - user-management
+          - order-management
+          - service-management
+          - notifications-service
+          - wallet-service
+          - search-and-discovery
+          - review-and-feedback
 
     steps:
       # 1. Checkout the repository
@@ -34,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/fixserv-${{ matrix.service }}
+          images: ${{ secrets.DOCKER_USERNAME }}/fixserv-${{ matrix.service }}-dev
 
       # 3. Set up Docker Buildx
       - name: Set up Docker Buildx
