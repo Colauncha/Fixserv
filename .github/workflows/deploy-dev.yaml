@@ -2,7 +2,7 @@ name: Deploy Dev Backend Services to AWS
 
 on:
   workflow_run:
-    workflows: ["Build and Push Docker Images to Docker Hub"]
+    workflows: ["Build and Push Docker Images to Docker Hub for dev"]
     types:
       - completed
 
