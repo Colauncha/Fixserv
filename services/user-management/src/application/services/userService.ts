@@ -16,6 +16,8 @@ import { RedisEventBus } from "@fixserv-colauncha/shared";
 import { EventAck } from "@fixserv-colauncha/shared";
 import { EmailService } from "../../infrastructure/services/emailServiceImpls";
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
+import { Categories } from "../../domain/value-objects/categories";
+import { Certificates } from "../../domain/value-objects/certificates";
 
 export class UserService implements IUserService {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
@@ -50,7 +52,7 @@ export class UserService implements IUserService {
     },
     adminData?: {
       permissions: string[];
-    }
+    },
     // referralCode?: string
   ): Promise<{ user: UserAggregate }> {
     const emailData = new Email(email);
@@ -61,7 +63,7 @@ export class UserService implements IUserService {
 
     switch (role) {
       case "CLIENT":
-        if (!clientData) throw new BadRequestError("Client data required");
+        // if (!clientData) throw new BadRequestError("Client data required");
         user = UserAggregate.createClient(
           uuidv4(),
           emailData,
@@ -69,13 +71,14 @@ export class UserService implements IUserService {
           fullName,
           phoneNumber,
           new DeliveryAddress(
-            clientData.deliveryAddress.city,
-            clientData.deliveryAddress.country,
-            clientData.deliveryAddress.postalCode,
-            clientData.deliveryAddress.state,
-            clientData.deliveryAddress.street
+            "", //clientData.deliveryAddress.city,
+            "", //clientData.deliveryAddress.country,
+            "", //clientData.deliveryAddress.postalCode,
+            "", //clientData.deliveryAddress.state,
+            "", //clientData.deliveryAddress.street
           ),
-          new ServicePreferences(clientData.servicePreferences)
+          // new ServicePreferences(clientData.servicePreferences)
+          new ServicePreferences([]),
         );
 
         // Create UserCreatedEvent for wallet service
@@ -86,7 +89,7 @@ export class UserService implements IUserService {
           role: "CLIENT",
           referralCode,
           additionalData: {
-            servicePreferences: clientData.servicePreferences,
+            servicePreferences: [], //clientData.servicePreferences,
           },
         });
         eventsToPublish.push({
@@ -96,18 +99,20 @@ export class UserService implements IUserService {
         break;
 
       case "ARTISAN":
-        if (!artisanData) throw new BadRequestError("Artisan data required");
+        // if (!artisanData) throw new BadRequestError("Artisan data required");
         user = UserAggregate.createArtisan(
           uuidv4(),
           emailData,
           passwordData,
           fullName,
           phoneNumber,
-          artisanData.businessName,
-          artisanData.location,
-          artisanData.rating,
-          new SkillSet(artisanData.skillSet),
-          new BusinessHours(artisanData.businessHours)
+          "", //artisanData.businessName,
+          "", //artisanData.location,
+          0, //artisanData.rating,
+          new SkillSet([]), //new SkillSet(artisanData.skillSet),
+          new BusinessHours({}), //new BusinessHours(artisanData.businessHours)
+          new Categories([]), // new Category(artisanData.category),
+          new Certificates([]), //new Certificates(artisanData.certificates),
         );
 
         // Create UserCreatedEvent for wallet service
@@ -118,9 +123,9 @@ export class UserService implements IUserService {
           role: "ARTISAN",
           referralCode,
           additionalData: {
-            businessName: artisanData.businessName,
-            skills: artisanData.skillSet,
-            location: artisanData.location,
+            businessName: "", //artisanData.businessName,
+            skills: [], //artisanData.skillSet,
+            location: "", //artisanData.location,
           },
         });
 
@@ -128,26 +133,27 @@ export class UserService implements IUserService {
         const artisanEvent = new ArtisanCreatedEvent({
           userId: user.id,
           fullName: user.fullName,
-          skills: user.skills.skills,
-          businessName: artisanData.businessName,
+          skills: [], //user.skills.skills,
+          businessName: "", //artisanData.businessName,
           // location: artisanData.location
         });
 
         eventsToPublish.push(
           { channel: "user_events", event: artisanUserEvent },
-          { channel: "artisan_events", event: artisanEvent }
+          { channel: "artisan_events", event: artisanEvent },
         );
         break;
 
       case "ADMIN":
-        if (!adminData) throw new BadRequestError("Admin data required");
+        //  if (!adminData) throw new BadRequestError("Admin data required");
         user = UserAggregate.createAdmin(
           uuidv4(),
           emailData,
           passwordData,
           fullName,
           phoneNumber,
-          adminData.permissions
+          // adminData.permissions,
+          [],
         );
 
         // Admins might not need wallets, but if they do:
@@ -172,22 +178,21 @@ export class UserService implements IUserService {
       await this.userRepository.save(user);
 
       // Generate verification token and send verification email
+
       const verificationToken = this.tokenService.generateVerificationToken(
-        user.id
+        user.id,
       );
       user.setEmailVerificationToken(verificationToken);
-      //await this.emailService.sendVerificationEmail(
-      //  user.email,
-      //  verificationToken
-      //);
 
       //Update user verification token
+
       await this.userRepository.save(user);
 
       //send verification emaail
+
       await this.emailService.sendVerificationEmail(
         user.email,
-        verificationToken
+        verificationToken,
       );
 
       // Publish all events
@@ -195,6 +200,11 @@ export class UserService implements IUserService {
         async ({ channel, event }) => {
           // Set up acknowledgment tracking if needed
           if (channel === "artisan_events") {
+            const ackPromise = this.setupEventAcknowledgment(event.id);
+            this.pendingEvents.set(event.id, ackPromise);
+          }
+
+          if (channel === "user_events") {
             const ackPromise = this.setupEventAcknowledgment(event.id);
             this.pendingEvents.set(event.id, ackPromise);
           }
@@ -216,12 +226,12 @@ export class UserService implements IUserService {
               }
             } catch (timeoutError) {
               console.error(
-                `Event acknowledgment timeout for event ${event.id}`
+                `Event acknowledgment timeout for event ${event.id}`,
               );
               this.pendingEvents.delete(event.id);
             }
           }
-        }
+        },
       );
 
       await Promise.all(publishPromises);
@@ -261,15 +271,15 @@ export class UserService implements IUserService {
     await this.tokenService.invalidateVerificationToken(userId);
 
     // ⭐ NEW: Send welcome email in background (non-blocking)
-    this.emailService
-      .sendWaitlistWelcomeEmail(user.email, user.fullName)
-      .catch((error) => {
-        console.error(
-          `Failed to send welcome email to ${user.email}:`,
-          error.message
-        );
-        // Don't throw - this shouldn't block the verification success
-      });
+    // this.emailService
+    //   .sendWaitlistWelcomeEmail(user.email, user.fullName)
+    //   .catch((error) => {
+    //     console.error(
+    //       `Failed to send welcome email to ${user.email}:`,
+    //       error.message
+    //     );
+    //     // Don't throw - this shouldn't block the verification success
+    //   });
 
     return { message: "Email verified successfully" };
   }
@@ -289,15 +299,15 @@ export class UserService implements IUserService {
     }
 
     const verificationToken = this.tokenService.generateVerificationToken(
-      user.id
+      user.id,
     );
     user.setEmailVerificationToken(verificationToken);
 
     await this.userRepository.save(user);
-    await this.emailService.sendVerificationEmail(
-      user.email,
-      verificationToken
-    );
+    // await this.emailService.sendVerificationEmail(
+    // user.email,
+    // verificationToken
+    // );
 
     console.log(`📧 Verification email resent to: ${user.email}`);
     return { message: "Verification email sent successfully!" };
@@ -318,21 +328,21 @@ export class UserService implements IUserService {
             resolve(ack);
             sub.unsubscribe();
           }
-        }
+        },
       );
     });
   }
   private timeout(ms: number): Promise<never> {
     return new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout reached")), ms)
+      setTimeout(() => reject(new Error("Timeout reached")), ms),
     );
   }
   async updateProfilePicture(
     userId: string,
-    imageUrl: string
+    imageUrl: string,
   ): Promise<UserAggregate> {
     console.log(
-      `Updating profile picture for user ${userId} with URL: ${imageUrl}`
+      `Updating profile picture for user ${userId} with URL: ${imageUrl}`,
     );
 
     const user = await this.userRepository.findById(userId);
@@ -350,7 +360,7 @@ export class UserService implements IUserService {
     fullName: string,
     role: "CLIENT" | "ARTISAN",
     phoneNumber: string,
-    referralCode?: string
+    referralCode?: string,
   ): Promise<{ user: UserAggregate }> {
     const emailData = new Email(email);
     const passwordData = await Password.create(password);
@@ -372,10 +382,10 @@ export class UserService implements IUserService {
             "", // country
             "", // postalCode
             "", // state
-            "" // street
+            "", // street
           ),
           // Empty service preferences - user will update later
-          new ServicePreferences([])
+          new ServicePreferences([]),
         );
 
         const clientUserEvent = new UserCreatedEvent({
@@ -408,7 +418,9 @@ export class UserService implements IUserService {
           "", // location - to be filled later
           0, // rating - default 0
           new SkillSet([]), // empty skills - to be filled later
-          new BusinessHours({}) // empty business hours - to be filled later
+          new BusinessHours({}), // empty business hours - to be filled later
+          new Categories([]), // empty category - to be filled later
+          new Certificates([]), // empty certificates - to be filled later
         );
 
         const artisanUserEvent = new UserCreatedEvent({
@@ -434,7 +446,7 @@ export class UserService implements IUserService {
 
         eventsToPublish.push(
           { channel: "user_events", event: artisanUserEvent },
-          { channel: "artisan_events", event: artisanEvent }
+          { channel: "artisan_events", event: artisanEvent },
         );
         break;
 
@@ -448,7 +460,7 @@ export class UserService implements IUserService {
 
       // Generate verification token and send verification email
       const verificationToken = this.tokenService.generateVerificationToken(
-        user.id
+        user.id,
       );
       user.setEmailVerificationToken(verificationToken);
 
@@ -456,10 +468,11 @@ export class UserService implements IUserService {
       await this.userRepository.save(user);
 
       // Send verification email
-      await this.emailService.sendVerificationEmail(
-        user.email,
-        verificationToken
-      );
+
+      // await this.emailService.sendVerificationEmail(
+      // user.email,
+      // verificationToken
+      // );
 
       // Publish all events
       const publishPromises = eventsToPublish.map(
@@ -484,12 +497,12 @@ export class UserService implements IUserService {
               }
             } catch (timeoutError) {
               console.error(
-                `Event acknowledgment timeout for event ${event.id}`
+                `Event acknowledgment timeout for event ${event.id}`,
               );
               this.pendingEvents.delete(event.id);
             }
           }
-        }
+        },
       );
 
       await Promise.all(publishPromises);

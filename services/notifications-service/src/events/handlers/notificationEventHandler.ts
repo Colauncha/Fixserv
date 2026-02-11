@@ -23,6 +23,7 @@ export class NotificationEventHandler {
         }
       }
     );
+    console.log("Subscribed to user_events");
     this.subscriptions.push(userEventsSub);
 
     // Subscribe to review events
@@ -106,7 +107,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Welcome notification created for user: ${event.payload.userId}`
+        `Welcome notification created for user: ${event.payload.fullName}`
       );
     } catch (error) {
       console.error("Error handling UserCreated event:", error);

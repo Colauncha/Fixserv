@@ -38,6 +38,10 @@ export class Order {
     public readonly clientAddress: object,
     public status: OrderStatus = "PENDING_ARTISAN_RESPONSE",
     public escrowStatus: EscrowStatus = "NOT_PAID",
+    public deviceType: String,
+    public deviceBrand: String,
+    public deviceModel: String,
+    public serviceRequired: String,
     public paymentReference?: string,
     public readonly createdAt: Date = new Date(),
     public completedAt?: Date,
@@ -82,6 +86,7 @@ export class Order {
     if (this.status !== "IN_PROGRESS")
       throw new BadRequestError("Order must be in progress to complete.");
     this.status = "COMPLETED";
+    this.escrowStatus = "RELEASED";
     this.completedAt = new Date();
   }
 
@@ -130,6 +135,7 @@ export class Order {
     }
 
     this.status = "REJECTED";
+    this.escrowStatus = "NOT_PAID";
     this.artisanResponse = {
       status: "REJECTED",
       respondedAt: new Date(),

@@ -19,7 +19,7 @@ export class UserController {
         role,
         phoneNumber,
         referralCode,
-        ...roleData
+        //...roleData
       } = req.body;
 
       const { user } = await this.userService.registerUser(
@@ -28,10 +28,10 @@ export class UserController {
         fullName,
         role,
         phoneNumber,
-        referralCode,
-        roleData.clientData,
-        roleData.artisanData,
-        roleData.adminData
+        referralCode
+        //roleData.clientData,
+        //roleData.artisanData,
+        //roleData.adminData
       );
 
       //await resend.emails.send({
@@ -46,7 +46,7 @@ export class UserController {
         message:
           "User registered successfully. Please check your email to verify your account.",
         user: this.response.toJSON(user),
-        referralCode: user.id,
+        // referralCode: user.id,
       });
     } catch (error: any) {
       if (error.code === 11000) {
