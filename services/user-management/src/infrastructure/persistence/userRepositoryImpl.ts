@@ -10,7 +10,14 @@ import { SkillSet } from "../../domain/value-objects/skillSet";
 import { AdminModel } from "./models/admin";
 import { ArtisanModel } from "./models/artisan";
 import { ClientModel } from "./models/client";
-import { BadRequestError } from "@fixserv-colauncha/shared";
+import {
+  BadRequestError,
+  connectRedis,
+  redis,
+} from "@fixserv-colauncha/shared";
+import { Categories } from "../../domain/value-objects/categories";
+import { Certificates } from "../../domain/value-objects/certificates";
+import { Certificate } from "../../domain/value-objects/certificate";
 
 export class UserRepositoryImpl implements IUserRepository {
   /*
@@ -72,7 +79,7 @@ export class UserRepositoryImpl implements IUserRepository {
         savedData = await ClientModel.findOneAndUpdate(
           { _id: user.id },
           userData,
-          { upsert: true, new: true, select: "+password" }
+          { upsert: true, new: true, select: "+password" },
         );
         break;
 
@@ -80,7 +87,7 @@ export class UserRepositoryImpl implements IUserRepository {
         savedData = await ArtisanModel.findOneAndUpdate(
           { _id: user.id },
           userData,
-          { upsert: true, new: true, select: "+password" }
+          { upsert: true, new: true, select: "+password" },
         );
         break;
 
@@ -88,7 +95,7 @@ export class UserRepositoryImpl implements IUserRepository {
         savedData = await AdminModel.findOneAndUpdate(
           { _id: user.id },
           userData,
-          { upsert: true, new: true, select: "+password" }
+          { upsert: true, new: true, select: "+password" },
         );
         break;
 
@@ -137,7 +144,7 @@ export class UserRepositoryImpl implements IUserRepository {
   async find(
     role?: string,
     page = 1,
-    limit = 10
+    limit = 10,
   ): Promise<{ users: UserAggregate[]; total: number }> {
     const skip = (page - 1) * limit;
 
@@ -189,11 +196,11 @@ export class UserRepositoryImpl implements IUserRepository {
             },
           },
         },
-        { new: true }
+        { new: true },
       ).exec();
     } catch (error: any) {
       throw new Error(
-        `Failed to update rating for user ${userId}: ${error.message}`
+        `Failed to update rating for user ${userId}: ${error.message}`,
       );
     }
   }
@@ -230,7 +237,7 @@ export class UserRepositoryImpl implements IUserRepository {
 
   private toPersistence(user: UserAggregate): any {
     console.log(
-      `Saving user ${user.id} - isEmailVerified: ${user.isEmailVerified}`
+      `Saving user ${user.id} - isEmailVerified: ${user.isEmailVerified}`,
     );
 
     const base = {
@@ -264,6 +271,10 @@ export class UserRepositoryImpl implements IUserRepository {
         rating: user.rating,
         skillSet: user.skills.skills,
         businessHours: user.businessHours,
+        categories: user.categories?.toJSON() ?? [],
+        certificates: user.getCertificates
+          ? user.getCertificates().map((cert) => cert.toJSON())
+          : [],
       };
     } else if (user.role === "ADMIN") {
       return {
@@ -288,7 +299,7 @@ export class UserRepositoryImpl implements IUserRepository {
     if (data.role === "CLIENT") {
       console.log(
         "Database uploadedProducts:",
-        data.uploadedProducts?.length || 0
+        data.uploadedProducts?.length || 0,
       );
 
       user = UserAggregate.createClient(
@@ -302,21 +313,30 @@ export class UserRepositoryImpl implements IUserRepository {
           data.deliveryAddress?.city || "",
           data.deliveryAddress?.postalCode || "",
           data.deliveryAddress?.state || "",
-          data.deliveryAddress?.country || ""
+          data.deliveryAddress?.country || "",
         ),
         new ServicePreferences(
-          Array.isArray(data.servicePreferences) ? data.servicePreferences : []
+          Array.isArray(data.servicePreferences) ? data.servicePreferences : [],
         ),
         data.profilePicture,
         data.uploadedProducts || [],
         isEmailVerified,
         emailVerificationToken,
-        emailVerifiedAt
+        emailVerifiedAt,
       );
     } else if (data.role === "ARTISAN") {
       const skills = Array.isArray(data.skillSet)
         ? data.skillSet
         : ["General Repair"];
+
+      // NEW: Handle categories
+      const categoriesData = data.categories || [];
+      const categories =
+        Array.isArray(categoriesData) && categoriesData.length > 0
+          ? Categories.fromJSON(categoriesData)
+          : new Categories(["GENERAL"]); // Default category if none exist
+      const certificatesData = data.certificates || [];
+      const certificates = Certificates.fromJSON(certificatesData);
 
       user = UserAggregate.createArtisan(
         data._id.toString(),
@@ -329,10 +349,12 @@ export class UserRepositoryImpl implements IUserRepository {
         data.rating || 0,
         new SkillSet(skills),
         new BusinessHours(data.businessHours || {}),
+        categories,
+        certificates,
         data.profilePicture,
         isEmailVerified,
         emailVerificationToken,
-        emailVerifiedAt
+        emailVerifiedAt,
       );
     } else if (data.role === "ADMIN") {
       user = UserAggregate.createAdmin(
@@ -347,7 +369,7 @@ export class UserRepositoryImpl implements IUserRepository {
         // data.emailVerificationToken
         isEmailVerified,
         emailVerificationToken,
-        emailVerifiedAt
+        emailVerifiedAt,
       );
     } else {
       throw new Error(`Unknown role ${data.role}`);
@@ -364,7 +386,7 @@ export class UserRepositoryImpl implements IUserRepository {
     //user.emailVerifiedAt = data.emailVerifiedAt;
 
     console.log(
-      `User ${user.id} loaded - isEmailVerified: ${user.isEmailVerified}`
+      `User ${user.id} loaded - isEmailVerified: ${user.isEmailVerified}`,
     );
 
     return user;
@@ -397,6 +419,16 @@ export class UserRepositoryImpl implements IUserRepository {
         rating: user.rating,
         skillSet: user.skills.skills,
         businessHours: user.businessHours,
+        categories: user.getCategoryNames ? user.getCategoryNames() : [],
+        certificates: (user as any).certificates
+          ? (user as any).certificates.toJSON()
+          : [],
+        pendingCertificatesCount: (user as any).certificates
+          ? (user as any).certificates.pendingCount
+          : 0,
+        approvedCertificatesCount: (user as any).certificates
+          ? (user as any).certificates.approvedCount
+          : 0,
       };
     } else if (user.role === "ADMIN") {
       return {
@@ -404,5 +436,406 @@ export class UserRepositoryImpl implements IUserRepository {
         permissions: user.permissions,
       };
     }
+  }
+
+  /**
+   * Find artisans by a single category
+   * @param category - Category name (e.g., "PHONES", "TABLETS")
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 10)
+   * @returns Object with artisans array and total count
+   */
+  async findArtisansByCategory(
+    category: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{ artisans: UserAggregate[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const normalizedCategory = category.trim().toUpperCase();
+
+    console.log(`Searching for artisans in category: ${normalizedCategory}`);
+
+    // Query for artisans with the specified category
+    const query = {
+      role: "ARTISAN",
+      "categories.name": normalizedCategory,
+    };
+
+    // Execute both queries in parallel for efficiency
+    const [docs, total] = await Promise.all([
+      ArtisanModel.find(query)
+        .skip(skip)
+        .limit(limit)
+        .select("+password")
+        .lean(),
+      ArtisanModel.countDocuments(query),
+    ]);
+
+    console.log(`Found ${docs.length} artisans (total: ${total})`);
+
+    // Convert to domain aggregates
+    const artisans = docs.map((doc) =>
+      this.toDomain({ ...doc, role: "ARTISAN" }),
+    );
+
+    return { artisans, total };
+  }
+
+  /**
+   * Find artisans by multiple categories (OR logic)
+   * @param categories - Array of category names
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 10)
+   * @returns Object with artisans array and total count
+   */
+  async findArtisansByCategories(
+    categories: string[],
+    page = 1,
+    limit = 10,
+  ): Promise<{ artisans: UserAggregate[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const normalizedCategories = categories.map((cat) =>
+      cat.trim().toUpperCase(),
+    );
+
+    console.log(
+      `Searching for artisans in categories: ${normalizedCategories.join(", ")}`,
+    );
+
+    // Query for artisans with ANY of the specified categories
+    const query = {
+      role: "ARTISAN",
+      "categories.name": { $in: normalizedCategories },
+    };
+
+    const [docs, total] = await Promise.all([
+      ArtisanModel.find(query)
+        .skip(skip)
+        .limit(limit)
+        .select("+password")
+        .lean(),
+      ArtisanModel.countDocuments(query),
+    ]);
+
+    console.log(`Found ${docs.length} artisans (total: ${total})`);
+
+    const artisans = docs.map((doc) =>
+      this.toDomain({ ...doc, role: "ARTISAN" }),
+    );
+
+    return { artisans, total };
+  }
+
+  /**
+   * Get all unique categories from all artisans
+   * @returns Array of category names (sorted alphabetically)
+   */
+  async getAllCategories(): Promise<string[]> {
+    console.log("Fetching all categories from database");
+
+    // Use distinct to get unique category names
+    const categoryNames = await ArtisanModel.distinct("categories.name").exec();
+
+    // Ensure we return strings and sort them
+    const categories: string[] = Array.isArray(categoryNames)
+      ? categoryNames.map(String).filter(Boolean).sort()
+      : [];
+
+    console.log(`Found ${categories.length} unique categories`);
+
+    return categories;
+  }
+
+  /**
+   * Find artisans by category and location
+   * @param category - Category name
+   * @param location - Location string (partial match supported)
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 10)
+   * @returns Object with artisans array and total count
+   */
+  async findArtisansByCategoryAndLocation(
+    category: string,
+    location: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{ artisans: UserAggregate[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const normalizedCategory = category.trim().toUpperCase();
+
+    console.log(
+      `Searching for artisans in category: ${normalizedCategory}, location: ${location}`,
+    );
+
+    // Use regex for flexible location matching (case-insensitive)
+    const locationRegex = new RegExp(location.trim(), "i");
+
+    const query = {
+      role: "ARTISAN",
+      "categories.name": normalizedCategory,
+      location: locationRegex,
+    };
+
+    const [docs, total] = await Promise.all([
+      ArtisanModel.find(query)
+        .skip(skip)
+        .limit(limit)
+        .select("+password")
+        .lean(),
+      ArtisanModel.countDocuments(query),
+    ]);
+
+    console.log(`Found ${docs.length} artisans (total: ${total})`);
+
+    const artisans = docs.map((doc) =>
+      this.toDomain({ ...doc, role: "ARTISAN" }),
+    );
+
+    return { artisans, total };
+  }
+
+  /**
+   * Find artisans by category with Redis caching
+   * This is optional but recommended for performance
+   */
+  async findArtisansByCategoryWithCache(
+    category: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{ artisans: UserAggregate[]; total: number }> {
+    await connectRedis();
+    const cacheKey = `artisans:category:${category.toUpperCase()}:page:${page}:limit:${limit}`;
+
+    try {
+      // Try to get from cache
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        console.log(`Cache HIT for category:${category}`);
+        const data = JSON.parse(cached);
+        return {
+          artisans: data.artisans.map((a: any) => this.toDomain(a)),
+          total: data.total,
+        };
+      }
+
+      console.log(`Cache MISS for category:${category}`);
+
+      // Get from database
+      const result = await this.findArtisansByCategory(category, page, limit);
+
+      // Cache the result for 5 minutes
+      await redis.set(
+        cacheKey,
+        JSON.stringify({
+          artisans: result.artisans.map((a) => this.toPersistence(a)),
+          total: result.total,
+        }),
+        { EX: 60 * 5 }, // 5 minutes
+      );
+
+      return result;
+    } catch (error) {
+      console.error(`Error in category cache for ${category}:`, error);
+      // Fallback to direct query if cache fails
+      return this.findArtisansByCategory(category, page, limit);
+    }
+  }
+
+  /**
+   * Invalidate category cache
+   * Call this when artisan categories are updated
+   */
+  async invalidateCategoryCache(category?: string): Promise<void> {
+    await connectRedis();
+
+    if (category) {
+      // Invalidate specific category (would need to track all page keys)
+      // For simplicity, we'll just log - in production use Redis SCAN
+      console.log(`Invalidating cache for category: ${category}`);
+      // You could delete the "all categories" cache here
+      await redis.del("categories:all");
+    } else {
+      // Invalidate all categories cache
+      await redis.del("categories:all");
+      console.log("Invalidated all categories cache");
+    }
+  }
+
+  // ========== CERTIFICATE REPOSITORY METHODS ==========
+
+  /**
+   * Add a certificate to an artisan's profile
+   */
+  async addCertificate(artisanId: string, certificate: any): Promise<void> {
+    console.log(`Adding certificate for artisan ${artisanId}:`, certificate);
+
+    // Get current user
+    const user = await this.findById(artisanId);
+    if (!user) {
+      throw new BadRequestError("Artisan not found");
+    }
+
+    if (user.role !== "ARTISAN") {
+      throw new BadRequestError("Only artisans can have certificates");
+    }
+
+    // Create certificate from data
+    const cert = Certificate.fromJSON(certificate);
+
+    // Add certificate through the domain aggregate
+    const updatedUser = user.addCertificate(cert);
+
+    // Save to database
+    await this.save(updatedUser);
+
+    console.log(`Certificate added successfully for artisan ${artisanId}`);
+  }
+
+  /**
+   * Remove a certificate from an artisan's profile
+   */
+  async removeCertificate(
+    artisanId: string,
+    certificateId: string,
+  ): Promise<void> {
+    console.log(
+      `Removing certificate ${certificateId} for artisan ${artisanId}`,
+    );
+
+    const user = await this.findById(artisanId);
+    if (!user) {
+      throw new BadRequestError("Artisan not found");
+    }
+
+    if (user.role !== "ARTISAN") {
+      throw new BadRequestError("Only artisans can have certificates");
+    }
+
+    // Remove certificate through domain aggregate
+    const updatedUser = user.removeCertificate(certificateId);
+
+    // Save to database
+    await this.save(updatedUser);
+
+    console.log(`Certificate removed successfully`);
+  }
+
+  /**
+   * Update certificate status (approve/reject)
+   * Called by admins to review certificates
+   */
+  async updateCertificateStatus(
+    artisanId: string,
+    certificateId: string,
+    status: "APPROVED" | "REJECTED",
+    adminId: string,
+    rejectionReason?: string,
+  ): Promise<void> {
+    console.log(
+      `Updating certificate ${certificateId} status to ${status} for artisan ${artisanId}`,
+    );
+
+    const user = await this.findById(artisanId);
+    if (!user) {
+      throw new BadRequestError("Artisan not found");
+    }
+
+    if (user.role !== "ARTISAN") {
+      throw new BadRequestError("Only artisans can have certificates");
+    }
+
+    let updatedUser;
+
+    if (status === "APPROVED") {
+      // Approve the certificate
+      updatedUser = user.approveCertificate(certificateId, adminId);
+    } else {
+      // Reject the certificate
+      if (!rejectionReason) {
+        throw new BadRequestError("Rejection reason is required");
+      }
+      updatedUser = user.rejectCertificate(
+        certificateId,
+        adminId,
+        rejectionReason,
+      );
+    }
+
+    // Save to database
+    await this.save(updatedUser);
+
+    console.log(`Certificate status updated successfully to ${status}`);
+  }
+
+  /**
+   * Get all artisans with pending certificates (for admin review)
+   */
+  async getArtisansWithPendingCertificates(
+    page = 1,
+    limit = 10,
+  ): Promise<{ artisans: UserAggregate[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    console.log(
+      `Fetching artisans with pending certificates - page: ${page}, limit: ${limit}`,
+    );
+
+    // Query for artisans with at least one pending certificate
+    const query = {
+      role: "ARTISAN",
+      "certificates.status": "PENDING",
+    };
+
+    const [docs, total] = await Promise.all([
+      ArtisanModel.find(query)
+        .skip(skip)
+        .limit(limit)
+        .select("+password")
+        .lean(),
+      ArtisanModel.countDocuments(query),
+    ]);
+
+    console.log(
+      `Found ${docs.length} artisans with pending certificates (total: ${total})`,
+    );
+
+    const artisans = docs.map((doc) =>
+      this.toDomain({ ...doc, role: "ARTISAN" }),
+    );
+
+    return { artisans, total };
+  }
+
+  /**
+   * Get all pending certificates across all artisans
+   * Returns artisan info with their pending certificates
+   */
+  async getAllPendingCertificates(): Promise<
+    Array<{
+      artisanId: string;
+      artisanName: string;
+      artisanEmail: string;
+      certificates: any[];
+    }>
+  > {
+    console.log("Fetching all pending certificates");
+
+    const artisans = await ArtisanModel.find({
+      role: "ARTISAN",
+      "certificates.status": "PENDING",
+    })
+      .select("+password")
+      .lean();
+
+    console.log(`Found ${artisans.length} artisans with pending certificates`);
+
+    return artisans.map((artisan: any) => ({
+      artisanId: artisan._id.toString(),
+      artisanName: artisan.fullName,
+      artisanEmail: artisan.email,
+      certificates: (artisan.certificates || []).filter(
+        (cert: any) => cert.status === "PENDING",
+      ),
+    }));
   }
 }

@@ -20,17 +20,29 @@ import {
   WorkStartedEvent,
 } from "../../events/orderEvents";
 import { WalletClient } from "../../infrastructure/reuseableWrapper/walletClient";
+import { redis } from "@fixserv-colauncha/shared";
+import { IServiceRepository } from "../../modules_from_other_services/domain/repository/serviceRepository";
+import { ServiceModel } from "../../modules_from_other_services/infrastructure/persistence/model/serviceModel";
+import { v4 as uuidv4 } from "uuid";
 
 export class OrderService {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
-  constructor(private orderRepository: OrderRepository) {}
+
+  constructor(
+    private serviceRepository: IServiceRepository,
+    private orderRepository: OrderRepository
+  ) {}
   async createOrder(
     clientId: string,
     artisanId: string,
     serviceId: string,
     price: number,
     clientAddress: object,
-    uploadedProductId: string
+    uploadedProductId: string,
+    deviceType: string,
+    deviceBrand: string,
+    deviceModel: string,
+    serviceRequired: string
   ): Promise<Order> {
     const service = await getServiceById(serviceId);
     const client = await getClientById(clientId);
@@ -55,7 +67,11 @@ export class OrderService {
       service.details.price,
       client.deliveryAddress,
       // client.uploadedProducts.id
-      [matchedProduct]
+      [matchedProduct],
+      deviceType,
+      deviceBrand,
+      deviceModel,
+      serviceRequired
     );
 
     const saveOrder = await this.orderRepository.save(orderAggregate.order);
@@ -366,4 +382,194 @@ export class OrderService {
       "Unable to fetch required data. Please try again later."
     );
   }
+
+  // Request repair (draftOrder)
+  async createDraftOrder(
+    clientId: string,
+    uploadedProductId: string,
+    deviceType: string,
+    deviceBrand: string,
+    deviceModel: string,
+    serviceRequired: string
+  ): Promise<{ draftOrderId: string; matchingServices: any[] }> {
+    const client = await getClientById(clientId);
+    const matchedProduct = client.uploadedProducts.find(
+      (prod: any) => prod.id === uploadedProductId
+    );
+    if (!matchedProduct) {
+      throw new BadRequestError(
+        `Uploaded product with ID ${uploadedProductId} not found for this client`
+      );
+    }
+
+    //Create a draft order (temporary, not yet confirmed)
+    const draftOrder = {
+      id: uuidv4(),
+      clientId: client.id,
+      uploadedProducts: [matchedProduct],
+      deviceType,
+      deviceBrand,
+      deviceModel,
+      serviceRequired,
+      status: "DRAFT", // Important: mark as draft
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min expiry
+    };
+
+    // Save draft order to repository or cache (Redis is perfect for this)
+    // await this.draftOrderRepository.save(draftOrder);
+    // OR use Redis for temporary storage:
+    await redis.set(
+      `draft_order:${draftOrder.id}`,
+      JSON.stringify(draftOrder),
+      { EX: 1800 }
+    );
+
+    // Search for matching services based on serviceRequired
+    const matchingServices = await this.searchMatchingServices(serviceRequired);
+
+    return { draftOrderId: draftOrder.id, matchingServices };
+  }
+
+  // Search for services that match the required service
+  async searchMatchingServices(serviceRequired: string): Promise<any[]> {
+    //// This would typically call the service-management service to find //matching services
+    //// For simplicity, let's assume we have a local method to do this
+    //const allServices = await this.serviceRepository.getAllServices();
+    //return allServices.filter((service) =>
+    //  service.details.title
+    //    .toLowerCase()
+    //    .includes(serviceRequired.toLowerCase())
+    //);
+
+    // Search services where skillSet contains keywords from serviceRequired
+    const keywords = serviceRequired.toLowerCase().split(" ");
+
+    /*
+    // MongoDB query example
+    const services = await (this.serviceRepository as any).findWithQuery({
+      isActive: true,
+      $or: [
+        // Match against skillSet array
+        { skillSet: { $in: keywords.map((k) => new RegExp(k, "i")) } },
+        // Match against title
+        { title: { $regex: serviceRequired, $options: "i" } },
+        // Match against description
+        { description: { $regex: serviceRequired, $options: "i" } },
+      ],
+    });
+*/
+    // Direct MongoDB query - properly structured
+    const services = await ServiceModel.find({
+      isActive: true,
+      $or: [
+        { skillSet: { $in: keywords.map((k) => new RegExp(k, "i")) } },
+        { title: { $regex: serviceRequired, $options: "i" } },
+        { description: { $regex: serviceRequired, $options: "i" } },
+      ],
+    }).lean();
+    // Sort by relevance (services with more matching keywords first)
+    const servicesWithScore = services.map((service: any) => {
+      let score = 0;
+      const serviceText = [
+        service.title,
+        service.description,
+        ...service.skillSet,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      keywords.forEach((keyword) => {
+        if (serviceText.includes(keyword)) score++;
+      });
+
+      return { ...service, id: service._id, relevanceScore: score }; // Use toJSON() if it's a Mongoose document
+    });
+
+    // Sort by score descending, then by rating
+    return servicesWithScore
+      .sort((a: any, b: any) => {
+        if (b.relevanceScore !== a.relevanceScore) {
+          return b.relevanceScore - a.relevanceScore;
+        }
+        // return b.rating - a.rating;
+        return (b.rating || 0) - (a.rating || 0);
+      })
+      .slice(0, 10); // Return top 10 matches
+  }
+
+  async confirmOrder(
+    clientId: string,
+    draftOrderId: string,
+    selectedServiceId: string
+  ): Promise<Order> {
+    // Retrieve draft order
+    // const draftOrder = await this.draftOrderRepository.findById(draftOrderId);
+    // OR from Redis:
+    const draftOrderData = await redis.get(`draft_order:${draftOrderId}`);
+    const draftOrder = draftOrderData ? JSON.parse(draftOrderData) : null;
+
+    if (!draftOrder) {
+      throw new BadRequestError("Draft order not found or expired");
+    }
+
+    if (draftOrder.clientId !== clientId) {
+      throw new BadRequestError("Unauthorized access to draft order");
+    }
+
+    // Get selected service details
+    const service = await getServiceById(selectedServiceId);
+    const client = await getClientById(clientId);
+
+    console.log("service in confirmOrder:", service);
+    console.log("client in confirmOrder:", client);
+
+    // Create the actual order
+    const orderAggregate = OrderAggregate.createNew(
+      client.id,
+      service.artisanId,
+      service.id,
+      service.price, // Use service price, not client-provided
+      client.deliveryAddress,
+      draftOrder.uploadedProducts,
+      draftOrder.deviceType,
+      draftOrder.deviceBrand,
+      draftOrder.deviceModel,
+      draftOrder.serviceRequired
+    );
+
+    const savedOrder = await this.orderRepository.save(orderAggregate.order);
+
+    // Lock funds in client wallet
+    await WalletClient.lockFundsForOrder(
+      client.id,
+      savedOrder.id,
+      savedOrder.price
+    );
+
+    // Delete draft order after confirmation
+    // await this.draftOrderRepository.delete(draftOrderId);
+    // OR from Redis:
+    await redis.del(`draft_order:${draftOrderId}`);
+
+    // Publish Event
+    const event = new OrderCreatedEvent({
+      orderId: savedOrder.id,
+      clientId: client.id,
+      artisanId: service.artisanId,
+      serviceId: service.id,
+      price: service.price,
+      title: service.title,
+      clientAddress: client.deliveryAddress,
+      createdAt: savedOrder.createdAt.toISOString(),
+    });
+    await this.eventBus.publish("order_events", event);
+
+    return savedOrder;
+  }
+
+  //Request history(order history)
+  //async getOrderHistory(clientId: string): Promise<Order[]> {
+  //  return this.orderRepository.findByClientId(clientId)
+  //}
 }

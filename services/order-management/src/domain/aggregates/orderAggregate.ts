@@ -18,7 +18,11 @@ export class OrderAggregate {
       description: string;
       objectName: string;
       uploadedAt: Date;
-    }[] = []
+    }[] = [],
+    deviceType: string,
+    deviceBrand: string,
+    deviceModel: string,
+    serviceRequired: string
   ) {
     const id = uuidv4();
     const now = new Date();
@@ -33,6 +37,10 @@ export class OrderAggregate {
       // "PENDING", // status is initially PENDING
       "PENDING_ARTISAN_RESPONSE",
       "NOT_PAID", // escrowStatus is initially NOT_PAID
+      deviceType,
+      deviceBrand,
+      deviceModel,
+      serviceRequired,
       "", // paymentReference is initially empty
       now, // createdAt is set to now
       undefined, // completedAt is initially undefined
@@ -65,6 +73,7 @@ export class OrderAggregate {
 
   completeOrder() {
     this.order.markCompleted();
+    this.order.updateEscrowStatus("RELEASED");
   }
   setPaymentReference(reference: string) {
     this.order.setPaymentReference(reference);
@@ -77,6 +86,7 @@ export class OrderAggregate {
 
   rejectOrder(reason: RejectionReason, note?: string): void {
     this.order.rejectOrder(reason, note);
+    this.order.updateEscrowStatus("NOT_PAID");
   }
 
   startWork(): void {

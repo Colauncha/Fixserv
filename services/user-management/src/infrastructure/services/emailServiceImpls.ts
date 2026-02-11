@@ -1,5 +1,6 @@
-import { BadRequestError } from "@fixserv-colauncha/shared";
 import { IEmailService } from "./emailService";
+
+import { BadRequestError } from "@fixserv-colauncha/shared";
 import transporter from "../../config/emailConfig";
 
 export class EmailService implements IEmailService {
@@ -128,7 +129,7 @@ export class EmailService implements IEmailService {
 
   async sendWaitlistWelcomeEmail(
     email: string,
-    fullName: string
+    fullName: string,
   ): Promise<void> {
     console.log("🎉 Sending waitlist welcome email to:", email);
 
@@ -218,3 +219,20 @@ export class EmailService implements IEmailService {
     }
   }
 }
+
+/*
+export class EmailService implements IEmailService {
+  async sendPasswordResetEmail(email: string, token: string): Promise<void> {
+    // Implementation omitted
+  }
+  async sendVerificationEmail(email: string, token: string): Promise<void> {
+    // Implementation omitted
+  }
+  async sendWaitlistWelcomeEmail(
+    email: string,
+    fullName: string
+  ): Promise<void> {
+    // Implementation omitted
+  }
+}
+*/

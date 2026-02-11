@@ -39,6 +39,20 @@ spec:
                 name: user-management-srv
                 port:
                   number: 4000
+          - path: /api/category/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-management-srv
+                port:
+                  number: 4000
+          - path: /api/certificate/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-management-srv
+                port:
+                  number: 4000
           - path: /service/?(.*)
             pathType: ImplementationSpecific
             backend:

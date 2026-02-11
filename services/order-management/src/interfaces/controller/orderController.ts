@@ -12,8 +12,17 @@ export class OrderController {
 
   async createOrder(req: Request, res: Response): Promise<void> {
     try {
-      const { artisanId, serviceId, price, clientAdress, uploadedProductId } =
-        req.body;
+      const {
+        artisanId,
+        serviceId,
+        price,
+        clientAdress,
+        uploadedProductId,
+        deviceType,
+        deviceBrand,
+        deviceModel,
+        serviceRequired,
+      } = req.body;
 
       const order = await this.orderService.createOrder(
         req.currentUser!.id,
@@ -21,7 +30,11 @@ export class OrderController {
         serviceId,
         price,
         clientAdress,
-        uploadedProductId
+        uploadedProductId,
+        deviceType,
+        deviceBrand,
+        deviceModel,
+        serviceRequired
       );
 
       res.status(201).json(order);
@@ -274,5 +287,61 @@ export class OrderController {
     const { serviceId, clientId, userId } = req.params;
     const result = await this.orderService.testing(serviceId, clientId, userId);
     res.status(200).json(result);
+  }
+
+  //draft order
+  async createDraftOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const {
+        uploadedProductId,
+        deviceType,
+        deviceBrand,
+        deviceModel,
+        serviceRequired,
+      } = req.body;
+      const result = await this.orderService.createDraftOrder(
+        req.currentUser!.id,
+        uploadedProductId,
+        deviceType,
+        deviceBrand,
+        deviceModel,
+        serviceRequired
+      );
+      res.status(200).json({
+        message: "Draft order created. Please select a service to continue.",
+        draftOrderId: result.draftOrderId,
+        matchingServices: result.matchingServices,
+      });
+    } catch (error: any) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Unexpected error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    }
+  }
+
+  async confirmOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const { draftOrderId, serviceId } = req.body;
+      const order = await this.orderService.confirmOrder(
+        req.currentUser!.id,
+        draftOrderId,
+        serviceId
+      );
+
+      res.status(201).json({
+        message: "Order created successfully",
+        order,
+      });
+    } catch (error: any) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Unexpected error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    }
   }
 }

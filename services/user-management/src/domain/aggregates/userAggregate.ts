@@ -9,6 +9,9 @@ import { Email } from "../value-objects/email";
 import { Password } from "../value-objects/password";
 import { ServicePreferences } from "../value-objects/servicePreferences";
 import { SkillSet } from "../value-objects/skillSet";
+import { Categories } from "../value-objects/categories";
+import { Certificates } from "../value-objects/certificates";
+import { Certificate } from "../value-objects/certificate";
 
 export class UserAggregate {
   // public isEmailVerified: boolean = false;
@@ -29,7 +32,7 @@ export class UserAggregate {
     uploadedProducts?: any[],
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
-    emailVerifiedAt?: Date | null
+    emailVerifiedAt?: Date | null,
   ): UserAggregate {
     const client = new Client(
       id,
@@ -43,7 +46,7 @@ export class UserAggregate {
       uploadedProducts || [],
       isEmailVerified,
       emailVerificationToken,
-      emailVerifiedAt
+      emailVerifiedAt,
     );
     return new UserAggregate(client);
   }
@@ -59,10 +62,12 @@ export class UserAggregate {
     rating: number,
     skillSet: SkillSet,
     businessHours: BusinessHours,
+    categories: Categories,
+    certificates: Certificates,
     profilePicture?: string | null,
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
-    emailVerifiedAt?: Date | null
+    emailVerifiedAt?: Date | null,
   ): UserAggregate {
     const artisan = new Artisan(
       id,
@@ -75,10 +80,12 @@ export class UserAggregate {
       rating,
       skillSet,
       businessHours,
+      categories,
+      certificates,
       profilePicture || undefined,
       isEmailVerified,
       emailVerificationToken,
-      emailVerifiedAt
+      emailVerifiedAt,
     );
     return new UserAggregate(artisan);
   }
@@ -93,7 +100,7 @@ export class UserAggregate {
     profilePicture?: string | null,
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
-    emailVerifiedAt?: Date | null
+    emailVerifiedAt?: Date | null,
   ) {
     const admin = new Admin(
       id,
@@ -105,7 +112,7 @@ export class UserAggregate {
       profilePicture || undefined,
       isEmailVerified,
       emailVerificationToken,
-      emailVerifiedAt
+      emailVerifiedAt,
     );
     return new UserAggregate(admin);
   }
@@ -122,7 +129,7 @@ export class UserAggregate {
 
   async changePassword(
     oldPlainPassword: string,
-    newPlainPassword: string
+    newPlainPassword: string,
   ): Promise<void> {
     if (!(await this._user.password.compare(oldPlainPassword))) {
       throw new BadRequestError("Old passowrd is incorrect");
@@ -163,7 +170,7 @@ export class UserAggregate {
   get servicePreferences(): ServicePreferences {
     if (this._user.role !== "CLIENT") {
       throw new BadRequestError(
-        "Service Preferences are only availabe for clients"
+        "Service Preferences are only availabe for clients",
       );
     }
     return (this._user as Client).servicePreferences;
@@ -215,7 +222,7 @@ export class UserAggregate {
   get uploadedProducts(): any[] {
     if (this._user.role !== "CLIENT") {
       throw new BadRequestError(
-        "Uploaded products are only available for clients"
+        "Uploaded products are only available for clients",
       );
     }
     return (this._user as Client).uploadedProducts || [];
@@ -352,7 +359,7 @@ export class UserAggregate {
       case "CLIENT":
         const address = DeliveryAddress.fromJSON(json.deliveryAddress || {});
         const servicePreferences = ServicePreferences.fromJSON(
-          json.servicePreferences || []
+          json.servicePreferences || [],
         );
         const uploadedProducts = json.uploadedProducts || [];
         return UserAggregate.createClient(
@@ -367,7 +374,7 @@ export class UserAggregate {
           uploadedProducts,
           isEmailVerified,
           emailVerificationToken,
-          emailVerifiedAt
+          emailVerifiedAt,
         );
 
       case "ARTISAN":
@@ -379,6 +386,9 @@ export class UserAggregate {
           skillSet = new SkillSet(["General Service"]);
         }
         const businessHours = BusinessHours.fromJSON(json.businessHours || {});
+        const categories = Categories.fromJSON(json.categories || []);
+        const certificates = Certificates.fromJSON(json.certificates || []);
+
         return UserAggregate.createArtisan(
           id,
           email,
@@ -390,10 +400,12 @@ export class UserAggregate {
           json.rating,
           skillSet,
           businessHours,
+          categories,
+          certificates,
           profilePicture,
           isEmailVerified,
           emailVerificationToken,
-          emailVerifiedAt
+          emailVerifiedAt,
         );
 
       case "ADMIN":
@@ -407,7 +419,7 @@ export class UserAggregate {
           profilePicture,
           isEmailVerified,
           emailVerificationToken,
-          emailVerifiedAt
+          emailVerifiedAt,
         );
 
       default:
@@ -452,10 +464,175 @@ export class UserAggregate {
         rating: this.rating,
         skillSet: this.skills,
         businessHours: this.businessHours,
+        categories: this.getCategoryNames(),
+        certificates: this.getCertificates().map((cert) => cert.toJSON()),
       }),
       ...(this.isAdmin() && {
         permissions: this.permissions,
       }),
     };
+  }
+  // Category management methods
+  updateCategories(categories: Categories) {
+    if (this._user.role !== "ARTISAN") {
+      throw new BadRequestError("Only artisans have categories");
+    }
+    (this._user as Artisan).categories = categories;
+  }
+  //addCategory(category: Category | string): void;
+  //removeCategory(categoryName: string): void;
+  getCategoryNames(): string[] {
+    if (this._user.role !== "ARTISAN") {
+      throw new BadRequestError("Only artisans have categories");
+    }
+    return (this._user as Artisan).categories.categoryNames;
+  }
+
+  //hasCategory(categoryName: string): boolean;
+  get categories(): Categories | undefined {
+    if (this._user.role !== "ARTISAN") return undefined;
+    return (this._user as Artisan).categories;
+  }
+
+  // ========== CERTIFICATE METHODS (for Artisans only) ==========
+
+  /**
+   * Add a certificate to the artisan
+   * Throws error if user is not an artisan
+   */
+  addCertificate(certificate: Certificate): UserAggregate {
+    if (this.role !== "ARTISAN") {
+      throw new Error("Only artisans can have certificates");
+    }
+
+    // Get the current artisan entity
+    const artisan = this._user as Artisan;
+
+    // Create new artisan with added certificate
+    const updatedArtisan = artisan.addCertificate(certificate);
+
+    // Return new UserAggregate with updated artisan
+    return new UserAggregate(updatedArtisan);
+  }
+
+  /**
+   * Remove a certificate from the artisan
+   * Throws error if user is not an artisan
+   */
+  removeCertificate(certificateId: string): UserAggregate {
+    if (this.role !== "ARTISAN") {
+      throw new Error("Only artisans can have certificates");
+    }
+
+    const artisan = this._user as Artisan;
+    const updatedArtisan = artisan.removeCertificate(certificateId);
+
+    return new UserAggregate(updatedArtisan);
+  }
+
+  /**
+   * Approve a certificate (admin action)
+   * Throws error if user is not an artisan
+   */
+  approveCertificate(certificateId: string, adminId: string): UserAggregate {
+    if (this.role !== "ARTISAN") {
+      throw new Error("Only artisans can have certificates");
+    }
+
+    const artisan = this._user as Artisan;
+    const updatedArtisan = artisan.approveCertificate(certificateId, adminId);
+
+    return new UserAggregate(updatedArtisan);
+  }
+
+  /**
+   * Reject a certificate with reason (admin action)
+   * Throws error if user is not an artisan
+   */
+  rejectCertificate(
+    certificateId: string,
+    adminId: string,
+    reason: string,
+  ): UserAggregate {
+    if (this.role !== "ARTISAN") {
+      throw new Error("Only artisans can have certificates");
+    }
+
+    const artisan = this._user as Artisan;
+    const updatedArtisan = artisan.rejectCertificate(
+      certificateId,
+      adminId,
+      reason,
+    );
+
+    return new UserAggregate(updatedArtisan);
+  }
+
+  /**
+   * Get all certificates for the artisan
+   * Returns empty array if user is not an artisan
+   */
+  getCertificates(): Certificate[] {
+    if (this.role !== "ARTISAN") {
+      return [];
+    }
+
+    const artisan = this._user as Artisan;
+    // return artisan.getCertificates();
+    // Make sure certificates exist
+    if (!artisan.certificates) {
+      return [];
+    }
+
+    // Return the certificates array
+    return artisan.certificates.certificates;
+  }
+
+  /**
+   * Check if artisan has pending certificates
+   * Returns false if user is not an artisan
+   */
+  hasPendingCertificates(): boolean {
+    if (this.role !== "ARTISAN") {
+      return false;
+    }
+
+    const artisan = this._user as Artisan;
+    // return artisan.hasPendingCertificates();
+    return artisan.certificates.hasPendingCertificates;
+  }
+
+  /**
+   * Get total certificate count
+   * Returns 0 if user is not an artisan
+   */
+  getCertificateCount(): number {
+    if (this.role !== "ARTISAN") {
+      return 0;
+    }
+
+    const artisan = this._user as Artisan;
+    // return artisan.getCertificateCount();
+    if (!artisan.certificates) {
+      return 0;
+    }
+
+    return artisan.certificates.count;
+  }
+
+  /**
+   * Get approved certificate count
+   * Returns 0 if user is not an artisan
+   */
+  getApprovedCertificateCount(): number {
+    if (this.role !== "ARTISAN") {
+      return 0;
+    }
+
+    const artisan = this._user as Artisan;
+    if (!artisan.certificates) {
+      return 0;
+    }
+    return artisan.certificates.approvedCount;
   }
 }

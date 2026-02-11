@@ -6,12 +6,14 @@ import { OrderService } from "../../../application/services/orderService";
 import { orderRepositoryImpls } from "../../../infrastructure/persistence/orderRepositoryImpl";
 import { OrderModel } from "../../../infrastructure/persistence/models/orderModel";
 import { PaymentService } from "../../../domain/services/paymentService";
+import { ServiceRepositoryImpl } from "../../../modules_from_other_services/infrastructure/serviceRepositoryImpls";
 
 const router = Router();
 const authMiddleware = new AuthMiddleware();
 const orderRepo = new orderRepositoryImpls(OrderModel);
 const paymentRepo = new PaymentService();
-const orderService = new OrderService(orderRepo);
+const serviceRepo = new ServiceRepositoryImpl();
+const orderService = new OrderService(serviceRepo, orderRepo);
 const orderController = new OrderController(orderService);
 
 const service = `${process.env.ORDER_MANAGEMENT_URL}/
@@ -129,6 +131,35 @@ router.get(
   authMiddleware.protect,
   requireRole("CLIENT"),
   orderController.getClientOrders.bind(orderController)
+);
+
+//DRAFT ORDER ROUTES
+router.post(
+  "/draft",
+  authMiddleware.protect,
+  requireRole("CLIENT"),
+  orderController.createDraftOrder.bind(orderController)
+);
+
+router.post(
+  "/confirm",
+  authMiddleware.protect,
+  orderController.confirmOrder.bind(orderController)
+);
+
+//Client orders
+router.get(
+  "/client-history",
+  authMiddleware.protect,
+  requireRole("CLIENT"),
+  orderController.getClientOrders.bind(orderController)
+);
+
+router.get(
+  "/artisan-history",
+  authMiddleware.protect,
+  requireRole("ARTISAN"),
+  orderController.getArtisanOrders.bind(orderController)
 );
 
 export { router as orderRouter };

@@ -10,6 +10,7 @@ import { ServicePreferences } from "../../domain/value-objects/servicePreference
 import { BusinessHours } from "../../domain/value-objects/businessHours";
 import { SkillSet } from "../../domain/value-objects/skillSet";
 import { refreshUserCache } from "../../infrastructure/utils/refreshUserCache";
+import { Categories } from "../../domain/value-objects/categories";
 
 export class AuthController {
   private userRepository = new UserRepositoryImpl();
@@ -24,7 +25,7 @@ export class AuthController {
       }
       const { user, BearerToken } = await this.authService.login(
         email,
-        password
+        password,
       );
 
       res.cookie("jwt", BearerToken, {
@@ -92,7 +93,7 @@ export class AuthController {
       const { users, total } = await this.authService.getAllUsers(
         role,
         page,
-        limit
+        limit,
       );
 
       res.status(200).json({
@@ -179,13 +180,13 @@ export class AuthController {
               updates.deliveryAddress.city,
               updates.deliveryAddress.postalCode,
               updates.deliveryAddress.state,
-              updates.deliveryAddress.country
-            )
+              updates.deliveryAddress.country,
+            ),
           );
         }
         if (updates.servicePreferences) {
           user.updateServicePreferences(
-            new ServicePreferences(updates.servicePreferences)
+            new ServicePreferences(updates.servicePreferences),
           );
         }
         break;
@@ -198,6 +199,9 @@ export class AuthController {
         }
         if (updates.businessHours) {
           user.updateBusinessHours(new BusinessHours(updates.businessHours));
+        }
+        if (updates.categories) {
+          user.updateCategories(new Categories(updates.categories));
         }
         break;
 
@@ -258,9 +262,8 @@ export class AuthController {
       throw new BadRequestError("Missing Google ID token");
     }
 
-    const { user, BearerToken } = await this.authService.loginWithGoogle(
-      idToken
-    );
+    const { user, BearerToken } =
+      await this.authService.loginWithGoogle(idToken);
     res.status(200).json({
       message: "Google login successful",
       user: this.userRepository.toJSON(user),
@@ -498,7 +501,7 @@ export class AuthController {
 
       // Validate token without resetting password
       const userId = await this.authService.validatePasswordResetToken(
-        token as any
+        token as any,
       );
       console.log("Validated userId:", userId);
 
@@ -675,7 +678,7 @@ export class AuthController {
       //   </html>
       // `);
       res.redirect(
-        `${process.env.FIXSERV_FRONTEND}/auth/reset-password?token=${token}`
+        `${process.env.FIXSERV_FRONTEND}/auth/reset-password?token=${token}`,
       );
     } catch (error: any) {
       console.error("Error showing reset form:", error);

@@ -104,6 +104,19 @@ const OrderSchema = new mongoose.Schema(
       required: true,
       default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
     },
+    //New fields as regards v2
+    deviceType: {
+      type: String,
+    },
+    deviceBrand: {
+      type: String,
+    },
+    deviceModel: {
+      type: String,
+    },
+    serviceRequired: {
+      type: String,
+    },
   },
   { versionKey: false }
 );

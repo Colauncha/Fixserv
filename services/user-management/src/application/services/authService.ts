@@ -13,6 +13,8 @@ import { IEmailService } from "../../infrastructure/services/emailService";
 import { Email } from "../../domain/value-objects/email";
 import { DeliveryAddress } from "../../domain/value-objects/deliveryAddress";
 import { ServicePreferences } from "../../domain/value-objects//servicePreferences";
+import { Categories } from "../../domain/value-objects/categories";
+import { Category } from "../../domain/value-objects/category";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -20,7 +22,7 @@ export class AuthService implements IAuthService {
   constructor(
     private userRepository: IUserRepository,
     private tokenService: TokenService,
-    private emailService: IEmailService
+    private emailService: IEmailService,
   ) {}
   /*
   async login(
@@ -75,7 +77,7 @@ export class AuthService implements IAuthService {
     */
   async login(
     email: string,
-    password: string
+    password: string,
   ): Promise<{ user: UserAggregate; BearerToken: string }> {
     if (!password) {
       throw new BadRequestError("Password is required");
@@ -115,7 +117,7 @@ export class AuthService implements IAuthService {
     const BearerToken = this.tokenService.generateBearerToken(
       foundUser.id,
       foundUser.email,
-      foundUser.role
+      foundUser.role,
     );
 
     return { user: foundUser, BearerToken };
@@ -181,7 +183,7 @@ export class AuthService implements IAuthService {
   async getAllUsers(
     role?: string,
     page = 1,
-    limit = 10
+    limit = 10,
   ): Promise<{ users: UserAggregate[]; total: number }> {
     const result = await this.userRepository.find(role, page, limit);
     if (!result) {
@@ -238,7 +240,7 @@ export class AuthService implements IAuthService {
   }
 
   async loginWithGoogle(
-    idToken: string
+    idToken: string,
   ): Promise<{ user: UserAggregate; BearerToken: string }> {
     const { email, fullName } = await this.verifyGoogleToken(idToken);
     let user = await this.userRepository.findByEmail(email);
@@ -255,16 +257,16 @@ export class AuthService implements IAuthService {
           "", // city
           "", // postalCode
           "", // state
-          "" // country
+          "", // country
         ),
-        new ServicePreferences([])
+        new ServicePreferences([]),
       );
       await this.userRepository.save(user);
     }
     const BearerToken = this.tokenService.generateBearerToken(
       user.id,
       user.email,
-      user.role
+      user.role,
     );
     return { user, BearerToken };
   }
@@ -311,5 +313,61 @@ export class AuthService implements IAuthService {
     await this.invalidateEmailCache(user.email);
 
     console.log(`Email verified and cache invalidated for user: ${userId}`);
+  }
+
+  async updateArtisanCategories(
+    artisanId: string,
+    categories: any[],
+  ): Promise<UserAggregate> {
+    // Fetch artisan
+    const artisan = await this.findUserById(artisanId);
+
+    if (!artisan) {
+      throw new BadRequestError("Artisan not found");
+    }
+
+    if (artisan.role !== "ARTISAN") {
+      throw new BadRequestError("User is not an artisan");
+    }
+
+    if (!categories || !Array.isArray(categories) || categories.length === 0) {
+      throw new BadRequestError("Categories array cannot be empty");
+    }
+
+    // Normalize categories (important) -> build string[] of category names expected by Categories
+    // const normalizedCategoryNames = categories.map//((cat) =>
+    //   cat.name.toUpperCase(),
+    // );
+
+    const normalizedCategories = categories.map((cat) => ({
+      name: cat.name.toUpperCase(),
+      description: cat.description ?? "",
+      iconUrl: cat.iconUrl ?? null,
+    }));
+
+    // Use aggregate method (DDD-safe)
+    // artisan.updateCategories(new Categories(normalizedCategories));
+    const categoryVOs = normalizedCategories.map(
+      (cat) =>
+        new Category(cat.name, cat.description, cat.iconUrl ?? undefined),
+    );
+
+    artisan.updateCategories(new Categories(categoryVOs));
+
+    // Persist
+    await this.userRepository.save(artisan);
+
+    // Cache invalidation (same pattern you already use)
+    await this.invalidateUserCache(artisan.id);
+    await this.invalidateEmailCache(artisan.email);
+
+    // Re-fetch fresh copy
+    const freshArtisan = await this.findUserById(artisan.id);
+
+    if (!freshArtisan) {
+      throw new BadRequestError("Failed to reload artisan");
+    }
+
+    return freshArtisan;
   }
 }

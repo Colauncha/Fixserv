@@ -38,7 +38,7 @@ setInterval(async () => {
       console.error(`❌ Failed to ping ${url}:`, error.message);
     }
   }
-}, 2 * 60 * 1000); // every 5 minutes
+}, 5 * 60 * 1000); // every 5 minutes
 router.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     status: "OK",
