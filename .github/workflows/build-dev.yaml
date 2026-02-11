@@ -1,10 +1,9 @@
-name: Build and Push Docker Images to Docker Hub
+name: Build and Push Docker Images to Docker Hub for dev
 
 on:
   push:
     branches:
-      - main
-      - build
+      - israel-backend
     paths-ignore:
       - 'README.md'
   
@@ -35,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/fixserv-${{ matrix.service }}
+          images: ${{ secrets.DOCKER_USERNAME }}/fixserv-${{ matrix.service }}-dev
 
       # 3. Set up Docker Buildx
       - name: Set up Docker Buildx
