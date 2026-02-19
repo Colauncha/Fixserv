@@ -16,7 +16,7 @@ RUN npm install -g pnpm && \
  
 # COPY /app/node_modules ./node_modules
      
- COPY services/user-management ./services/user-management/
+COPY services/user-management ./services/user-management/
 
 WORKDIR /app/services/user-management
 

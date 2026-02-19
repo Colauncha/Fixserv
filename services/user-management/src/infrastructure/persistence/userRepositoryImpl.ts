@@ -69,8 +69,8 @@ export class UserRepositoryImpl implements IUserRepository {
     const userData = this.toPersistence(user);
     const role = user.role;
 
-    console.log(`Saving user ${user.id} with role ${role}`);
-    console.log("User data being saved:", JSON.stringify(userData, null, 2));
+    // console.log(`Saving user ${user.id} with role ${role}`);
+    // console.log("User data being saved:", JSON.stringify(userData, null, 2));
 
     let savedData: any;
 
