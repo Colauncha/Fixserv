@@ -43,7 +43,7 @@ build:
     - image: docker.io/ogkpos/order-management
       context: .
       docker:
-        dockerfile: services/order-management/Dockerfile
+        dockerfile: services/order-management/Dockerfile.dev
       sync:
         manual:
           - src: "src/**/*.ts"
@@ -51,7 +51,7 @@ build:
     - image: docker.io/ogkpos/wallet-service
       context: .
       docker:
-        dockerfile: services/wallet-service/Dockerfile
+        dockerfile: services/wallet-service/Dockerfile.dev
       sync:
         manual:
           - src: "src/**/*.ts"

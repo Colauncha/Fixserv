@@ -38,12 +38,12 @@ const start = async () => {
     const notificationService = new NotificationService(
       notificationRepo,
       domainService,
-      eventBus
+      eventBus,
     );
 
     // Setup event handlers
     const notificationEventHandler = new NotificationEventHandler(
-      notificationService
+      notificationService,
     );
     await notificationEventHandler.setupSubscriptions();
 

@@ -612,6 +612,9 @@ importers:
       express-async-errors:
         specifier: ^3.1.1
         version: 3.1.1(express@4.21.2)
+      express-list-endpoints:
+        specifier: ^7.1.1
+        version: 7.1.1
       express-mongo-sanitize:
         specifier: ^2.2.0
         version: 2.2.0
@@ -2360,6 +2363,10 @@ packages:
     resolution: {integrity: sha512-h6aK1da4tpqWSbyCa3FxB/V6Ehd4EEB15zyQq9qe75OZBp0krinNKuH4rAY+S/U/2I36vdLAUFSjQJ+TFmODng==}
     peerDependencies:
       express: ^4.16.2
+
+  express-list-endpoints@7.1.1:
+    resolution: {integrity: sha512-SA6YHH1r6DrioJ4fFJNqiwu1FweGFqJZO9KBApMzwPosoSGPOX2AW0wiMepOXjojjEXDuP9whIvckomheErbJA==}
+    engines: {node: '>=18'}
 
   express-mongo-sanitize@2.2.0:
     resolution: {integrity: sha512-PZBs5nwhD6ek9ZuP+W2xmpvcrHwXZxD5GdieX2dsjPbAbH4azOkrHbycBud2QRU+YQF1CT+pki/lZGedHgo/dQ==}
@@ -5984,6 +5991,8 @@ snapshots:
   express-async-errors@3.1.1(express@4.21.2):
     dependencies:
       express: 4.21.2
+
+  express-list-endpoints@7.1.1: {}
 
   express-mongo-sanitize@2.2.0: {}
 

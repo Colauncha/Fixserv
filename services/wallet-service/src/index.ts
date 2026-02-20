@@ -162,7 +162,7 @@ const start = async (): Promise<void> => {
   } catch (error: any) {
     console.error(
       "❌ MongoDB connection failed, but service will continue:",
-      error
+      error,
     );
     // const server = app.listen(4005, () => {
     //   console.log(`⚠️ Server running in degraded //mode on 4005 ${4005}`);
@@ -198,7 +198,7 @@ const start = async (): Promise<void> => {
       console.log(
         `🔓 Internal request: ${req.method} ${req.url} from ${
           req.hostname || req.ip
-        }`
+        }`,
       );
       return next();
     }

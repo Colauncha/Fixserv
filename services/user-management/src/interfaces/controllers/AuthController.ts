@@ -255,7 +255,7 @@ export class AuthController {
         .json({ message: error.message || "Failed to reset password" });
     }
   }
-
+  /*
   async googleLogin(req: Request, res: Response): Promise<void> {
     const { idToken } = req.body;
     if (!idToken) {
@@ -269,6 +269,94 @@ export class AuthController {
       user: this.userRepository.toJSON(user),
       BearerToken,
     });
+  }
+  */
+  async googleLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const { idToken, role } = req.body;
+
+      if (!idToken) {
+        throw new BadRequestError("Missing Google ID token");
+      }
+
+      // Validate role if provided
+      const validRoles = ["CLIENT", "ARTISAN", "ADMIN"];
+      if (role && !validRoles.includes(role)) {
+        throw new BadRequestError("Invalid role");
+      }
+
+      const { user, BearerToken, isNewUser } =
+        await this.authService.loginWithGoogle(idToken, role);
+
+      res.status(200).json({
+        success: true,
+        message: isNewUser
+          ? "Account created successfully"
+          : "Login successful",
+        data: {
+          user: this.userRepository.toJSON(user),
+          token: BearerToken,
+          isNewUser,
+        },
+      });
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Google authentication failed",
+      });
+    }
+  }
+
+  /**
+   * Method 2: Get Google Auth URL (for redirect flow)
+   */
+  async getGoogleAuthUrl(req: Request, res: Response): Promise<void> {
+    try {
+      const { role } = req.query;
+
+      const authUrl = this.authService.getGoogleAuthUrl(
+        role as "CLIENT" | "ARTISAN" | "ADMIN",
+      );
+
+      res.status(200).json({
+        success: true,
+        data: { authUrl },
+      });
+    } catch (error: any) {
+      console.error("Error generating Google auth URL:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate authentication URL",
+      });
+    }
+  }
+
+  /**
+   * Method 3: Handle Google OAuth Callback
+   */
+  async googleCallback(req: Request, res: Response): Promise<void> {
+    try {
+      const { code, state } = req.query;
+
+      if (!code || typeof code !== "string") {
+        throw new BadRequestError("Missing authorization code");
+      }
+
+      const { user, BearerToken, isNewUser } =
+        await this.authService.handleGoogleCallback(code, state as string);
+
+      // Redirect to frontend with token
+      const redirectUrl = `${process.env.FIXSERV_FRONTEND}/auth/callback?token=${BearerToken}&isNewUser=${isNewUser}`;
+
+      res.redirect(redirectUrl);
+    } catch (error: any) {
+      console.error("Google callback error:", error);
+
+      // Redirect to frontend with error
+      const errorUrl = `${process.env.FIXSERV_FRONTEND}/auth/login?error=${encodeURIComponent(error.message)}`;
+      res.redirect(errorUrl);
+    }
   }
   /*
   async showResetPasswordForm(req: Request, res: Response): Promise<void> {
