@@ -85,10 +85,10 @@ router.post(
 
 router.post("/google-login", authController.googleLogin.bind(authController));
 
-router.get("google-url", authController.getGoogleAuthUrl.bind(authController));
+router.get("/google-url", authController.getGoogleAuthUrl.bind(authController));
 
 router.get(
-  "google-callback",
+  "/google-callback",
   authController.googleCallback.bind(authController),
 );
 

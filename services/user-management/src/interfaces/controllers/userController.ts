@@ -34,19 +34,11 @@ export class UserController {
         //roleData.adminData
       );
 
-      //await resend.emails.send({
-      //  from: "fixserv@resend.dev",
-      //  to: email,
-      //  subject: "Welcome to Fixserv",
-      //  html: ` <p>Hi there,</p><strong>Welcome to Fixserv, please Login //to get started.</stro>`,
-      //});
-
       res.status(201).json({
         success: true,
         message:
           "User registered successfully. Please check your email to verify your account.",
         user: this.response.toJSON(user),
-        // referralCode: user.id,
       });
     } catch (error: any) {
       if (error.code === 11000) {

@@ -28,57 +28,7 @@ export class AuthService implements IAuthService {
     private tokenService: TokenService,
     private emailService: IEmailService,
   ) {}
-  /*
-  async login(
-    email: string,
-    password: string
-  ): Promise<{ user: UserAggregate; BearerToken: string }> {
-    if (!password) {
-      throw new BadRequestError("Password is required");
-    }
-    const cacheKey = `user:email:${email}`;
-    await connectRedis();
 
-    const cachedUser = await redis.get(cacheKey);
-
-    let user: UserAggregate;
-
-    if (cachedUser) {
-      user = UserAggregate.fromJSON(JSON.parse(cachedUser));
-    } else {
-      const foundUser = await this.userRepository.findByEmail(email);
-      if (!foundUser) {
-        throw new BadRequestError("No user with that email exists");
-      }
-      user = foundUser;
-
-      // Cache the user data for 10 minutes
-      await redis.set(cacheKey, JSON.stringify(user.toJSON()), {
-        EX: 60 * 10,
-      });
-    }
-
-    const passwordData = Password.fromHash(user.password);
-
-    const isMatch = await passwordData.compare(password);
-
-    if (!isMatch) {
-      throw new NotAuthorizeError();
-    }
-    // Optional: Check if email is verified before allowing login
-    if (!user.isEmailVerified) {
-      throw new BadRequestError("Email not verified");
-    }
-
-    const BearerToken = this.tokenService.generateBearerToken(
-      user.id,
-      user.email,
-      user.role
-    );
-
-    return { user, BearerToken };
-  }
-    */
   async login(
     email: string,
     password: string,
@@ -226,24 +176,6 @@ export class AuthService implements IAuthService {
     await this.userRepository.save(user);
   }
 
-  /*
-  async verifyGoogleToken(token: string) {
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
-    console.log("Received token for audience:", payload?.aud);
-    console.log("Expected audience:", process.env.GOOGLE_CLIENT_ID);
-    if (!payload || !payload.email) {
-      throw new BadRequestError("Invalid Google token");
-    }
-    return {
-      email: payload.email,
-      fullName: payload.name || "",
-    };
-  }
-*/
   private async verifyGoogleToken(idToken: string): Promise<{
     email: string;
     fullName: string;
@@ -277,39 +209,6 @@ export class AuthService implements IAuthService {
       throw new BadRequestError("Invalid Google token");
     }
   }
-  /*
-  async loginWithGoogle(
-    idToken: string,
-  ): Promise<{ user: UserAggregate; BearerToken: string }> {
-    const { email, fullName } = await this.verifyGoogleToken(idToken);
-    let user = await this.userRepository.findByEmail(email);
-    if (!user) {
-      const password = await Password.create(Math.random().toString(36)); //dummy
-      user = UserAggregate.createClient(
-        uuidv4(),
-        new Email(email),
-        password,
-        fullName,
-        "",
-        new DeliveryAddress(
-          "", // street
-          "", // city
-          "", // postalCode
-          "", // state
-          "", // country
-        ),
-        new ServicePreferences([]),
-      );
-      await this.userRepository.save(user);
-    }
-    const BearerToken = this.tokenService.generateBearerToken(
-      user.id,
-      user.email,
-      user.role,
-    );
-    return { user, BearerToken };
-  }
-    */
   async loginWithGoogle(
     idToken: string,
     role?: "CLIENT" | "ARTISAN" | "ADMIN", // Optional: specify role during signup

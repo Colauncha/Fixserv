@@ -255,22 +255,7 @@ export class AuthController {
         .json({ message: error.message || "Failed to reset password" });
     }
   }
-  /*
-  async googleLogin(req: Request, res: Response): Promise<void> {
-    const { idToken } = req.body;
-    if (!idToken) {
-      throw new BadRequestError("Missing Google ID token");
-    }
 
-    const { user, BearerToken } =
-      await this.authService.loginWithGoogle(idToken);
-    res.status(200).json({
-      message: "Google login successful",
-      user: this.userRepository.toJSON(user),
-      BearerToken,
-    });
-  }
-  */
   async googleLogin(req: Request, res: Response): Promise<void> {
     try {
       const { idToken, role } = req.body;
@@ -354,7 +339,7 @@ export class AuthController {
       console.error("Google callback error:", error);
 
       // Redirect to frontend with error
-      const errorUrl = `${process.env.FIXSERV_FRONTEND}/auth/login?error=${encodeURIComponent(error.message)}`;
+      const errorUrl = `${process.env.FIXSERV_FRONTEND}/log-in?error=${encodeURIComponent(error.message)}`;
       res.redirect(errorUrl);
     }
   }
