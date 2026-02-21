@@ -5,7 +5,7 @@ export class Categories {
 
   constructor(categories: Category[] | string[]) {
     if (categories.length === 0) {
-      throw new Error("Artisan must have at least one category");
+      this._categories = [new Category("GENERAL", "", undefined)];
     }
 
     // Handle both Category objects and strings

@@ -9,31 +9,6 @@ const authMiddleware = new AuthMiddleware();
 const validate = new ValidateRequest();
 const router = Router();
 
-const service = `${process.env.WALLET_SERVICE_URL}/api/wallet/health`;
-setInterval(async () => {
-  const ENV = process.env.ENV?.toLowerCase();
-  console.log(ENV);
-  if (ENV !== "development") {
-    console.log("Skipping health check pings in non-development environment");
-    return;
-  }
-  for (const url of [service]) {
-    try {
-      await axios.get(url, { timeout: 5000 });
-      console.log(`✅ Pinged ${url}`);
-    } catch (error: any) {
-      console.error(`❌ Failed to ping ${url}:`, error.message);
-    }
-  }
-}, 5 * 60 * 1000); // every 5 minutes
-router.get("/health", (req: Request, res: Response) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    service: "wallet-service",
-  });
-});
-
 router.post(
   "/top-up",
   [
@@ -53,7 +28,7 @@ router.post(
           "Complete payment at the provided URL. Your wallet will be automatically credited upon successful payment.",
       },
     });
-  }
+  },
 );
 
 //router.post("/lock-funds", async (req: Request, res: Response) => {
@@ -86,7 +61,7 @@ router.post(
     body("bankCode").notEmpty().withMessage("Bank code is required"),
   ],
   validate.validateRequest,
-  WalletController.resolveAccountHandler
+  WalletController.resolveAccountHandler,
 );
 
 // Initiate withdrawal
@@ -109,7 +84,7 @@ router.post(
       .withMessage("PIN must be at least 4 characters"),
   ],
   validate.validateRequest,
-  WalletController.initiateWithdrawalHandler
+  WalletController.initiateWithdrawalHandler,
 );
 
 // Process withdrawal (admin/automated endpoint)
@@ -118,7 +93,7 @@ router.post(
   [param("withdrawalId").notEmpty().withMessage("Withdrawal ID is required")],
   validate.validateRequest,
   // authMiddleware.requireAdmin, // Uncomment if you have admin middleware
-  WalletController.processWithdrawalHandler
+  WalletController.processWithdrawalHandler,
 );
 
 // Get withdrawal history for a user
@@ -136,14 +111,14 @@ router.get(
       .withMessage("Limit must be between 1 and 100"),
   ],
   validate.validateRequest,
-  WalletController.getWithdrawalHistoryHandler
+  WalletController.getWithdrawalHistoryHandler,
 );
 
 // Get pending withdrawals (admin endpoint)
 router.get(
   "/withdrawal/pending",
   // authMiddleware.requireAdmin, // Uncomment if you have admin middleware
-  WalletController.getPendingWithdrawalsHandler
+  WalletController.getPendingWithdrawalsHandler,
 );
 
 // Cancel withdrawal
@@ -154,7 +129,7 @@ router.delete(
     param("withdrawalId").notEmpty().withMessage("Withdrawal ID is required"),
   ],
   validate.validateRequest,
-  WalletController.cancelWithdrawalHandler
+  WalletController.cancelWithdrawalHandler,
 );
 ///////////////////////////////////////////////////////
 
@@ -166,7 +141,7 @@ router.post("/refund-funds", WalletController.refundFundsToClientHandler);
 
 router.get("/top-up/verify/:reference", async (req: Request, res: Response) => {
   console.log(
-    "⚠️ Manual verification endpoint called - should only be used for debugging"
+    "⚠️ Manual verification endpoint called - should only be used for debugging",
   );
   const { reference } = req.params;
   const data = await WalletService.verifyTopup(reference);
@@ -176,7 +151,7 @@ router.get("/top-up/verify/:reference", async (req: Request, res: Response) => {
 router.get("/get-balance/:userId", WalletController.getWalletBalanceHandler);
 router.get(
   "/get-transaction/:userId",
-  WalletController.getTransactionHistoryHandler
+  WalletController.getTransactionHistoryHandler,
 );
 
 //router.post(
@@ -195,21 +170,21 @@ router.get("/webhook/health", WalletController.webhookHealthCheck);
 router.post("/signup", WalletController.handleNewUserSignupHandler);
 router.post(
   "/artisan/verify",
-  WalletController.handleArtisanVerificationHandler
+  WalletController.handleArtisanVerificationHandler,
 );
 router.get(
   "/fixpoints/balance/:userId",
-  WalletController.getFixpointsBalanceHandler
+  WalletController.getFixpointsBalanceHandler,
 );
 router.post("/fixpoints/redeem", WalletController.redeemFixpointsHandler);
 router.get("/referral/info/:userId", WalletController.getReferralInfoHandler);
 router.get(
   "/fixpoints/history/:userId",
-  WalletController.getFixpointsTransactionHistoryHandler
+  WalletController.getFixpointsTransactionHistoryHandler,
 );
 router.get(
   "/referral/validate/:code",
-  WalletController.validateReferralCodeHandler
+  WalletController.validateReferralCodeHandler,
 );
 router.get("/referral/analytics", WalletController.getReferralAnalyticsHandler); // Admin only
 

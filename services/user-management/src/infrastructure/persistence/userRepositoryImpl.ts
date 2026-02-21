@@ -103,7 +103,7 @@ export class UserRepositoryImpl implements IUserRepository {
         throw new Error(`Unknown role ${role}`);
     }
 
-    console.log("Data saved to database:", JSON.stringify(savedData, null, 2));
+    //console.log("Data saved to database:", JSON.//stringify(savedData, null, 2));
 
     if (!savedData.role) {
       savedData.role = role; // Ensure role is set if not present
