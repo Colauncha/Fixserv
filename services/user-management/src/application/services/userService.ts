@@ -174,6 +174,10 @@ export class UserService implements IUserService {
     }
 
     try {
+      const existigEmail = await this.userRepository.findByEmail(email);
+      if (existigEmail) {
+        throw new BadRequestError("Email already exists");
+      }
       // Save user first
       await this.userRepository.save(user);
 

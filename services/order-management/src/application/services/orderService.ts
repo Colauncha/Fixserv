@@ -30,7 +30,7 @@ export class OrderService {
 
   constructor(
     private serviceRepository: IServiceRepository,
-    private orderRepository: OrderRepository
+    private orderRepository: OrderRepository,
   ) {}
   async createOrder(
     clientId: string,
@@ -42,7 +42,7 @@ export class OrderService {
     deviceType: string,
     deviceBrand: string,
     deviceModel: string,
-    serviceRequired: string
+    serviceRequired: string,
   ): Promise<Order> {
     const service = await getServiceById(serviceId);
     const client = await getClientById(clientId);
@@ -51,12 +51,12 @@ export class OrderService {
     console.log("service:", service);
 
     const matchedProduct = client.uploadedProducts.find(
-      (prod: any) => prod.id === uploadedProductId
+      (prod: any) => prod.id === uploadedProductId,
     );
 
     if (!matchedProduct) {
       throw new BadRequestError(
-        `Uploaded product with ID ${uploadedProductId} not found for this client`
+        `Uploaded product with ID ${uploadedProductId} not found for this client`,
       );
     }
 
@@ -71,7 +71,7 @@ export class OrderService {
       deviceType,
       deviceBrand,
       deviceModel,
-      serviceRequired
+      serviceRequired,
     );
 
     const saveOrder = await this.orderRepository.save(orderAggregate.order);
@@ -80,7 +80,7 @@ export class OrderService {
     await WalletClient.lockFundsForOrder(
       client.id,
       saveOrder.id,
-      saveOrder.price
+      saveOrder.price,
     );
 
     //PUBLISH Event
@@ -150,7 +150,7 @@ export class OrderService {
 
     if (order.status !== "WORK_COMPLETED") {
       throw new BadRequestError(
-        "Order must be marked as WORK_COMPLETED before releasing payment"
+        "Order must be marked as WORK_COMPLETED before releasing payment",
       );
     }
 
@@ -183,7 +183,7 @@ export class OrderService {
   async acceptOrder(
     orderId: string,
     artisanId: string,
-    estimatedCompletionDate?: Date
+    estimatedCompletionDate?: Date,
   ): Promise<void> {
     const order = await this.orderRepository.findById(orderId);
     if (!order) throw new BadRequestError("Order not found");
@@ -191,7 +191,7 @@ export class OrderService {
     // Verify artisan ownership
     if (order.artisanId !== artisanId) {
       throw new BadRequestError(
-        "You are not authorized to respond to this order"
+        "You are not authorized to respond to this order",
       );
     }
 
@@ -215,7 +215,7 @@ export class OrderService {
     orderId: string,
     artisanId: string,
     reason: RejectionReason,
-    note?: string
+    note?: string,
   ): Promise<void> {
     const order = await this.orderRepository.findById(orderId);
     if (!order) throw new BadRequestError("Order not found");
@@ -223,7 +223,7 @@ export class OrderService {
     // Verify artisan ownership
     if (order.artisanId !== artisanId) {
       throw new BadRequestError(
-        "You are not authorized to respond to this order"
+        "You are not authorized to respond to this order",
       );
     }
 
@@ -276,7 +276,7 @@ export class OrderService {
 
     if (order.artisanId !== artisanId) {
       throw new BadRequestError(
-        "You are not authorized to complete this order"
+        "You are not authorized to complete this order",
       );
     }
 
@@ -379,7 +379,7 @@ export class OrderService {
 
     // All calls failed
     throw new BadRequestError(
-      "Unable to fetch required data. Please try again later."
+      "Unable to fetch required data. Please try again later.",
     );
   }
 
@@ -390,15 +390,15 @@ export class OrderService {
     deviceType: string,
     deviceBrand: string,
     deviceModel: string,
-    serviceRequired: string
+    serviceRequired: string,
   ): Promise<{ draftOrderId: string; matchingServices: any[] }> {
     const client = await getClientById(clientId);
     const matchedProduct = client.uploadedProducts.find(
-      (prod: any) => prod.id === uploadedProductId
+      (prod: any) => prod.id === uploadedProductId,
     );
     if (!matchedProduct) {
       throw new BadRequestError(
-        `Uploaded product with ID ${uploadedProductId} not found for this client`
+        `Uploaded product with ID ${uploadedProductId} not found for this client`,
       );
     }
 
@@ -422,7 +422,7 @@ export class OrderService {
     await redis.set(
       `draft_order:${draftOrder.id}`,
       JSON.stringify(draftOrder),
-      { EX: 1800 }
+      { EX: 1800 },
     );
 
     // Search for matching services based on serviceRequired
@@ -501,7 +501,7 @@ export class OrderService {
   async confirmOrder(
     clientId: string,
     draftOrderId: string,
-    selectedServiceId: string
+    selectedServiceId: string,
   ): Promise<Order> {
     // Retrieve draft order
     // const draftOrder = await this.draftOrderRepository.findById(draftOrderId);
@@ -529,13 +529,13 @@ export class OrderService {
       client.id,
       service.artisanId,
       service.id,
-      service.price, // Use service price, not client-provided
+      service.details.price, // Use service price, not client-provided
       client.deliveryAddress,
       draftOrder.uploadedProducts,
       draftOrder.deviceType,
       draftOrder.deviceBrand,
       draftOrder.deviceModel,
-      draftOrder.serviceRequired
+      draftOrder.serviceRequired,
     );
 
     const savedOrder = await this.orderRepository.save(orderAggregate.order);
@@ -544,7 +544,7 @@ export class OrderService {
     await WalletClient.lockFundsForOrder(
       client.id,
       savedOrder.id,
-      savedOrder.price
+      savedOrder.price,
     );
 
     // Delete draft order after confirmation

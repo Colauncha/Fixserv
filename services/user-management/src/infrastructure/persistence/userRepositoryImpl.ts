@@ -10,6 +10,7 @@ import { SkillSet } from "../../domain/value-objects/skillSet";
 import { AdminModel } from "./models/admin";
 import { ArtisanModel } from "./models/artisan";
 import { ClientModel } from "./models/client";
+import { UserIdentityModel } from "./models/userIdentity";
 import {
   BadRequestError,
   connectRedis,
@@ -66,6 +67,15 @@ export class UserRepositoryImpl implements IUserRepository {
   }
     */
   async save(user: UserAggregate): Promise<UserAggregate> {
+    // 1️⃣ Check global uniqueness
+    const existingIdentity = await UserIdentityModel.findOne({
+      email: user.email,
+    });
+
+    if (existingIdentity && existingIdentity.userId !== user.id) {
+      throw new BadRequestError("Email already exists");
+    }
+
     const userData = this.toPersistence(user);
     const role = user.role;
 
@@ -108,6 +118,17 @@ export class UserRepositoryImpl implements IUserRepository {
     if (!savedData.role) {
       savedData.role = role; // Ensure role is set if not present
     }
+
+    // 3️⃣ Save to identity registry
+    await UserIdentityModel.findOneAndUpdate(
+      { email: user.email },
+      {
+        email: user.email,
+        userId: user.id,
+        role: user.role,
+      },
+      { upsert: true },
+    );
 
     // Return the updated user aggregate
     return this.toDomain(savedData);

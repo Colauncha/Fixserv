@@ -40,6 +40,7 @@ export class AuthController {
       res.status(200).json({ data: { response, BearerToken } });
     } catch (error: any) {
       console.error("Login failed:", error);
+      /*
       if (error.message === "Email not verified") {
         res.status(403).json({
           success: false,
@@ -48,6 +49,27 @@ export class AuthController {
         });
       }
       throw new BadRequestError("Invalid credentials");
+    }
+      */
+      if (error.message === "Email not verified") {
+        res.status(403).json({
+          success: false,
+          message: "Please verify your email before logging in",
+          code: "EMAIL_NOT_VERIFIED",
+        });
+      }
+
+      if (error.statusCode) {
+        res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: "Something went wrong",
+      });
     }
   }
 
