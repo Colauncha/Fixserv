@@ -55,8 +55,8 @@ export class Order {
     }[] = [],
     public artisanResponse?: ArtisanResponse,
     public artisanResponseDeadline: Date = new Date(
-      Date.now() + 24 * 60 * 60 * 1000
-    ) // 24 hours from creation
+      Date.now() + 24 * 60 * 60 * 1000,
+    ), // 24 hours from creation
   ) {}
 
   // markInProgress() {
@@ -71,12 +71,13 @@ export class Order {
       throw new BadRequestError("Order must be accepted by artisan to start.");
     }
     this.status = "IN_PROGRESS";
+    this.escrowStatus = "IN_ESCROW";
   }
 
   markAsWorkCompleted() {
     if (this.status !== "IN_PROGRESS") {
       throw new BadRequestError(
-        "Order must be in progress to mark work completed."
+        "Order must be in progress to mark work completed.",
       );
     }
     this.status = "WORK_COMPLETED";
@@ -107,7 +108,7 @@ export class Order {
   acceptOrder(estimatedCompletionDate?: Date) {
     if (this.status !== "PENDING_ARTISAN_RESPONSE") {
       throw new BadRequestError(
-        "Order can only be accepted when pending artisan response"
+        "Order can only be accepted when pending artisan response",
       );
     }
 
@@ -121,12 +122,13 @@ export class Order {
       respondedAt: new Date(),
       estimatedCompletionDate,
     };
+    this.escrowStatus = "IN_ESCROW"; // Move to escrow when accepted
   }
 
   rejectOrder(reason: RejectionReason, note?: string) {
     if (this.status !== "PENDING_ARTISAN_RESPONSE") {
       throw new BadRequestError(
-        "Order can only be rejected when pending artisan response"
+        "Order can only be rejected when pending artisan response",
       );
     }
 

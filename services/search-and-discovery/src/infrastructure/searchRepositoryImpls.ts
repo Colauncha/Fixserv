@@ -54,7 +54,7 @@ export class searchRepositoryImpls implements searchRepository {
               conditions.push({
                 [field]: {
                   $regex: `${this.escapeRegex(firstPart)}.*${this.escapeRegex(
-                    secondPart
+                    secondPart,
                   )}`,
                   $options: "i",
                 },
@@ -72,7 +72,7 @@ export class searchRepositoryImpls implements searchRepository {
     keyword: string,
     filters: SearchFilter,
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<PaginatedResult<any>> {
     const cacheKey = makeSearchKey("artisan", keyword, filters, page, limit);
 
@@ -81,8 +81,8 @@ export class searchRepositoryImpls implements searchRepository {
     const cached = await redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
-    console.log("Search keyword:", keyword);
-    console.log("Cache key:", cacheKey);
+    //console.log("Search keyword:", keyword);
+    //console.log("Cache key:", cacheKey);
 
     const query: any = {
       role: "ARTISAN",
@@ -93,7 +93,7 @@ export class searchRepositoryImpls implements searchRepository {
       const searchTerm = keyword.trim();
       const searchConditions: any[] = [];
 
-      console.log("Processing search term:", searchTerm);
+      // console.log("Processing search term:", searchTerm);
 
       // Create search conditions for relevant fields
       const fieldConditions = this.createSearchConditions(searchTerm, [
@@ -130,7 +130,7 @@ export class searchRepositoryImpls implements searchRepository {
       try {
         const serviceSearchConditions = this.createSearchConditions(
           searchTerm,
-          ["title", "description"]
+          ["title", "description"],
         );
 
         if (serviceSearchConditions.length > 0) {
@@ -153,7 +153,7 @@ export class searchRepositoryImpls implements searchRepository {
 
       if (searchConditions.length > 0) {
         query.$or = searchConditions;
-        console.log("Search query:", JSON.stringify(query, null, 2));
+        //console.log("Search query:", JSON.stringify(query, null, 2));
       }
     }
 
@@ -182,7 +182,7 @@ export class searchRepositoryImpls implements searchRepository {
         ArtisanModel.countDocuments(query),
       ]);
 
-      console.log(`Found ${total} artisans matching search criteria`);
+      // console.log(`Found ${total} artisans matching search criteria`);
 
       const result = {
         data,
@@ -205,15 +205,15 @@ export class searchRepositoryImpls implements searchRepository {
     keyword: string,
     filters: SearchFilter,
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<PaginatedResult<any>> {
     const cacheKey = makeSearchKey("service", keyword, filters, page, limit);
     await connectRedis();
     const cached = await redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
-    console.log("Service search keyword:", keyword);
-    console.log("Cache key:", cacheKey);
+    //console.log("Service search keyword:", keyword);
+    //console.log("Cache key:", cacheKey);
 
     const query: any = {
       isActive: true,
@@ -223,7 +223,7 @@ export class searchRepositoryImpls implements searchRepository {
       const searchTerm = keyword.trim();
       const serviceSearchConditions: any[] = [];
 
-      console.log("Processing service search term:", searchTerm);
+      // console.log("Processing service search term:", searchTerm);
 
       // Search in service fields
       const serviceFieldConditions = this.createSearchConditions(searchTerm, [
@@ -279,7 +279,7 @@ export class searchRepositoryImpls implements searchRepository {
 
       if (serviceSearchConditions.length > 0) {
         query.$or = serviceSearchConditions;
-        console.log("Service search query:", JSON.stringify(query, null, 2));
+        // console.log("Service search query:", JSON.stringify(query, null, 2));
       }
     }
 
@@ -321,7 +321,7 @@ export class searchRepositoryImpls implements searchRepository {
     const skip = (page - 1) * limit;
 
     try {
-      console.log("Final service query:", JSON.stringify(query, null, 2));
+      // console.log("Final service query:", JSON.stringify(query, null, 2));
 
       const [data, total] = await Promise.all([
         ServiceModel.find(query)
@@ -332,7 +332,7 @@ export class searchRepositoryImpls implements searchRepository {
         ServiceModel.countDocuments(query),
       ]);
 
-      console.log(`Found ${total} services matching search criteria`);
+      // console.log(`Found ${total} services matching search criteria`);
 
       const result = {
         data,
