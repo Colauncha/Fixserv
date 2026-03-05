@@ -26,6 +26,7 @@ export class UserService implements IUserService {
   private tokenService = new JwtTokenService();
   constructor(private userRepository: IUserRepository) {}
 
+  /*
   async registerUser(
     email: string,
     password: string,
@@ -174,10 +175,10 @@ export class UserService implements IUserService {
     }
 
     try {
-      const existigEmail = await this.userRepository.findByEmail(email);
-      if (existigEmail) {
-        throw new BadRequestError("Email already exists");
-      }
+      //const existigEmail = await this.userRepository.//findByEmail(email);
+      //if (existigEmail) {
+      //  throw new BadRequestError("Email already //exists");
+      //}
       // Save user first
       await this.userRepository.save(user);
 
@@ -250,6 +251,240 @@ export class UserService implements IUserService {
       throw new BadRequestError(`User registration failed: ${err.message}`);
     }
   }
+    */
+
+  async registerUser(
+  email: string,
+  password: string,
+  fullName: string,
+  role: "CLIENT" | "ARTISAN" | "ADMIN",
+  phoneNumber: string,
+  referralCode?: string,
+  clientData?: any,
+  artisanData?: any,
+  adminData?: any,
+): Promise<{ user: UserAggregate }> {
+  
+  // Normalize email early
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  // Validate email format
+  if (!this.isValidEmail(normalizedEmail)) {
+    throw new BadRequestError("Invalid email format");
+  }
+  
+  // Create email value object
+  const emailData = new Email(normalizedEmail);
+  const passwordData = await Password.create(password);
+  
+  // Check if email exists across all collections (with timeout protection)
+  const existingUser = await this.checkEmailExistsWithTimeout(normalizedEmail);
+  
+  if (existingUser) {
+    throw new BadRequestError(
+      `Email ${normalizedEmail} is already registered as a ${existingUser.role}`
+    );
+  }
+  
+  // Create user aggregate based on role
+  let user: UserAggregate;
+  let eventsToPublish: any[] = [];
+  
+  // ... (your existing user creation logic)
+   switch (role) {
+   case "CLIENT":
+     // if (!clientData) throw new BadRequestError("Client data required");
+     user = UserAggregate.createClient(
+       uuidv4(),
+       emailData,
+       passwordData,
+       fullName,
+       phoneNumber,
+       new DeliveryAddress(
+         "", //clientData.deliveryAddress.city,
+         "", //clientData.deliveryAddress.country,
+         "", //clientData.deliveryAddress.postalCode,
+         "", //clientData.deliveryAddress.state,
+         "", //clientData.deliveryAddress.street
+       ),
+       // new ServicePreferences(clientData.servicePreferences)
+       new ServicePreferences([]),
+     );
+     // Create UserCreatedEvent for wallet service
+     const clientUserEvent = new UserCreatedEvent({
+       userId: user.id,
+       email: user.email,
+       fullName: user.fullName,
+       role: "CLIENT",
+       referralCode,
+       additionalData: {
+         servicePreferences: [], //clientData.servicePreferences,
+       },
+     });
+     eventsToPublish.push({
+       channel: "user_events",
+       event: clientUserEvent,
+     });
+     break;
+   case "ARTISAN":
+     // if (!artisanData) throw new BadRequestError("Artisan datarequired");
+     user = UserAggregate.createArtisan(
+       uuidv4(),
+       emailData,
+       passwordData,
+       fullName,
+       phoneNumber,
+       "", //artisanData.businessName,
+       "", //artisanData.location,
+       0, //artisanData.rating,
+       new SkillSet([]), //new SkillSet(artisanData.skillSet),
+       new BusinessHours({}), //new BusinessHours(artisanData.businessHours)
+       new Categories([]), // new Category(artisanData.category),
+       new Certificates([]), //new Certificates(artisanData.certificates),
+     );
+     // Create UserCreatedEvent for wallet service
+     const artisanUserEvent = new UserCreatedEvent({
+       userId: user.id,
+       email: user.email,
+       fullName: user.fullName,
+       role: "ARTISAN",
+       referralCode,
+       additionalData: {
+         businessName: "", //artisanData.businessName,
+         skills: [], //artisanData.skillSet,
+         location: "", //artisanData.location,
+       },
+     });
+     // Create ArtisanCreatedEvent for service management
+     const artisanEvent = new ArtisanCreatedEvent({
+       userId: user.id,
+       fullName: user.fullName,
+       skills: [], //user.skills.skills,
+       businessName: "", //artisanData.businessName,
+       // location: artisanData.location
+     });
+     eventsToPublish.push(
+       { channel: "user_events", event: artisanUserEvent },
+       { channel: "artisan_events", event: artisanEvent },
+     );
+     break;
+   case "ADMIN":
+     //  if (!adminData) throw new BadRequestError("Admin data required");
+     user = UserAggregate.createAdmin(
+       uuidv4(),
+       emailData,
+       passwordData,
+       fullName,
+       phoneNumber,
+       // adminData.permissions,
+       [],
+     );
+     // Admins might not need wallets, but if they do:
+     //const adminUserEvent = new UserCreatedEvent({
+     //  userId: user.id,
+     //  email: user.email.value,
+     //  fullName: user.fullName,
+     //  role: "ADMIN",
+     //  additionalData: {
+     //    permissions: adminData.permissions
+     //  }
+     //});
+     //eventsToPublish.push({ channel: "user_events", event: //adminUserEvent });
+     break;
+   default:
+     throw new BadRequestError("Invalid role");
+ }
+  
+  try {
+    // Save user with transaction
+    await this.userRepository.save(user);
+    
+    // Generate and set verification token
+    const verificationToken = this.tokenService.generateVerificationToken(user.id);
+    user.setEmailVerificationToken(verificationToken);
+    
+    // Update user with verification token
+    await this.userRepository.save(user);
+    
+    // Send verification email
+    await this.emailService.sendVerificationEmail(
+      normalizedEmail,
+      verificationToken,
+    );
+    
+    // Publish events
+    // await this.publishEventsWithRetry(eventsToPublish);
+     // Publish all events
+ const publishPromises = eventsToPublish.map(
+   async ({ channel, event }) => {
+     // Set up acknowledgment tracking if needed
+     if (channel === "artisan_events") {
+       const ackPromise = this.setupEventAcknowledgment(event.id);
+       this.pendingEvents.set(event.id, ackPromise);
+     }
+     if (channel === "user_events") {
+       const ackPromise = this.setupEventAcknowledgment(event.id);
+       this.pendingEvents.set(event.id, ackPromise);
+     }
+     await this.eventBus.publish(channel, event);
+     // Wait for acknowledgment for critical events
+     if (channel === "artisan_events") {
+       try {
+         const ack = await Promise.race([
+           this.pendingEvents.get(event.id)!,
+           this.timeout(8000),
+         ]);
+         this.pendingEvents.delete(event.id);
+         if (ack && ack.status === "failed") {
+           console.error(`Event processing failed: ${ack.error}`);
+           // Decide if you want to throw or just log
+         }
+       } catch (timeoutError) {
+         console.error(
+           `Event acknowledgment timeout for event ${event.id}`,
+         );
+         this.pendingEvents.delete(event.id);
+       }
+     }
+   },
+ );
+ await Promise.all(publishPromises);
+    
+    return { user };
+  } catch (err: any) {
+    // Handle specific MongoDB duplicate key errors
+    if (err.code === 11000) {
+      throw new BadRequestError("Email already exists");
+    }
+    
+    throw new BadRequestError(`User registration failed: ${err.message}`);
+  }
+}
+
+private async checkEmailExistsWithTimeout(
+  email: string, 
+  timeoutMs: number = 5000
+): Promise<{ role: string } | null> {
+  try {
+    const checkPromise = this.userRepository.findByEmail(email);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Email check timeout")), timeoutMs);
+    });
+    
+    const user = await Promise.race([checkPromise, timeoutPromise]) as UserAggregate | null;
+    return user ? { role: user.role } : null;
+  } catch (error) {
+    console.error("Email check failed:", error);
+    // On timeout or error, assume email is available
+    // But log for monitoring
+    return null;
+  }
+}
+
+private isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
 
   async verifyEmail(token: string): Promise<{ message: string }> {
     const userId = await this.tokenService.validateVerificationToken(token);

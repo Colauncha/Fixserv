@@ -100,6 +100,9 @@ export class CategoryService implements ICategoryService {
     const cacheKey = "categories:all";
     await connectRedis();
 
+    if (!redis) {
+      throw new Error("Redis not initialized");
+    }
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
@@ -149,6 +152,9 @@ export class CategoryService implements ICategoryService {
   async invalidateCategoryCache(category?: string): Promise<void> {
     await connectRedis();
 
+    if (!redis) {
+      throw new Error("Redis not initialized");
+    }
     if (category) {
       // Invalidate specific category cache (you'll need to track keys)
       const pattern = `artisans:category:${category}:*`;

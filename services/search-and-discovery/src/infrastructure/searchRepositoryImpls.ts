@@ -78,6 +78,8 @@ export class searchRepositoryImpls implements searchRepository {
 
     await connectRedis();
 
+    if (!redis) throw new Error("Redis connection failed");
+
     const cached = await redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
@@ -209,6 +211,7 @@ export class searchRepositoryImpls implements searchRepository {
   ): Promise<PaginatedResult<any>> {
     const cacheKey = makeSearchKey("service", keyword, filters, page, limit);
     await connectRedis();
+    if (!redis) throw new Error("Redis connection failed");
     const cached = await redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 

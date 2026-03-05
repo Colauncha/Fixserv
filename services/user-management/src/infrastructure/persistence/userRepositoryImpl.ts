@@ -1,4 +1,5 @@
 import { Model } from "mongoose";
+import mongoose from "mongoose";
 import { UserAggregate } from "../../domain/aggregates/userAggregate";
 import { IUserRepository } from "../../domain/repositories/userRepository";
 import { BusinessHours } from "../../domain/value-objects/businessHours";
@@ -66,6 +67,7 @@ export class UserRepositoryImpl implements IUserRepository {
     }
   }
     */
+  /*
   async save(user: UserAggregate): Promise<UserAggregate> {
     // 1️⃣ Check global uniqueness
     const existingIdentity = await UserIdentityModel.findOne({
@@ -132,7 +134,138 @@ export class UserRepositoryImpl implements IUserRepository {
 
     // Return the updated user aggregate
     return this.toDomain(savedData);
+  }*/
+
+  async save(user: UserAggregate): Promise<UserAggregate> {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const userData = this.toPersistence(user);
+      const role = user.role;
+      const normalizedEmail = user.email.toLowerCase().trim();
+
+      // 1️⃣ Check global uniqueness with pessimistic locking
+      const existingIdentity = await UserIdentityModel.findOne({
+        email: normalizedEmail,
+      }).session(session);
+
+      if (existingIdentity) {
+        // If identity exists but belongs to the same user (update scenario)
+        if (existingIdentity.userId !== user.id) {
+          throw new BadRequestError(
+            `Email ${normalizedEmail} is already registered as a ${existingIdentity.role}`,
+          );
+        }
+      }
+
+      // 2️⃣ Save to role-specific collection
+      let savedData: any;
+      let Model: any;
+
+      switch (role) {
+        case "CLIENT":
+          Model = ClientModel;
+          break;
+        case "ARTISAN":
+          Model = ArtisanModel;
+          break;
+        case "ADMIN":
+          Model = AdminModel;
+          break;
+        default:
+          throw new Error(`Unknown role ${role}`);
+      }
+
+      // Check if email exists in other role collections (redundant check)
+      const emailExistsInOtherRoles = await this.checkEmailInOtherCollections(
+        normalizedEmail,
+        role,
+        user.id,
+        session,
+      );
+
+      if (emailExistsInOtherRoles) {
+        throw new BadRequestError(
+          `Email ${normalizedEmail} is already registered with a different account type`,
+        );
+      }
+
+      // Perform the upsert
+      savedData = await Model.findOneAndUpdate(
+        { _id: user.id },
+        {
+          ...userData,
+          email: normalizedEmail, // Ensure normalized email is saved
+        },
+        {
+          upsert: true,
+          new: true,
+          select: "+password",
+          session,
+        },
+      );
+
+      // 3️⃣ Save to identity registry (primary source of truth)
+      await UserIdentityModel.findOneAndUpdate(
+        { email: normalizedEmail },
+        {
+          email: normalizedEmail,
+          userId: user.id,
+          role: user.role,
+          updatedAt: new Date(),
+        },
+        {
+          upsert: true,
+          session,
+        },
+      );
+
+      // Commit transaction
+      await session.commitTransaction();
+
+      return this.toDomain(savedData);
+    } catch (error) {
+      // Rollback transaction on error
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
+
+  // Helper method to check email in other collections
+  private async checkEmailInOtherCollections(
+    email: string,
+    currentRole: string,
+    currentUserId: string,
+    session: mongoose.ClientSession,
+  ): Promise<boolean> {
+    const collections = {
+      CLIENT: ClientModel,
+      ARTISAN: ArtisanModel,
+      ADMIN: AdminModel,
+    };
+
+    for (const [role, Model] of Object.entries(collections)) {
+      if (role === currentRole) continue;
+
+      const existing = await (Model as any)
+        .findOne({
+          email: email,
+          _id: { $ne: currentUserId }, // Exclude current user if updating
+        })
+        .session(session);
+
+      if (existing) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   async findById(id: string): Promise<UserAggregate | null> {
     let userData: any;
 
@@ -148,6 +281,7 @@ export class UserRepositoryImpl implements IUserRepository {
     return null;
   }
 
+  /*
   async findByEmail(email: string): Promise<UserAggregate | null> {
     let userData: any;
 
@@ -160,6 +294,49 @@ export class UserRepositoryImpl implements IUserRepository {
     userData = await AdminModel.findOne({ email }).select("+password");
     if (userData) return this.toDomain(userData);
     return null;
+  }
+    */
+  async findByEmail(email: string): Promise<UserAggregate | null> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // First check the identity collection for faster lookup
+    const identity = await UserIdentityModel.findOne({
+      email: normalizedEmail,
+    });
+
+    if (!identity) {
+      return null;
+    }
+
+    // Then fetch from the appropriate collection
+    let userData: any;
+
+    switch (identity.role) {
+      case "CLIENT":
+        userData = await ClientModel.findById(identity.userId).select(
+          "+password",
+        );
+        break;
+      case "ARTISAN":
+        userData = await ArtisanModel.findById(identity.userId).select(
+          "+password",
+        );
+        break;
+      case "ADMIN":
+        userData = await AdminModel.findById(identity.userId).select(
+          "+password",
+        );
+        break;
+    }
+
+    if (!userData) {
+      // Inconsistent state - identity exists but user doesn't
+      // Clean up the orphaned identity record
+      await UserIdentityModel.deleteOne({ email: normalizedEmail });
+      return null;
+    }
+
+    return this.toDomain(userData);
   }
 
   async find(
@@ -257,9 +434,9 @@ export class UserRepositoryImpl implements IUserRepository {
   }
 
   private toPersistence(user: UserAggregate): any {
-    console.log(
-      `Saving user ${user.id} - isEmailVerified: ${user.isEmailVerified}`,
-    );
+    // console.log(
+    // // `Saving user ${user.id} - isEmailVerified: ${user.isEmailVerified}`,
+    // );
 
     const base = {
       _id: user.id,
@@ -406,9 +583,9 @@ export class UserRepositoryImpl implements IUserRepository {
     //
     //user.emailVerifiedAt = data.emailVerifiedAt;
 
-    console.log(
-      `User ${user.id} loaded - isEmailVerified: ${user.isEmailVerified}`,
-    );
+    //console.log(
+    //  `User ${user.id} loaded - isEmailVerified: $//{user.isEmailVerified}`,
+    //);
 
     return user;
   }
@@ -628,6 +805,9 @@ export class UserRepositoryImpl implements IUserRepository {
     const cacheKey = `artisans:category:${category.toUpperCase()}:page:${page}:limit:${limit}`;
 
     try {
+      if (!redis) {
+        throw new Error("Not initialized");
+      }
       // Try to get from cache
       const cached = await redis.get(cacheKey);
       if (cached) {
@@ -668,6 +848,9 @@ export class UserRepositoryImpl implements IUserRepository {
    */
   async invalidateCategoryCache(category?: string): Promise<void> {
     await connectRedis();
+    if (!redis) {
+      throw new Error("Not initialized");
+    }
 
     if (category) {
       // Invalidate specific category (would need to track all page keys)

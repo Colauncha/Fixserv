@@ -14,7 +14,7 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
     await ReviewModel.updateOne(
       { _id: review.id },
       this.toPersistence(review),
-      { upsert: true }
+      { upsert: true },
     );
     await this.invalidateCaches(review);
   }
@@ -32,7 +32,7 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   async findByArtisan(
     artisanId: string,
     page?: number,
-    limit?: number
+    limit?: number,
   ): Promise<Review[]> {
     // const docs = await ReviewModel.find({ artisanId });
     // return docs.map((doc) => this.toDomain(doc));
@@ -42,7 +42,7 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   async findByService(
     serviceId: string,
     page?: number,
-    limit?: number
+    limit?: number,
   ): Promise<Review[]> {
     // const docs = await ReviewModel.find({ serviceId });
     // return docs.map((doc) => this.toDomain(doc));
@@ -52,7 +52,7 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   async findByClient(
     clientId: string,
     page?: number,
-    limit?: number
+    limit?: number,
   ): Promise<Review[]> {
     // const docs = await ReviewModel.find({ clientId }).exec();
     // return docs.map((doc) => this.toDomain(doc));
@@ -67,21 +67,24 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   async findPublishedByArtisan(
     artisanId: string,
     page?: number,
-    limit?: number
+    limit?: number,
   ): Promise<Review[]> {
     const pageNumber = page || 1;
     const limitNumber = limit || 20;
     const key = `artisan:${artisanId}:published:v1:${pageNumber}:${limitNumber}`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Redis client not initialized");
+    }
     const cachedData = await redis.get(key);
     if (cachedData) {
       return JSON.parse(cachedData).map((dto: ReviewDto) =>
-        this.dtoToDomain(dto)
+        this.dtoToDomain(dto),
       );
     }
     const result = await this.query(
       { artisanId, status: "published" },
-      { page, limit }
+      { page, limit },
     );
 
     const dtoList = result.map((r) => r.toDto());
@@ -95,21 +98,24 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   async findPublishedByService(
     serviceId: string,
     page?: number,
-    limit?: number
+    limit?: number,
   ): Promise<Review[]> {
     const pageNumber = page || 1;
     const limitNumber = limit || 20;
     const key = `service:${serviceId}:published:v1:${pageNumber}:${limitNumber}`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Redis client not initialized");
+    }
     const cachedData = await redis.get(key);
     if (cachedData) {
       return JSON.parse(cachedData).map((dto: ReviewDto) =>
-        this.dtoToDomain(dto)
+        this.dtoToDomain(dto),
       );
     }
     const result = await this.query(
       { serviceId, status: "published" },
-      { page, limit }
+      { page, limit },
     );
     const dtoList = result.map((r) => r.toDto());
     if (dtoList.length) {
@@ -141,6 +147,9 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   async getAverageArtisanRating(artisanId: string): Promise<number> {
     const key = `avg:artisan:${artisanId}:v1`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Redis client not initialized");
+    }
     const cachedData = await redis.get(key);
     if (cachedData) {
       return parseFloat(cachedData);
@@ -157,6 +166,9 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   async getAverageServiceRating(serviceId: string): Promise<number> {
     const key = `avg:service:${serviceId}:v1`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Redis client not initialized");
+    }
     const cachedData = await redis.get(key);
     if (cachedData) {
       return parseFloat(cachedData);
@@ -193,7 +205,7 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
           status: review.status,
           updatedAt: new Date(),
         },
-      }
+      },
     );
     await this.invalidateCaches(review);
   }
@@ -216,26 +228,26 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
     const rawServiceRating = doc.serviceRating ?? {};
     const feedback = new Feedback(rawFeedback.comment);
     rawFeedback.moderationNotes.forEach((note: string) =>
-      feedback.addModerationNote(note)
+      feedback.addModerationNote(note),
     );
     rawFeedback.attachments.forEach((attachment: string) =>
-      feedback.addAttachment(attachment)
+      feedback.addAttachment(attachment),
     );
     const artisanRating = new Rating(
       typeof rawArtisanRating.value === "number" &&
-      rawArtisanRating.value >= 1 &&
-      rawArtisanRating.value <= 5
+        rawArtisanRating.value >= 1 &&
+        rawArtisanRating.value <= 5
         ? rawArtisanRating.value
         : 1,
-      rawArtisanRating.dimensions ?? []
+      rawArtisanRating.dimensions ?? [],
     );
     const serviceRating = new Rating(
       typeof rawServiceRating.value === "number" &&
-      rawServiceRating.value >= 1 &&
-      rawServiceRating.value <= 5
+        rawServiceRating.value >= 1 &&
+        rawServiceRating.value <= 5
         ? rawServiceRating.value
         : 1,
-      rawServiceRating.dimensions ?? []
+      rawServiceRating.dimensions ?? [],
     );
     return new Review(
       doc._id,
@@ -247,7 +259,7 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
       artisanRating,
       serviceRating,
       doc.status,
-      doc.createdAt
+      doc.createdAt,
     );
   }
 
@@ -278,6 +290,9 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
 
   async scanAndDelete(pattern: string) {
     // use SCAN to avoid blocking Redis on large keyspaces
+    if (!redis) {
+      throw new Error("Redis client not initialized");
+    }
     let cursor = "0";
     do {
       const { cursor: next, keys } = await redis.scan(cursor, {
@@ -290,6 +305,9 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
   }
 
   private async invalidateCaches(review: Review) {
+    if (!redis) {
+      throw new Error("Redis client not initialized");
+    }
     await Promise.all([
       this.scanAndDelete(`artisan:${review.artisanId}:published:v1:*`),
       this.scanAndDelete(`service:${review.serviceId}:published:v1:*`),
@@ -332,7 +350,7 @@ export class reviewAndFeedbackRepositoryImpls implements ReviewRepository {
       new Rating(dto.artisanRating, dto.ratingDimensions),
       new Rating(dto.serviceRating, dto.ratingDimensions),
       dto.status as any,
-      new Date(dto.date)
+      new Date(dto.date),
     );
   }
 }

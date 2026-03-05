@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const artisanSchema = new mongoose.Schema<IArtisan>(
   {
+    //@ts-ignore
     _id: {
       type: String,
       default: uuidv4,
@@ -40,13 +41,13 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
   },
   {
     toJSON: {
-      transform(doc, ret) {
+      transform(doc, ret: any) {
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v;
       },
     },
-  }
+  },
 );
 
 const ArtisanModel = mongoose.model<IArtisan>("ArtisanModel", artisanSchema);

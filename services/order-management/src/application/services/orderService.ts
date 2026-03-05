@@ -160,7 +160,12 @@ export class OrderService {
     // await EscrowService.releasePayment(order);
 
     // await this.orderRepository.update(aggregate.order);
-    await this.orderRepository.update(order);
+
+    // ✅ Use aggregate
+    const aggregate = new OrderAggregate(order);
+    aggregate.completeOrder();
+
+    await this.orderRepository.update(aggregate.order);
     const event = new PaymentReleasedEvent({
       orderId,
       artisanId: order.artisanId,
@@ -419,6 +424,10 @@ export class OrderService {
     // Save draft order to repository or cache (Redis is perfect for this)
     // await this.draftOrderRepository.save(draftOrder);
     // OR use Redis for temporary storage:
+
+    if (!redis) {
+      throw new Error("Not Initialized");
+    }
     await redis.set(
       `draft_order:${draftOrder.id}`,
       JSON.stringify(draftOrder),
@@ -506,6 +515,9 @@ export class OrderService {
     // Retrieve draft order
     // const draftOrder = await this.draftOrderRepository.findById(draftOrderId);
     // OR from Redis:
+    if (!redis) {
+      throw new Error("Not Initialized");
+    }
     const draftOrderData = await redis.get(`draft_order:${draftOrderId}`);
     const draftOrder = draftOrderData ? JSON.parse(draftOrderData) : null;
 

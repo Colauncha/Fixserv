@@ -38,7 +38,7 @@ export class JwtTokenService implements TokenService {
       process.env.JWT_KEY!,
       {
         expiresIn: "1h",
-      }
+      },
     );
     this.storeVerificationTokenInRedis(id, token);
     return token;
@@ -80,11 +80,14 @@ export class JwtTokenService implements TokenService {
 
   private async storeVerificationTokenInRedis(
     id: string,
-    token: string
+    token: string,
   ): Promise<void> {
     try {
       await connectRedis();
       const key = `${this.REDIS_VERIFICATION_PREFIX}${id}`;
+      if (!redis) {
+        throw new Error("Redis not initialized");
+      }
 
       // Store token in Redis with 24 hour expiration
       await redis.set(key, token, {
@@ -111,12 +114,15 @@ export class JwtTokenService implements TokenService {
 
       // Then check if token exists in Redis (not expired)
       await connectRedis();
+      if (!redis) {
+        throw new Error("Redis not initialized");
+      }
       const key = `${this.REDIS_VERIFICATION_PREFIX}${userId}`;
       const storedToken = await redis.get(key);
 
       if (!storedToken || storedToken !== token) {
         console.log(
-          `❌ Verification token not found or expired in Redis for user: ${userId}`
+          `❌ Verification token not found or expired in Redis for user: ${userId}`,
         );
         return null;
       }
@@ -133,6 +139,9 @@ export class JwtTokenService implements TokenService {
     try {
       await connectRedis();
       const key = `${this.REDIS_VERIFICATION_PREFIX}${userId}`;
+      if (!redis) {
+        throw new Error("Redis not initialized");
+      }
       await redis.del(key);
       console.log(`🗑️ Verification token invalidated for user: ${userId}`);
     } catch (error) {

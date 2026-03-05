@@ -61,6 +61,9 @@ export class AuthService implements IAuthService {
     const cacheKey = `user:email:${email}`;
     const userIdCacheKey = `user:${foundUser.id}`;
 
+    if (!redis) {
+      throw new Error("Not initialized");
+    }
     await redis.set(cacheKey, JSON.stringify(foundUser.toJSON()), {
       EX: 60 * 10, // 10 minutes
     });
@@ -82,6 +85,9 @@ export class AuthService implements IAuthService {
     await connectRedis();
 
     try {
+      if (!redis) {
+        throw new Error("Not initialized");
+      }
       const cachedUser = await redis.get(cacheKey);
       if (cachedUser) {
         console.log(`Cache HIT for user:${id}`);
@@ -109,6 +115,9 @@ export class AuthService implements IAuthService {
   async findUserByEmail(email: string): Promise<UserAggregate> {
     const cacheKey = `user:email:${email}`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Not initialized");
+    }
     try {
       const cachedUser = await redis.get(cacheKey);
       if (cachedUser) {
@@ -380,6 +389,9 @@ export class AuthService implements IAuthService {
   async invalidateUserCache(userId: string): Promise<void> {
     const cacheKey = `user:${userId}`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Not initialized");
+    }
     await redis.del(cacheKey);
     console.log(`Cache invalidated for user:${userId}`);
   }
@@ -387,6 +399,9 @@ export class AuthService implements IAuthService {
   async invalidateEmailCache(email: string): Promise<void> {
     const cacheKey = `user:email:${email}`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Not initialized");
+    }
     await redis.del(cacheKey);
     console.log(`Cache invalidated for email:${email}`);
   }

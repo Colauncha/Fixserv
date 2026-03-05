@@ -7,6 +7,7 @@ deploy:
 build:
   local:
     push: false
+    concurrency: 2
   artifacts:
     - image: docker.io/ogkpos/user-management
       context: .
@@ -14,8 +15,8 @@ build:
         dockerfile: services/user-management/Dockerfile.dev
       sync:
         manual:
-          - src: "src/**/*.ts"
-            dest: .
+          - src: "services/user-management/src/**/*.ts"
+            dest: /app/services/user-management/src
     - image: docker.io/ogkpos/service-management
       context: .
       docker:

@@ -1,11 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import app from "./interfaces/http/expressApp";
-import {
-  connectDB,
-  connectRedis,
-  rateLimiter,
-} from "@fixserv-colauncha/shared";
+import { connectDB, connectRedis } from "@fixserv-colauncha/shared";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
 import { RatingCalculator } from "./domain/services/ratingCalculator";
 import { reviewAndFeedbackRepositoryImpls } from "./infrastructure/review-and-feedbackRepositoryImpls";
@@ -21,11 +17,11 @@ if (!process.env.MONGO_URI) {
 }
 
 const userManagementClient = new UserManagementClient(
-  createAxiosClient(process.env.USER_MANAGEMENT_URL!)
+  createAxiosClient(process.env.USER_MANAGEMENT_URL!),
 );
 
 const serviceManagementClient = new ServiceManagementClient(
-  createAxiosClient(process.env.SERVICE_MANAGEMENT_URL!)
+  createAxiosClient(process.env.SERVICE_MANAGEMENT_URL!),
 );
 
 const reviewRepo = new reviewAndFeedbackRepositoryImpls();
@@ -35,14 +31,14 @@ const start = async () => {
   try {
     await connectDB();
     await connectRedis();
-    app.use(rateLimiter());
+
     app.listen(4002, () => {
       console.log("review-service is running on port 4002");
     });
     const reviewEventsHandler = new ReviewEventsHandler(
       ratingCalculator,
       userManagementClient,
-      serviceManagementClient
+      serviceManagementClient,
     );
 
     await reviewEventsHandler.setupSubscriptions();
@@ -51,4 +47,4 @@ const start = async () => {
   }
 };
 
-// start();
+start();

@@ -5,47 +5,13 @@ import {
   connectDB,
   disconnectDB,
   RedisEventBus,
+  disconnectRedis,
 } from "@fixserv-colauncha/shared";
 
 import { ServiceEventsHandler } from "./events/handlers/serviceEventHandler";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
 
-import { connectRedis, rateLimiter } from "@fixserv-colauncha/shared";
-
-//process.on("uncaughtException", (err) => {
-//  console.log(err.name, err.message);
-//  process.exit(1);
-//});
-
-process.on("uncaughtException", async (err) => {
-  console.error("💀 Uncaught Exception:", err.name, err.message);
-  console.error("Stack:", err.stack);
-
-  // await cleanup();
-  // process.exit(1);
-});
-
-process.on("unhandledRejection", async (reason, promise) => {
-  console.error("💀 Unhandled Rejection at:", promise, "reason:", reason);
-
-  // await cleanup();
-  // process.exit(1);
-});
-
-//const cleanup = async (): Promise<void> => {
-//  console.log("🧹 Starting graceful shutdown...");
-//  try {
-//    await disconnectDB();
-//
-//    console.log("✅ Cleanup completed");
-//  } catch (error) {
-//    console.error("❌ Error during cleanup:", error);
-//  }
-//};
-
-// Handle shutdown signals
-//process.on("SIGTERM", cleanup);
-//process.on("SIGINT", cleanup);
+import { connectRedis } from "@fixserv-colauncha/shared";
 
 if (!process.env.JWT_KEY) {
   throw new Error("JWT SECRET must be defined");
@@ -53,152 +19,70 @@ if (!process.env.JWT_KEY) {
 if (!process.env.MONGO_URI) {
   throw new Error("MongoDb connection string must be available");
 }
-/*
-const start = async ():Promise<void> => {
-  try {
-    await connectDB();
-    await connectRedis();
-    // app.use(rateLimiter());
-    // Apply rate limiter only for public/external requests
-    app.use((req: any, res, next) => {
-      // Skip limiter for internal service-to-service calls
-      // In Docker, `req.hostname` or `req.ip` may be like 'user-management-srv' or internal IPs
-      const internalHosts = [
-        "user-management-srv",
-        "wallet-service-srv",
-        "service-management-srv",
-      ];
-      const internalIPs = ["127.0.0.1", "::1"];
+if (!process.env.REDIS_URL) throw new Error("REDIS_URL must be defined");
 
-      if (
-        internalHosts.includes(req.hostname) ||
-        internalIPs.includes(req.ip)
-      ) {
-        return next();
-      }
+// const start = async (): Promise<void> => {
+const start = async () => {
+  await connectDB();
 
-      // Otherwise, apply rate limiting
-      return rateLimiter()(req, res, next);
-    });
+  await connectRedis();
 
-    app.listen(4000, () => {
-      console.log("user-management is running on port 4000");
-    });
-
-    const eventsHandler = new ServiceEventsHandler();
-    const reviewEventHandler = new ReviewEventsHandler();
-    await eventsHandler.setupSubscriptions();
-    await reviewEventHandler.setupSubscriptions();
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-start();
-*/
-
-const start = async (): Promise<void> => {
-  let server: any;
-
+  // CREATE A SINGLE EVENT BUS INSTANCE
+  const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+  await eventBus.connect();
   try {
     console.log("🚀 Starting user-management service...");
 
-    // Connect to MongoDB with retries
-    console.log("📦 Connecting to MongoDB...");
-    await connectDB();
+    const eventsHandler = new ServiceEventsHandler(eventBus);
+    const reviewEventHandler = new ReviewEventsHandler(eventBus);
+    await eventsHandler.setupSubscriptions();
+    await reviewEventHandler.setupSubscriptions();
 
-    // Connect to Redis with fallback option
-    console.log("📦 Connecting to Redis...");
-    try {
-      await connectRedis();
-    } catch (error) {
-      console.log("⚠️ Primary Redis connection failed, trying alternative...");
-    }
-
-    // CREATE A SINGLE EVENT BUS INSTANCE
-    const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
-    await eventBus.connect();
-
-    // Rate limiter middleware (simplified to avoid Redis dependency issues)
-    app.use((req: any, res, next) => {
-      const internalHosts = [
-        "user-management-srv",
-        "wallet-service-srv",
-        "service-management-srv",
-        "localhost",
-      ];
-
-      const internalIPs = ["127.0.0.1", "::1"];
-
-      // Check if request is from internal service
-      const isInternal =
-        internalHosts.includes(req.hostname) ||
-        internalIPs.some((ip) => req.ip?.includes(ip));
-
-      if (isInternal) {
-        return next();
-      }
-
-      // For now, skip rate limiting if Redis is not available
-      // You can implement in-memory rate limiting as fallback
-      return next();
-    });
-
-    // Start server
-    server = app.listen(4000, () => {
-      console.log("✅ user-management is running on port 4000");
-    });
-
-    // Setup event handlers with error handling
-    console.log("📡 Setting up event handlers...");
-    try {
-      const eventsHandler = new ServiceEventsHandler(eventBus);
-      const reviewEventHandler = new ReviewEventsHandler(eventBus);
-
-      await eventsHandler.setupSubscriptions();
-      await reviewEventHandler.setupSubscriptions();
-
-      console.log("📡 Event handlers initialized successfully");
-    } catch (eventError) {
-      console.error("⚠️ Event handler setup failed:", eventError);
-      // Don't exit, continue without events if Redis is the issue
-    }
-
-    console.log("🎉 Service started successfully!");
-
-    // Health check interval
-    // setInterval(async () => {
-    //   const redisHealthy = await checkRedisHealth();
-    //   if (!redisHealthy) {
-    //     console.warn("⚠️ Redis health check failed");
-    //   }
-    // }, 30000); // Check every 30 seconds
-    // Graceful shutdown handling
-    // const gracefulShutdown = (signal: string) => {
-    //   console.log(`📴 Received ${signal}, shutting down gracefully...`);
-    //   server.close(async () => {
-    //     console.log("✅ HTTP server closed");
-    //     await connectDB();
-    //     process.exit(0);
-    //   });
-    //   // Force close after 10 seconds
-    //   setTimeout(() => {
-    //     console.log("⚡ Force closing server");
-    //     process.exit(1);
-    //   }, 10000);
-    // };
-    // process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-    // process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-  } catch (error) {
-    console.error("💀 Failed to start service:", error);
-
-    // await cleanup();
-    // process.exit(1);
+    console.log("📡 Event handlers initialized successfully");
+  } catch (eventError) {
+    console.error("⚠️ Event handler setup failed:", eventError);
+    // Don't exit, continue without events if Redis is the issue
   }
+
+  const server = app.listen(4000, () => {
+    console.log("✅ user-management service running on port 4000");
+  });
+
+  // 6. Graceful shutdown
+  const shutdown = async (signal: string) => {
+    console.log(`📴 ${signal} received, shutting //down...`);
+    server.close(async () => {
+      await Promise.all([
+        disconnectDB(),
+        disconnectRedis(),
+        eventBus.disconnect(),
+      ]);
+      console.log("✅ Graceful shutdown complete");
+      process.exit(0);
+    });
+
+    // Force exit if shutdown hangs
+    setTimeout(() => {
+      console.error("⚡ Forced shutdown after timeout");
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
-start().catch(async (error) => {
+process.on("uncaughtException", (err) => {
+  console.error("💀 Uncaught Exception:", err.message);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("💀 Unhandled Rejection:", reason);
+  process.exit(1);
+});
+
+start().catch((error) => {
   console.error("💀 Startup failed:", error);
-  // await cleanup();
-  // process.exit(1);
+  process.exit(1);
 });

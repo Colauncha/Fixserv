@@ -1,5 +1,9 @@
 import axios from "axios";
-import { AuthMiddleware, ValidateRequest } from "@fixserv-colauncha/shared";
+import {
+  AuthMiddleware,
+  ValidateRequest,
+  requireRole,
+} from "@fixserv-colauncha/shared";
 import { Router } from "express";
 import { body, param, query } from "express-validator";
 import express, { Request, Response } from "express";
@@ -170,23 +174,43 @@ router.get("/webhook/health", WalletController.webhookHealthCheck);
 router.post("/signup", WalletController.handleNewUserSignupHandler);
 router.post(
   "/artisan/verify",
+  authMiddleware.protect,
+  requireRole("ARTISAN", "ADMIN"),
   WalletController.handleArtisanVerificationHandler,
 );
 router.get(
   "/fixpoints/balance/:userId",
+  authMiddleware.protect,
   WalletController.getFixpointsBalanceHandler,
 );
-router.post("/fixpoints/redeem", WalletController.redeemFixpointsHandler);
-router.get("/referral/info/:userId", WalletController.getReferralInfoHandler);
+
+router.post(
+  "/fixpoints/redeem",
+  authMiddleware.protect,
+  WalletController.redeemFixpointsHandler,
+);
+
+router.get(
+  "/referral/info/:userId",
+  authMiddleware.protect,
+  WalletController.getReferralInfoHandler,
+);
 router.get(
   "/fixpoints/history/:userId",
+  authMiddleware.protect,
+
   WalletController.getFixpointsTransactionHistoryHandler,
 );
 router.get(
   "/referral/validate/:code",
   WalletController.validateReferralCodeHandler,
 );
-router.get("/referral/analytics", WalletController.getReferralAnalyticsHandler); // Admin only
+router.get(
+  "/referral/analytics",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  WalletController.getReferralAnalyticsHandler,
+); // Admin only
 
 //router.get("/paystack/webhook/test", (req, res) => {
 //  console.log("🧪 Webhook test endpoint called");

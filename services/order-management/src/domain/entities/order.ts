@@ -84,8 +84,8 @@ export class Order {
   }
 
   markCompleted() {
-    if (this.status !== "IN_PROGRESS")
-      throw new BadRequestError("Order must be in progress to complete.");
+    if (this.status !== "WORK_COMPLETED")
+      throw new BadRequestError("Order must be in WORK_COMPLETED to complete.");
     this.status = "COMPLETED";
     this.escrowStatus = "RELEASED";
     this.completedAt = new Date();
