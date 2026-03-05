@@ -1,25 +1,26 @@
 #  ---- STAGE 1: Builder ----
- FROM node:18-alpine AS builder
- WORKDIR /app
+FROM node:18-alpine AS builder
+WORKDIR /app
  
- RUN npm install -g pnpm
- COPY package.json pnpm-lock.yaml pnpm-workspace.aml ./
- COPY services/wallet-service/package.json ./ervices/wallet-service/
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml pnpm-workspace.aml ./
+COPY services/wallet-service/package.json ./ervices/wallet-service/
  
- RUN pnpm install --shamefully-hoist
+RUN pnpm install --shamefully-hoist
  
- COPY services ./services
+COPY services ./services
  
- RUN cd services/wallet-service && pnpm install -shamefully-hoist
- RUN cd services/wallet-service && pnpm run build
+RUN cd services/wallet-service && pnpm install -shamefully-hoist
+RUN cd services/wallet-service && pnpm run build
 #  ---- STAGE 2: Runtime ----
- FROM node:18-alpine
- WORKDIR /app
- COPY --from=builder /app/node_modules ./ode_modules
- COPY --from=builder /app/services/wallet-service/ist ./dist
- COPY --from=builder /app/services/wallet-service/ackage.json ./
-  ENV NODE_ENV=production
-  CMD ["node", "dist/index.js"]
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=builder /app/node_modules ./ode_modules
+COPY --from=builder /app/services/wallet-service/ist ./dist
+COPY --from=builder /app/services/wallet-service/ackage.json ./
+
+ENV NODE_ENV=production
+CMD ["node", "dist/index.js"]
 
 
 
