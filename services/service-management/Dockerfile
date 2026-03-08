@@ -68,7 +68,7 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
- COPY services/service-management/package.json ./services/service-management/
+COPY services/service-management/package.json ./services/service-management/
 
 RUN pnpm install --shamefully-hoist
 
