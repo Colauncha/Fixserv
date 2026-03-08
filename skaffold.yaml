@@ -20,7 +20,7 @@ build:
     - image: docker.io/ogkpos/service-management
       context: .
       docker:
-        dockerfile: services/service-management/Dockerfile.dev
+        dockerfile: services/service-management/Dockerfile
       sync:
         manual:
           - src: "src/**/*.ts"

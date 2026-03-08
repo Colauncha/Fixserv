@@ -32,6 +32,7 @@ const start = async () => {
     await artisanEventsHandler.setupSubscriptions();
     await reviewEventHandler.setupSubscriptions();
     await orderEventHandler.setupSubscriptions();
+    console.log("📡 Event handlers initialized successfully");
   } catch (error) {
     console.error("⚠️ Event handler setup failed:", error);
   }
@@ -40,23 +41,26 @@ const start = async () => {
     console.log("service-management is running on port 4001");
   });
   // 6. Graceful shutdown
-  const shutdown = async (signal: string) =>
+  const shutdown = async (signal: string) => {
     console.log(`📴 ${signal} received, shutt down...`);
-  server.close(async () => {
-    await Promise.all([
-      disconnectDB(),
-      disconnectRedis(),
-      eventBus.disconnect(),
-    ]);
-    console.log("✅ Graceful shutdown complete");
-    process.exit(0);
-  });
+    server.close(async () => {
+      await Promise.all([
+        disconnectDB(),
+        disconnectRedis(),
+        eventBus.disconnect(),
+      ]);
+      console.log("✅ Graceful shutdown complete");
+      process.exit(0);
+    });
 
-  // Force exit if shutdown hangs
-  setTimeout(() => {
-    console.error("⚡ Forced shutdown aftertimeout");
-    process.exit(1);
-  }, 10000);
+    // Force exit if shutdown hangs
+    setTimeout(() => {
+      console.error("⚡ Forced shutdown aftertimeout");
+      process.exit(1);
+    }, 10000);
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
 process.on("uncaughtException", (err) => {
