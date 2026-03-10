@@ -1,78 +1,84 @@
 import dotenv from "dotenv";
 dotenv.config();
+
 import app from "./interfaces/http/expressApp";
 import {
   connectDB,
+  disconnectDB,
   connectRedis,
-  rateLimiter,
+  disconnectRedis,
   RedisEventBus,
 } from "@fixserv-colauncha/shared";
 import { OrderEventsHandler } from "./events/handlers/orderEventHandler";
 
-if (!process.env.JWT_KEY) {
-  throw new Error("JWT SECRET must be defined");
-}
-if (!process.env.MONGO_URI) {
-  throw new Error("MongoDb connection string must be available");
-}
+if (!process.env.JWT_KEY) throw new Error("JWT_KEY must be defined");
+if (!process.env.MONGO_URI) throw new Error("MONGO_URI must be defined");
+if (!process.env.REDIS_URL) throw new Error("REDIS_URL must be defined");
 
-// Error handling
-process.on("uncaughtException", async (err) => {
-  console.error("💀 Uncaught Exception:", err.name, err.message);
-  console.error("Stack:", err.stack);
+const start = async (): Promise<void> => {
+  console.log("🚀 Starting order service...");
 
-  process.exit(1);
-});
+  // 1. Connect to MongoDB
+  await connectDB();
 
-process.on("unhandledRejection", async (reason, promise) => {
-  console.error("💀 Unhandled Rejection at:", promise, "reason:", reason);
+  // 2. Connect Redis cache client (for rate limiting, caching etc.)
+  await connectRedis();
 
-  process.exit(1);
-});
-
-if (!process.env.JWT_KEY) {
-  throw new Error("JWT SECRET must be defined");
-}
-
-if (!process.env.MONGO_URI) {
-  throw new Error("MongoDb connection string must be available");
-}
-
-// Graceful startup
-async function startServer() {
+  // 3. Connect Event Bus (uses its OWN 2 dedicated clients - publisher + subscriber)
   const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   await eventBus.connect();
 
+  // 4. Setup event subscriptions
   try {
-    // Connect to database
-    console.log("📦 Connecting to database...");
-    await connectDB();
-    console.log("✅ Database connection established");
+    const orderEventsHandler = new OrderEventsHandler(eventBus);
+    await orderEventsHandler.setupSubscriptions();
 
-    await connectRedis();
-    console.log("Redis connected");
+    console.log("📡 Event handlers initialized");
+  } catch (eventError) {
+    // Non-fatal: log and continue — events can recover, don't crash the service
+    console.error("⚠️ Event handler setup failed:", eventError);
+  }
 
-    // Start HTTP server
-    const server = app.listen(4004, () => {
-      console.log(`✅ Server running on 4004 ${4004}`);
+  // 5. Start HTTP server AFTER all connections are ready
+  const server = app.listen(4004, () => {
+    console.log("✅ order-management service running on port 4004");
+  });
+
+  // 6. Graceful shutdown
+  const shutdown = async (signal: string) => {
+    console.log(`📴 ${signal} received, shutting down...`);
+    server.close(async () => {
+      await Promise.all([
+        disconnectDB(),
+        disconnectRedis(),
+        eventBus.disconnect(),
+      ]);
+      console.log("✅ Graceful shutdown complete");
+      process.exit(0);
     });
 
-    // Setup event handlers
-    console.log("📡 Setting up event handlers...");
-    try {
-      const orderEventsHandler = new OrderEventsHandler(eventBus);
-      await orderEventsHandler.setupSubscriptions();
-      console.log("📡 Event handlers initialized successfully");
-    } catch (eventError) {
-      console.error("⚠️ Event handler setup failed:", eventError);
-    }
-  } catch (error) {
-    console.error("💀 Failed to start server:", error);
-  }
-}
+    // Force exit if shutdown hangs
+    setTimeout(() => {
+      console.error("⚡ Forced shutdown after timeout");
+      process.exit(1);
+    }, 10000);
+  };
 
-// Start the server
-startServer().catch((error) => {
-  console.error("💀 Critical startup error:", error);
-  // process.exit(1);
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+};
+
+process.on("uncaughtException", (err) => {
+  console.error("💀 Uncaught Exception:", err.message);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("💀 Unhandled Rejection:", reason);
+  process.exit(1);
+});
+
+start().catch((error) => {
+  console.error("💀 Startup failed:", error);
+  process.exit(1);
 });

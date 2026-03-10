@@ -18,48 +18,22 @@ const authenticate = new AuthMiddleware();
 const serviceService = new ServiceService(
   serviceRepository,
   artisanRepository,
-  offeredRepository
+  offeredRepository,
 );
 const serviceController = new ServiceController(serviceService);
-
-const service = `${process.env.SERVICE_MANAGEMENT_URL_HEALTH}/
-api/service/health`;
-setInterval(async () => {
-  const ENV = process.env.ENV?.toLowerCase();
-  console.log(ENV);
-  if (ENV !== "development") {
-    console.log("Skipping health check pings in non-development environment");
-    return
-  }
-  for (const url of [service]) {
-    try {
-      await axios.get(url, { timeout: 5000 });
-      console.log(`✅ Pinged ${url}`);
-    } catch (error: any) {
-      console.error(`❌ Failed to ping ${url}:`, error.message);
-    }
-  }
-}, 2 * 60 * 1000); // every 5 minutes
-router.get("/health", (req: Request, res: Response) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    service: "service-management-service",
-  });
-});
 
 router.post(
   "/createService",
   authenticate.protect,
   requireRole("ARTISAN"),
-  serviceController.create.bind(serviceController)
+  serviceController.create.bind(serviceController),
 );
 
 router.post(
   "/offer-base-service",
   authenticate.protect,
   requireRole("ARTISAN"),
-  serviceController.offerBaseService.bind(serviceController)
+  serviceController.offerBaseService.bind(serviceController),
 );
 
 router.get("/services", serviceController.getServices.bind(serviceController));
@@ -70,26 +44,26 @@ router.get(
   "/artisan/:artisanId",
   authenticate.protect,
   requireRole("ARTISAN", "CLIENT", "ADMIN"),
-  serviceController.listByArtisan.bind(serviceController)
+  serviceController.listByArtisan.bind(serviceController),
 );
 
 router.get(
   "/:serviceId",
-  serviceController.getServiceById.bind(serviceController)
+  serviceController.getServiceById.bind(serviceController),
 );
 
 router.patch(
   "/:serviceId",
   authenticate.protect,
   requireRole("ARTISAN"),
-  serviceController.updateService.bind(serviceController)
+  serviceController.updateService.bind(serviceController),
 );
 
 router.delete(
   "/:serviceId",
   authenticate.protect,
   requireRole("ARTISAN", "ADMIN"),
-  serviceController.deleteService.bind(serviceController)
+  serviceController.deleteService.bind(serviceController),
 );
 
 export { router as serviceRouter };

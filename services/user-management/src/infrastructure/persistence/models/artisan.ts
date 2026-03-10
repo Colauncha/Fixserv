@@ -127,7 +127,7 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
   } as any,
   {
     toJSON: {
-      transform(doc, ret) {
+      transform(doc, ret: any) {
         ret.id = ret._id;
         delete ret._id;
 
@@ -140,7 +140,7 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
       },
     },
     toObject: {
-      transform(doc, ret) {
+      transform(doc, ret: any) {
         delete ret.password;
       },
     },

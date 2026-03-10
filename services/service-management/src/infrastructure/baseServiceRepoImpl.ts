@@ -17,11 +17,11 @@ export class BaseServiceRepositoryImpl implements IBaseServiceRepository {
     const doc = await BaseServiceModel.findById(id).lean();
     if (!doc) return null;
     return new BaseService(
-      doc._id,
+      doc._id!,
       doc.title,
       doc.description,
       doc.createdBy,
-      doc.isActive
+      doc.isActive,
     );
   }
 
@@ -30,12 +30,12 @@ export class BaseServiceRepositoryImpl implements IBaseServiceRepository {
     return docs.map(
       (doc) =>
         new BaseService(
-          doc._id,
+          doc._id!,
           doc.title,
           doc.description,
           doc.createdBy,
-          doc.isActive
-        )
+          doc.isActive,
+        ),
     );
   }
 

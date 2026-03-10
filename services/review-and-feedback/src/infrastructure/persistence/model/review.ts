@@ -42,7 +42,7 @@ export const reviewSchema = new mongoose.Schema(
   {
     versionKey: false,
     toJSON: {
-      transform: (doc, ret) => {
+      transform: (doc, ret: any) => {
         ret.id = ret._id;
         delete ret._id;
 
@@ -60,7 +60,7 @@ export const reviewSchema = new mongoose.Schema(
         delete ret.createdAt;
       },
     },
-  }
+  },
 );
 
 reviewSchema.index({ artisanId: 1, status: 1, createdAt: -1 });

@@ -16,6 +16,7 @@ const serviceRepo = new ServiceRepositoryImpl();
 const orderService = new OrderService(serviceRepo, orderRepo);
 const orderController = new OrderController(orderService);
 
+/*
 const service = `${process.env.ORDER_MANAGEMENT_URL}/
 api/orders/health`;
 setInterval(async () => {
@@ -41,45 +42,46 @@ router.get("/health", (req: Request, res: Response) => {
     service: "order-management-service",
   });
 });
+*/
 
 router.post(
   "/create",
   authMiddleware.protect,
   requireRole("CLIENT"),
-  orderController.createOrder.bind(orderController)
+  orderController.createOrder.bind(orderController),
 );
 
 router.get("/public", orderController.getPublicOrders.bind(orderController));
 
 router.get(
   "/test/:serviceId/:clientId/:userId",
-  orderController.testing.bind(orderController)
+  orderController.testing.bind(orderController),
 );
 
 router.get(
   "/:orderId/getOrder",
   authMiddleware.protect,
-  orderController.getAnOrder.bind(orderController)
+  orderController.getAnOrder.bind(orderController),
 );
 router.patch(
   "/:orderId/complete",
   authMiddleware.protect,
-  orderController.markCompleted.bind(orderController)
+  orderController.markCompleted.bind(orderController),
 );
 router.post(
   "/:orderId/release-payment",
   authMiddleware.protect,
-  orderController.releasePayment.bind(orderController)
+  orderController.releasePayment.bind(orderController),
 );
 router.patch(
   "/:orderId/dispute",
-  orderController.markDisputed.bind(orderController)
+  orderController.markDisputed.bind(orderController),
 );
 router.post(
   "/:orderId/initiate-payment",
   authMiddleware.protect,
   requireRole("CLIENT"),
-  orderController.initiatePayment.bind(orderController)
+  orderController.initiatePayment.bind(orderController),
 );
 
 // NEW ARTISAN RESPONSE ROUTES
@@ -87,28 +89,28 @@ router.post(
   "/:orderId/accept",
   authMiddleware.protect,
   requireRole("ARTISAN"),
-  orderController.acceptOrder.bind(orderController)
+  orderController.acceptOrder.bind(orderController),
 );
 
 router.post(
   "/:orderId/reject",
   authMiddleware.protect,
   requireRole("ARTISAN"),
-  orderController.rejectOrder.bind(orderController)
+  orderController.rejectOrder.bind(orderController),
 );
 
 router.patch(
   "/:orderId/start-work",
   authMiddleware.protect,
   requireRole("ARTISAN"),
-  orderController.startWork.bind(orderController)
+  orderController.startWork.bind(orderController),
 );
 
 router.patch(
   "/:orderId/complete-work",
   authMiddleware.protect,
   requireRole("ARTISAN"),
-  orderController.completeWork.bind(orderController)
+  orderController.completeWork.bind(orderController),
 );
 
 // ORDER LISTING ROUTES
@@ -116,21 +118,21 @@ router.get(
   "/artisan/orders",
   authMiddleware.protect,
   requireRole("ARTISAN"),
-  orderController.getArtisanOrders.bind(orderController)
+  orderController.getArtisanOrders.bind(orderController),
 );
 
 router.get(
   "/artisan/pending",
   authMiddleware.protect,
   requireRole("ARTISAN"),
-  orderController.getPendingOrdersForArtisan.bind(orderController)
+  orderController.getPendingOrdersForArtisan.bind(orderController),
 );
 
 router.get(
   "/client/orders",
   authMiddleware.protect,
   requireRole("CLIENT"),
-  orderController.getClientOrders.bind(orderController)
+  orderController.getClientOrders.bind(orderController),
 );
 
 //DRAFT ORDER ROUTES
@@ -138,13 +140,13 @@ router.post(
   "/draft",
   authMiddleware.protect,
   requireRole("CLIENT"),
-  orderController.createDraftOrder.bind(orderController)
+  orderController.createDraftOrder.bind(orderController),
 );
 
 router.post(
   "/confirm",
   authMiddleware.protect,
-  orderController.confirmOrder.bind(orderController)
+  orderController.confirmOrder.bind(orderController),
 );
 
 //Client orders
@@ -152,14 +154,14 @@ router.get(
   "/client-history",
   authMiddleware.protect,
   requireRole("CLIENT"),
-  orderController.getClientOrders.bind(orderController)
+  orderController.getClientOrders.bind(orderController),
 );
 
 router.get(
   "/artisan-history",
   authMiddleware.protect,
   requireRole("ARTISAN"),
-  orderController.getArtisanOrders.bind(orderController)
+  orderController.getArtisanOrders.bind(orderController),
 );
 
 export { router as orderRouter };

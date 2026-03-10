@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const adminSchema = new mongoose.Schema<IAdmin>(
   {
+    //@ts-ignore
     _id: {
       type: String,
       default: uuidv4,
@@ -51,13 +52,13 @@ const adminSchema = new mongoose.Schema<IAdmin>(
   },
   {
     toJSON: {
-      transform(doc, ret) {
+      transform(doc, ret: any) {
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v;
       },
     },
-  }
+  },
 );
 
 const AdminModel = mongoose.model<IAdmin>("AdminModel", adminSchema);

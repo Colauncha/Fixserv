@@ -80,7 +80,7 @@ const NotificationSchema = new Schema<INotificationDocument>(
     timestamps: true,
     collection: "notifications",
     toJSON: {
-      transform: function (doc, ret) {
+      transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         delete ret._id;
         delete ret.__v;
@@ -88,14 +88,14 @@ const NotificationSchema = new Schema<INotificationDocument>(
       },
     },
     toObject: {
-      transform: function (doc, ret) {
+      transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         delete ret._id;
         delete ret.__v;
         return ret;
       },
     },
-  }
+  },
 );
 
 // Compound indexes for better query performance
@@ -133,15 +133,15 @@ const NotificationPreferenceSchema =
     {
       timestamps: true,
       collection: "notification_preferences",
-    }
+    },
   );
 
 export const NotificationModel = mongoose.model<INotificationDocument>(
   "Notification",
-  NotificationSchema
+  NotificationSchema,
 );
 export const NotificationPreferenceModel =
   mongoose.model<INotificationPreferenceDocument>(
     "NotificationPreference",
-    NotificationPreferenceSchema
+    NotificationPreferenceSchema,
   );

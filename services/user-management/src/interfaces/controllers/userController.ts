@@ -28,25 +28,17 @@ export class UserController {
         fullName,
         role,
         phoneNumber,
-        referralCode
+        referralCode,
         //roleData.clientData,
         //roleData.artisanData,
         //roleData.adminData
       );
-
-      //await resend.emails.send({
-      //  from: "fixserv@resend.dev",
-      //  to: email,
-      //  subject: "Welcome to Fixserv",
-      //  html: ` <p>Hi there,</p><strong>Welcome to Fixserv, please Login //to get started.</stro>`,
-      //});
 
       res.status(201).json({
         success: true,
         message:
           "User registered successfully. Please check your email to verify your account.",
         user: this.response.toJSON(user),
-        // referralCode: user.id,
       });
     } catch (error: any) {
       if (error.code === 11000) {
@@ -69,7 +61,7 @@ export class UserController {
       //  success: true,
       //  message: result.message,
       //});
-      res.redirect(`${process.env.FIXSERV_FRONTEND}/auth/login`);
+      res.redirect(`${process.env.FIXSERV_FRONTEND}/log-in`);
     } catch (error: any) {
       res.status(400).json({
         success: false,
@@ -87,7 +79,7 @@ export class UserController {
       }
 
       const result = await this.userService.resendVerificationEmail(
-        email.toLowerCase()
+        email.toLowerCase(),
       );
 
       res.status(200).json({
@@ -110,7 +102,7 @@ export class UserController {
         password,
         fullName,
         role,
-        phoneNumber
+        phoneNumber,
       );
 
       res.status(201).json({

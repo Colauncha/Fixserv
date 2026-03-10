@@ -14,6 +14,7 @@ import rootRouter from "./routes/rootRoutes";
 import { uploadRouter } from "./routes/uploadRoute";
 import { categoryRouter } from "./routes/categoryRoutes";
 import { certificateRouter } from "./routes/certificateRoute";
+import expressListEndpoints from "express-list-endpoints";
 
 const app = express();
 
@@ -41,6 +42,11 @@ app.use("/api/admin", adminRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/certificate", certificateRouter);
+
+//app.get("/api/endpoints", (req, res) //=> {
+//  const endpoints = //expressListEndpoints(app);
+//  res.json({ endpoints });
+//});
 
 app.all("*", async () => {
   throw new NotFoundError();

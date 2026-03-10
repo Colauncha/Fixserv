@@ -27,7 +27,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
         rating: service.rating,
         skillSet: service.skillSet.toArray(),
       },
-      { upsert: true }
+      { upsert: true },
     );
   }
 
@@ -59,6 +59,9 @@ export class ServiceRepositoryImpl implements IServiceRepository {
     const skip = (page - 1) * limit;
     const cacheKey = `services:page=${page}:limit=${limit}`;
     await connectRedis();
+    if (!redis) {
+      throw new Error("Not initialized");
+    }
     const cachedData = await redis.get(cacheKey);
     if (cachedData) {
       return JSON.parse(cachedData).map(this.toDomain);
@@ -95,7 +98,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
       estimatedDuration?: string;
       isActive?: boolean;
       rating?: number;
-    }
+    },
   ): Promise<void> {
     try {
       const updateObj: any = {};
@@ -118,7 +121,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
       }
       const result = await ServiceModel.updateOne(
         { _id: id },
-        { $set: updateObj, ...(updateObj.$push && { $push: updateObj.push }) }
+        { $set: updateObj, ...(updateObj.$push && { $push: updateObj.push }) },
       );
 
       if (result.matchedCount === 0) {
@@ -141,11 +144,11 @@ export class ServiceRepositoryImpl implements IServiceRepository {
               updatedAt: new Date(),
             },
           },
-        }
+        },
       );
     } catch (error: any) {
       throw new BadRequestError(
-        `Failed to update rating for service ${serviceId}: ${error.message}`
+        `Failed to update rating for service ${serviceId}: ${error.message}`,
       );
     }
   }
@@ -158,11 +161,11 @@ export class ServiceRepositoryImpl implements IServiceRepository {
         doc.title,
         doc.description,
         doc.price,
-        doc.estimatedDuration
+        doc.estimatedDuration,
       ),
       doc.isActive,
       doc.rating,
-      SkillSet.create(doc.skillSet || [])
+      SkillSet.create(doc.skillSet || []),
     );
   }
 }

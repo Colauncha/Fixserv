@@ -18,76 +18,57 @@ const domainService = new NotificationDomainService();
 const notificationService = new NotificationService(
   notificationRepo,
   domainService,
-  eventBus
+  eventBus,
 );
 const notificationController = new NotificationController(notificationService);
-
-const service = `${process.env.NOTIFICATIONS_SERVICE_URL}/api/notifications/health`;
-setInterval(async () => {
-  const ENV = process.env.ENV?.toLowerCase();
-  console.log(ENV);
-  if (ENV !== "development") {
-    console.log("Skipping health check pings in non-development environment");
-    return
-  }
-  for (const url of [service]) {
-    try {
-      await axios.get(url, { timeout: 5000 });
-      console.log(`✅ Pinged ${url}`);
-    } catch (error: any) {
-      console.error(`❌ Failed to ping ${url}:`, error.message);
-    }
-  }
-}, 5 * 60 * 1000); // every 5 minutes
-router.get("/health", (req: Request, res: Response) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    service: "notifications-service",
-  });
-});
 
 // Get user notifications (authenticated users only)
 router.get(
   "/",
+  //@ts-ignore
   authMiddleware.protect,
-  notificationController.getNotifications.bind(notificationController)
+  notificationController.getNotifications.bind(notificationController),
 );
 
 // Get unread count
 router.get(
   "/unread-count",
+  //@ts-ignore
   authMiddleware.protect,
-  notificationController.getUnreadCount.bind(notificationController)
+  notificationController.getUnreadCount.bind(notificationController),
 );
 
 // Mark specific notification as read
 router.patch(
   "/:notificationId/read",
+  //@ts-ignore
   authMiddleware.protect,
-  notificationController.markAsRead.bind(notificationController)
+  notificationController.markAsRead.bind(notificationController),
 );
 
 // Mark all notifications as read
 router.patch(
   "/mark-all-read",
+  //@ts-ignore
   authMiddleware.protect,
-  notificationController.markAllAsRead.bind(notificationController)
+  notificationController.markAllAsRead.bind(notificationController),
 );
 
 // Delete notification
 router.delete(
   "/:notificationId",
+  //@ts-ignore
   authMiddleware.protect,
-  notificationController.deleteNotification.bind(notificationController)
+  notificationController.deleteNotification.bind(notificationController),
 );
 
 // Create notification (Admin only)
 router.post(
   "/create",
+  //@ts-ignore
   authMiddleware.protect,
   // requireRole("ADMIN"),
-  notificationController.createNotification.bind(notificationController)
+  notificationController.createNotification.bind(notificationController),
 );
 
 export { router as notificationRouter };

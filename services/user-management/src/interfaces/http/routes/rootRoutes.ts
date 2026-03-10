@@ -17,6 +17,10 @@ rootRouter.get("/health", (req: Request, res: Response) => {
 
 rootRouter.get("/debug-cache/:email", async (req, res) => {
   const key = `user:email:${req.params.email}`;
+  if (!redis) {
+    res.status(500).json({ error: "Redis not initialized" });
+    return;
+  }
   const raw = await redis.get(key);
   res.json({ key, raw: JSON.parse(raw || "{}") });
 });

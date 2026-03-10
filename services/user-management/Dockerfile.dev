@@ -1,27 +1,54 @@
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
-
-COPY services/user-management/package.json ./services/user-management/
-
-
-COPY services/shared/package.json ./services/shared/
-
-# Install with --shamefully-flatten to completely avoid symlinks
-
-RUN npm install -g pnpm && \
-    pnpm install --shamefully-hoist 
+ FROM node:18-alpine
  
-# COPY /app/node_modules ./node_modules
-     
+ WORKDIR /app
+ 
+ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
+ 
+ COPY services/user-management/package.json ./services/user-management/
+ 
+ 
+ COPY services/shared/package.json ./services/shared/
+ 
+#  Install with --shamefully-flatten to completely avoid symlinks
+ 
+ RUN npm install -g pnpm && \
+   pnpm install --shamefully-hoist 
+  
+ 
+    
  COPY services/user-management ./services/user-management/
+ 
+ WORKDIR /app/services/user-management
+ 
+ 
+ 
+ EXPOSE 4000
+ 
+ CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
 
-WORKDIR /app/services/user-management
-
-# ENV ENV=development
-
-EXPOSE 4000
-
-CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+# FROM node:18-alpine
+# 
+# WORKDIR /app
+# 
+# Copy root-level files
+# COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# 
+# Copy ALL service package.json files (pnpm workspace needs them all)
+# COPY services/user-management/package.json ./services/user-management/
+# # COPY services/service-management/package.json ./services/service-management/
+# COPY services/wallet-service/package.json ./services/wallet-service/
+# COPY services/order-management/package.json ./services/order-management/
+# # COPY services/notifications-service/package.json ./services/notifications-service/
+# # COPY services/review-and-feedback/package.json ./services/review-and-feedback/
+# # COPY services/search-and-discovery/package.json ./services/search-and-discovery/
+# 
+# RUN npm install -g pnpm && \
+    # pnpm install --shamefully-hoist
+# 
+# COPY services/user-management ./services/user-management/
+# 
+# WORKDIR /app/services/user-management
+# 
+# EXPOSE 4000
+# 
+# # CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]

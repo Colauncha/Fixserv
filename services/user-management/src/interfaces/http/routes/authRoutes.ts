@@ -9,6 +9,7 @@ import { requireRole } from "@fixserv-colauncha/shared";
 import { ValidateRequest } from "@fixserv-colauncha/shared";
 import { body } from "express-validator";
 import { EmailService } from "../../../infrastructure/services/emailServiceImpls";
+import expressListEndpoints from "express-list-endpoints";
 
 const router = express.Router();
 
@@ -56,13 +57,13 @@ router.post(
     body("password").trim().notEmpty().withMessage("Password is required"),
   ],
   validate.validateRequest,
-  authController.login.bind(authController)
+  authController.login.bind(authController),
 );
 
 router.post(
   "/logout",
   authMiddleware.protect,
-  authController.logout.bind(authController)
+  authController.logout.bind(authController),
 );
 
 router.get("/getAll", authController.getAllUsers.bind(authController));
@@ -74,19 +75,26 @@ router.get(
   async (req: Request, res: Response) => {
     const user = await userRepository.findById(req.currentUser!.id);
     res.status(200).send(user);
-  }
+  },
 );
 
 router.post(
   "/forgot-password",
-  authController.forgotPassword.bind(authController)
+  authController.forgotPassword.bind(authController),
 );
 
 router.post("/google-login", authController.googleLogin.bind(authController));
 
+router.get("/google-url", authController.getGoogleAuthUrl.bind(authController));
+
+router.get(
+  "/google-callback",
+  authController.googleCallback.bind(authController),
+);
+
 router.get(
   "/reset-password",
-  authController.showResetPasswordForm.bind(authController)
+  authController.showResetPasswordForm.bind(authController),
 );
 
 router.patch(
@@ -97,21 +105,26 @@ router.patch(
       .withMessage("Password must be at least 6 characters long"),
   ],
   validate.validateRequest,
-  authController.resetPassword.bind(authController)
+  authController.resetPassword.bind(authController),
 );
 
 router.get("/user/:id", authController.findUserById.bind(authController));
 
 router.get(
   "/users/email/:email",
-  authController.findUserByEmail.bind(authController)
+  authController.findUserByEmail.bind(authController),
 );
 
 router.patch(
   "/:id",
   authMiddleware.protect,
   requireRole("ADMIN", "ARTISAN", "CLIENT"),
-  authController.updateUser.bind(authController)
+  authController.updateUser.bind(authController),
 );
+
+router.get("/endpoints", (req: Request, res: Response) => {
+  const endpoints = expressListEndpoints(router);
+  res.json(endpoints);
+});
 
 export { router as adminRouter };

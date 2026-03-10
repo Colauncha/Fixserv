@@ -137,7 +137,7 @@ export class EmailService implements IEmailService {
       await transporter.sendMail({
         from: `"FixServ Team" <${process.env.MAIL_USERNAME}>`,
         to: email,
-        subject: "🎉 Welcome to FixServ Waitlist!",
+        subject: "🎉 Welcome to FixServ",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <!-- Header -->
@@ -148,7 +148,7 @@ export class EmailService implements IEmailService {
             <!-- Main Content -->
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
               <h2 style="margin: 0 0 10px 0; font-size: 28px;">Welcome to FixServ!</h2>
-              <p style="margin: 0; font-size: 18px; opacity: 0.95;">You're now on our exclusive waitlist</p>
+              <p style="margin: 0; font-size: 18px; opacity: 0.95;">You're now on our exclusive platform</p>
             </div>
 
             <div style="padding: 0 20px;">
@@ -157,18 +157,9 @@ export class EmailService implements IEmailService {
               </p>
               
               <p style="font-size: 16px; line-height: 1.8; color: #333;">
-                Thank you for verifying your email and joining the FixServ waitlist! We're thrilled to have you as part of our early community.
+                Thank you for verifying your email and joining the FixServ platform! We're thrilled to have you as part of our community.
               </p>
 
-              <div style="background-color: #f0f7ff; padding: 25px; border-radius: 10px; margin: 30px 0; border-left: 4px solid #007bff;">
-                <h3 style="color: #007bff; margin-top: 0; font-size: 20px;">🚀 What's Next?</h3>
-                <ul style="color: #333; line-height: 1.8; padding-left: 20px;">
-                  <li style="margin-bottom: 10px;">You'll be among the first to know when FixServ V2 launches</li>
-                  <li style="margin-bottom: 10px;">Get exclusive early access to new features</li>
-                  <li style="margin-bottom: 10px;">Receive updates on our development progress</li>
-                  <li style="margin-bottom: 10px;">Be part of shaping the future of FixServ</li>
-                </ul>
-              </div>
 
               <div style="background-color: #fff3cd; padding: 20px; border-radius: 10px; margin: 30px 0; border-left: 4px solid #ffc107;">
                 <p style="color: #856404; margin: 0; font-size: 15px;">

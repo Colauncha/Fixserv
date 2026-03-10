@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const clientSchema = new mongoose.Schema<IClient>(
   {
+    //@ts-ignore
     _id: {
       type: String,
       default: uuidv4,
@@ -71,13 +72,13 @@ const clientSchema = new mongoose.Schema<IClient>(
 
   {
     toJSON: {
-      transform(doc, ret) {
+      transform(doc, ret: any) {
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v;
       },
     },
-  }
+  },
 );
 
 const ClientModel = mongoose.model<IClient>("ClientModel", clientSchema);

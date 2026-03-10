@@ -1,4 +1,3 @@
-import { BadRequestError } from "@fixserv-colauncha/shared";
 import { OfferedService } from "../domain/entities/offeredService";
 import { IOfferedServiceRepository } from "../domain/repository/offeredServiceRepository";
 import { OfferedServiceModel } from "./persistence/model/offeredService";
@@ -28,7 +27,7 @@ export class OfferedServiceRepositoryImpl implements IOfferedServiceRepository {
     return docs.map(
       (doc) =>
         new OfferedService(
-          doc._id,
+          doc._id!,
           doc.artisanId,
           doc.baseServiceId,
           doc.price,
@@ -45,7 +44,7 @@ export class OfferedServiceRepositoryImpl implements IOfferedServiceRepository {
     return docs.map(
       (doc) =>
         new OfferedService(
-          doc._id,
+          doc._id!,
           doc.artisanId,
           doc.baseServiceId,
           doc.price,
@@ -72,7 +71,7 @@ export class OfferedServiceRepositoryImpl implements IOfferedServiceRepository {
 
     console.log(docs);
     return new OfferedService(
-      docs[0]._id,
+      docs[0]._id!,
       docs[0].artisanId,
       docs[0].baseServiceId,
       docs[0].price,

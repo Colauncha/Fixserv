@@ -22,7 +22,7 @@ export class OrderAggregate {
     deviceType: string,
     deviceBrand: string,
     deviceModel: string,
-    serviceRequired: string
+    serviceRequired: string,
   ) {
     const id = uuidv4();
     const now = new Date();
@@ -47,7 +47,7 @@ export class OrderAggregate {
       undefined, // disputeId is initially undefined
       uploadedProducts, // uploadedProducts is passed as an argument
       undefined,
-      responseDeadline
+      responseDeadline,
     );
 
     return new OrderAggregate(order);
@@ -60,7 +60,7 @@ export class OrderAggregate {
   releasePayment() {
     if (this.order.status !== "COMPLETED") {
       throw new BadRequestError(
-        "Order must be completed before releasing payment."
+        "Order must be completed before releasing payment.",
       );
     }
     this.order.updateEscrowStatus("RELEASED");
@@ -82,6 +82,7 @@ export class OrderAggregate {
   // New methods for artisan response
   acceptOrder(estimatedCompletionDate?: Date): void {
     this.order.acceptOrder(estimatedCompletionDate);
+    this.order.updateEscrowStatus("IN_ESCROW"); // Move to escrow upon acceptance
   }
 
   rejectOrder(reason: RejectionReason, note?: string): void {

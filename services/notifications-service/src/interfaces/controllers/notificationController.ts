@@ -91,7 +91,9 @@ export class NotificationController {
   async markAsRead(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.currentUser!.id;
-      const { notificationId } = req.params;
+      const notificationId = Array.isArray(req.params.notificationId)
+        ? req.params.notificationId[0]
+        : req.params.notificationId;
 
       if (!userId) {
         res.status(401).json({
@@ -185,7 +187,9 @@ export class NotificationController {
   async deleteNotification(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.currentUser!.id;
-      const { notificationId } = req.params;
+      const notificationId = Array.isArray(req.params.notificationId)
+        ? req.params.notificationId[0]
+        : req.params.notificationId;
 
       if (!userId) {
         res.status(401).json({
