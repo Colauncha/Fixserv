@@ -22,25 +22,25 @@ export class ServiceService {
   constructor(
     private serviceRepository: IServiceRepository,
     private artisanRepository: IArtisanRepository,
-    private offeredServiceRepository: IOfferedServiceRepository
+    private offeredServiceRepository: IOfferedServiceRepository,
   ) {}
 
   async createService(
     artisanId: string,
     title: string,
     description: string,
+    bio: string,
     price: number,
     estimatedDuration: string,
-    rating: number
+    rating: number,
   ): Promise<Service> {
     const artisan = await this.artisanRepository.findById(artisanId);
     if (!artisan || artisan.role !== "ARTISAN") {
       throw new BadRequestError("Invalid artisan ID");
     }
     // Fetch artisan's skillSet
-    const artisanSkillSet = await this.artisanRepository.getArtisanSkillSet(
-      artisanId
-    );
+    const artisanSkillSet =
+      await this.artisanRepository.getArtisanSkillSet(artisanId);
     if (!artisanSkillSet) {
       throw new BadRequestError("Artisan skillSet not found");
     }
@@ -48,10 +48,10 @@ export class ServiceService {
     const service = new Service(
       uuidv4(),
       artisanId,
-      new ServiceDetails(title, description, price, estimatedDuration),
+      new ServiceDetails(title, description, bio, price, estimatedDuration),
       true,
       rating,
-      artisanSkillSet
+      artisanSkillSet,
     );
 
     // // Publish event
@@ -89,11 +89,12 @@ export class ServiceService {
     updates: {
       title?: string;
       description?: string;
+      bio?: string;
       price?: number;
       estimatedDuration?: string;
       isActive?: boolean;
     },
-    callerArtisanId: string
+    callerArtisanId: string,
   ): Promise<Service> {
     if (Object.keys(updates).length === 0) {
       throw new BadRequestError("No update fields provided");
@@ -113,7 +114,7 @@ export class ServiceService {
 
     if (existingService.artisanId !== callerArtisanId) {
       throw new BadRequestError(
-        "Login as the artisan associated with this service"
+        "Login as the artisan associated with this service",
       );
     }
 
@@ -147,7 +148,7 @@ export class ServiceService {
 
     if (service.artisanId !== callerArtisanId) {
       throw new BadRequestError(
-        "Only the artisan associated with this service,can delete it"
+        "Only the artisan associated with this service,can delete it",
       );
     }
     // Invalidate cache before deletion
@@ -170,7 +171,7 @@ export class ServiceService {
     baseServiceId: string,
     price: number,
     estimatedDuration: string,
-    skillSet?: string[]
+    skillSet?: string[],
   ): Promise<OfferedService> {
     // validate artisan and base service existence (optional)
     const offeredService = new OfferedService(
@@ -181,7 +182,7 @@ export class ServiceService {
       estimatedDuration,
       0,
       skillSet,
-      true
+      true,
     );
 
     await this.offeredServiceRepository.create(offeredService);

@@ -19,7 +19,7 @@ describe("serviceService", () => {
   const serviceService = new ServiceService(
     serviceRepository,
     artisanRepository,
-    offeredRepository
+    offeredRepository,
   );
   it("should throw BadRequestError for invalid Artisan", async () => {
     mockFindById.mockResolvedValue(null);
@@ -28,10 +28,11 @@ describe("serviceService", () => {
         "invalid-id",
         "Tiling",
         "Tile work",
+        "Expert tiler with 10 years of experience",
         200,
         "2 days",
-        4.5
-      )
+        4.5,
+      ),
     ).rejects.toThrow(BadRequestError);
   });
 
@@ -47,15 +48,16 @@ describe("serviceService", () => {
       mockArtisan.id,
       "Plumbing",
       "Pipe fixing",
+      "Skilled plumber with 5 years of experience",
       100,
       "3 hours",
-      5
+      5,
     );
     expect(result).toBeInstanceOf(Service);
     expect(mockSave).toHaveBeenCalled();
     expect(mockPublish).toHaveBeenCalledWith(
       "service_events",
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 });

@@ -3,6 +3,7 @@ export interface IService {
   artisanId: string;
   title: string;
   description: string;
+  bio: string;
   price: number;
   estimatedDuration: string;
   isActive: boolean;

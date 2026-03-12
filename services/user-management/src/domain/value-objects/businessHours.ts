@@ -36,11 +36,15 @@ export class BusinessHours {
     return time >= hours.open && time <= hours.close;
   }
 
-  get schedule(): Record<Day, string> {
-    return Object.entries(this._schedule).reduce((acc, [day, hours]) => {
-      acc[day as Day] = `${hours.open}- ${hours.close}`;
-      return acc;
-    }, {} as Record<Day, string>);
+  // get schedule(): Record<Day, string> {
+  //   return Object.entries(this._schedule).reduce((acc, [day, hours]) => {
+  //     acc[day as Day] = `${hours.open}- ${hours.close}`;
+  //     return acc;
+  //   }, {} as Record<Day, string>);
+  // }
+
+  get schedule(): BusinessHoursSchedule {
+    return { ...this._schedule };
   }
 
   toJSON(): BusinessHoursSchedule {
@@ -49,6 +53,18 @@ export class BusinessHours {
 
   // ✅ Deserialize from JSON (used in fromJSON of UserAggregate)
   static fromJSON(schedule: BusinessHoursSchedule): BusinessHours {
-    return new BusinessHours(schedule);
+    //  return new BusinessHours(schedule);
+    // Handle case where days might be stored as "09:00- 17:00" strings
+    const normalized = Object.entries(schedule).reduce((acc, [day, value]: [string, DayHours | string]) => {
+      if (typeof value === "string") {
+        const [open, close] = value.split("-").map((s: string) => s.trim());
+        acc[day as Day] = { open, close };
+      } else {
+        acc[day as Day] = value;
+      }
+      return acc;
+    }, {} as BusinessHoursSchedule);
+
+    return new BusinessHours(normalized);
   }
 }

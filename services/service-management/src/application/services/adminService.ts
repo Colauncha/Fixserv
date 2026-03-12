@@ -11,19 +11,21 @@ import { IOfferedServiceRepository } from "../../domain/repository/offeredServic
 export class AdminServiceManager {
   constructor(
     private baseServiceRepository: IBaseServiceRepository,
-    private offeredServiceRepository: IOfferedServiceRepository
+    private offeredServiceRepository: IOfferedServiceRepository,
   ) {}
 
   async createService(
     title: string,
     description: string,
-    createdBy: string
+    bio: string,
+    createdBy: string,
   ): Promise<BaseService> {
     const baseService = new BaseService(
       uuidv4(),
       title,
       description,
-      createdBy
+      bio,
+      createdBy,
     );
     await this.baseServiceRepository.createBaseService(baseService);
     return baseService;
