@@ -122,13 +122,23 @@ export class ServiceService {
     await this.serviceRepository.updateService(serviceId, updates);
 
     //clear in-memory Dataloader cache
-    //serviceLoader.clear(serviceId);
+    serviceLoader.clear(serviceId);
 
     // Invalidate external rediscache
     await clearServiceCache();
 
     //RE-fetch fresh service from DB
-    return serviceLoader.load(serviceId) as Promise<Service>;
+    // return serviceLoader.load(serviceId) as Promise<Service>;
+    // Fetch directly from DB (bypass DataLoader entirely for post-update fetch)
+    const freshService = await this.serviceRepository.findById(serviceId);
+    if (!freshService) {
+      throw new BadRequestError("Service not found after update");
+    }
+
+    // Prime DataLoader with fresh data so subsequent requests in same batch get correct data
+    serviceLoader.prime(serviceId, freshService);
+
+    return freshService;
   }
 
   async getServices(): Promise<Service[]> {

@@ -19,61 +19,58 @@ if (!process.env.MONGO_URI) {
   throw new Error("MongoDb connection string must be available");
 }
 
-const start = async () => {
+const start = async (): Promise<void> => {
+  console.log("🚀 Starting service-management service...");
+
   await connectDB();
   await connectRedis();
-  // CREATE A SINGLE EVENT BUS INSTANCE
-  const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
-  await eventBus.connect();
-  try {
-    const artisanEventsHandler = new ArtisanEventsHandler();
-    const reviewEventHandler = new ReviewEventsHandler();
-    const orderEventHandler = new OrderEventHandler();
-    await artisanEventsHandler.setupSubscriptions();
-    await reviewEventHandler.setupSubscriptions();
-    await orderEventHandler.setupSubscriptions();
-    console.log("📡 Event handlers initialized successfully");
-  } catch (error) {
-    console.error("⚠️ Event handler setup failed:", error);
-  }
 
+  // Start HTTP server immediately — don't wait for event bus
   const server = app.listen(4001, () => {
-    console.log("service-management is running on port 4001");
+    console.log("✅ service-management running on port 4001");
   });
-  // 6. Graceful shutdown
+
+  // Event bus is non-fatal — retry in background
+  const initEventBus = async () => {
+    try {
+      const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+      await eventBus.connect();
+      const artisanEventsHandler = new ArtisanEventsHandler();
+      const reviewEventHandler = new ReviewEventsHandler();
+      const orderEventHandler = new OrderEventHandler();
+      await artisanEventsHandler.setupSubscriptions();
+      await reviewEventHandler.setupSubscriptions();
+      await orderEventHandler.setupSubscriptions();
+      console.log("📡 Event handlers initialized");
+    } catch (eventError: any) {
+      console.error(
+        "⚠️ Event bus failed, retrying in 10s:",
+        eventError.message,
+      );
+      setTimeout(initEventBus, 10000); // retry after 10s
+    }
+  };
+
+  initEventBus(); // fire and forget — server already running
+
   const shutdown = async (signal: string) => {
-    console.log(`📴 ${signal} received, shutt down...`);
+    console.log(`📴 ${signal} received, shutting down...`);
     server.close(async () => {
       await Promise.all([
         disconnectDB(),
         disconnectRedis(),
-        eventBus.disconnect(),
+        RedisEventBus.instanceRef?.disconnect(),
       ]);
-      console.log("✅ Graceful shutdown complete");
       process.exit(0);
     });
-
-    // Force exit if shutdown hangs
-    setTimeout(() => {
-      console.error("⚡ Forced shutdown aftertimeout");
-      process.exit(1);
-    }, 10000);
+    setTimeout(() => process.exit(1), 10000);
   };
+
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
-process.on("uncaughtException", (err) => {
-  console.error("💀 Uncaught Exception:", err.message);
-  process.exit(1);
-});
-
-process.on("unhandledRejection", (reason) => {
-  console.error("💀 Unhandled Rejection:", reason);
-  process.exit(1);
-});
-
-start().catch((error) => {
-  console.error("💀 Startup failed:", error);
+start().catch((err) => {
+  console.error("💀 Failed to start service management:", err);
   process.exit(1);
 });

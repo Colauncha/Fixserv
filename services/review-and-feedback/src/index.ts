@@ -1,7 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 import app from "./interfaces/http/expressApp";
-import { connectDB, connectRedis } from "@fixserv-colauncha/shared";
+import {
+  connectDB,
+  connectRedis,
+  disconnectDB,
+} from "@fixserv-colauncha/shared";
 import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
 import { RatingCalculator } from "./domain/services/ratingCalculator";
 import { reviewAndFeedbackRepositoryImpls } from "./infrastructure/review-and-feedbackRepositoryImpls";
@@ -27,6 +31,7 @@ const serviceManagementClient = new ServiceManagementClient(
 const reviewRepo = new reviewAndFeedbackRepositoryImpls();
 const ratingCalculator = new RatingCalculator(reviewRepo);
 
+/*
 const start = async () => {
   try {
     await connectDB();
@@ -48,3 +53,57 @@ const start = async () => {
 };
 
 // start();
+*/
+const start = async (): Promise<void> => {
+  console.log("🚀 Starting review and feedback service...");
+
+  await connectDB();
+  await connectRedis();
+
+  // Start HTTP server immediately — don't wait for event bus
+  const server = app.listen(4002, () => {
+    console.log("review-service is running on port 4002");
+  });
+
+  // Event bus is non-fatal — retry in background
+  const initEventBus = async () => {
+    try {
+      const reviewEventsHandler = new ReviewEventsHandler(
+        ratingCalculator,
+        userManagementClient,
+        serviceManagementClient,
+      );
+      await reviewEventsHandler.setupSubscriptions();
+      console.log("📡 Event handlers initialized");
+    } catch (eventError: any) {
+      console.error(
+        "⚠️ Event bus failed, retrying in 10s:",
+        eventError.message,
+      );
+      setTimeout(initEventBus, 10000); // retry after 10s
+    }
+  };
+
+  initEventBus(); // fire and forget — server already running
+
+  const shutdown = async (signal: string) => {
+    console.log(`📴 ${signal} received, shutting down...`);
+    server.close(async () => {
+      await Promise.all([
+        disconnectDB(),
+        // disconnectRedis(),
+        // RedisEventBus.instanceRef?.disconnect(),
+      ]);
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10000);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+};
+
+start().catch((err) => {
+  console.error("💀 Failed to start review and feedback service", err);
+  process.exit(1);
+});

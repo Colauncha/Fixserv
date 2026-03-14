@@ -33,8 +33,8 @@ importers:
   services/notifications-service:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.30
-        version: 1.0.30
+        specifier: ^1.0.31
+        version: 1.0.31
       axios:
         specifier: ^1.9.0
         version: 1.13.6
@@ -133,8 +133,8 @@ importers:
   services/order-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.30
-        version: 1.0.30
+        specifier: ^1.0.31
+        version: 1.0.31
       axios:
         specifier: ^1.9.0
         version: 1.13.6
@@ -230,8 +230,8 @@ importers:
   services/review-and-feedback:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.30
-        version: 1.0.30
+        specifier: ^1.0.31
+        version: 1.0.31
       axios:
         specifier: ^1.9.0
         version: 1.13.6
@@ -318,8 +318,8 @@ importers:
   services/search-and-discovery:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.30
-        version: 1.0.30
+        specifier: ^1.0.31
+        version: 1.0.31
       axios:
         specifier: ^1.9.0
         version: 1.13.6
@@ -397,8 +397,8 @@ importers:
   services/service-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.30
-        version: 1.0.30
+        specifier: ^1.0.31
+        version: 1.0.31
       axios:
         specifier: ^1.9.0
         version: 1.13.6
@@ -579,8 +579,8 @@ importers:
   services/user-management:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.30
-        version: 1.0.30
+        specifier: ^1.0.31
+        version: 1.0.31
       axios:
         specifier: ^1.9.0
         version: 1.13.6
@@ -724,8 +724,8 @@ importers:
   services/wallet-service:
     dependencies:
       '@fixserv-colauncha/shared':
-        specifier: ^1.0.30
-        version: 1.0.30
+        specifier: ^1.0.31
+        version: 1.0.31
       axios:
         specifier: ^1.9.0
         version: 1.13.6
@@ -1039,6 +1039,9 @@ packages:
 
   '@fixserv-colauncha/shared@1.0.30':
     resolution: {integrity: sha512-VP8P2wJEJeQEBVrww8iZU2ukfEP+H+NGMpxYJqBr5WcMtxs+mXLQIB7HjHxaanEKBvJfSLaeHWrjWBfgWIMHQw==}
+
+  '@fixserv-colauncha/shared@1.0.31':
+    resolution: {integrity: sha512-1FaYYLYM+RRiCA55N/zBa6aPczgvw+Kk54NxjJ2w+wylNrvfnruk7yJNB5hCneLWqSwSxHV1B0rEtb3zutL4pQ==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -3874,6 +3877,32 @@ snapshots:
     optional: true
 
   '@fixserv-colauncha/shared@1.0.30':
+    dependencies:
+      '@redis/client': 5.11.0
+      cookie-session: 2.1.1
+      dotenv: 16.6.1
+      express: 4.22.1
+      express-rate-limit: 7.5.1(express@4.22.1)
+      express-validator: 7.3.1
+      jsonwebtoken: 9.0.3
+      mongoose: 8.23.0
+      rate-limit-redis: 4.3.1(express-rate-limit@7.5.1(express@4.22.1))
+      redis: 5.11.0
+      redis-cli: 2.1.2
+      uuid: 11.1.0
+      uuidv4: 6.2.13
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-providers'
+      - '@mongodb-js/zstd'
+      - '@node-rs/xxhash'
+      - gcp-metadata
+      - kerberos
+      - mongodb-client-encryption
+      - snappy
+      - socks
+      - supports-color
+
+  '@fixserv-colauncha/shared@1.0.31':
     dependencies:
       '@redis/client': 5.11.0
       cookie-session: 2.1.1

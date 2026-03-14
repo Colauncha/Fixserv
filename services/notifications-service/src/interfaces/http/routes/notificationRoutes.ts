@@ -25,7 +25,7 @@ const notificationController = new NotificationController(notificationService);
 // Get user notifications (authenticated users only)
 router.get(
   "/",
-  //@ts-ignore
+
   authMiddleware.protect,
   notificationController.getNotifications.bind(notificationController),
 );
@@ -33,7 +33,6 @@ router.get(
 // Get unread count
 router.get(
   "/unread-count",
-  //@ts-ignore
   authMiddleware.protect,
   notificationController.getUnreadCount.bind(notificationController),
 );
@@ -41,7 +40,7 @@ router.get(
 // Mark specific notification as read
 router.patch(
   "/:notificationId/read",
-  //@ts-ignore
+
   authMiddleware.protect,
   notificationController.markAsRead.bind(notificationController),
 );
@@ -49,7 +48,7 @@ router.patch(
 // Mark all notifications as read
 router.patch(
   "/mark-all-read",
-  //@ts-ignore
+
   authMiddleware.protect,
   notificationController.markAllAsRead.bind(notificationController),
 );
@@ -65,9 +64,9 @@ router.delete(
 // Create notification (Admin only)
 router.post(
   "/create",
-  //@ts-ignore
+
   authMiddleware.protect,
-  // requireRole("ADMIN"),
+  requireRole("ADMIN"),
   notificationController.createNotification.bind(notificationController),
 );
 

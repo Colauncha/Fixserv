@@ -35,7 +35,7 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
     //saeve the image URL to the user's profile in the database
     const updatedUser = await userService.updateProfilePicture(
       userId,
-      result.secure_url
+      result.secure_url,
     );
 
     console.log("updatedUser", updatedUser.toJSON());
@@ -44,7 +44,7 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
     await authService.invalidateUserCache(userId);
     const freshUser = await authService.findUserById(userId);
 
-    console.log("freshUser from cache refresh:", freshUser.toJSON());
+    // console.log("freshUser from cache refresh:", freshUser.toJSON());
 
     res.status(200).json({
       imageUrl: result.secure_url,
@@ -71,7 +71,7 @@ export const uploadProducts = async (req: Request, res: Response) => {
 
   if (!file || !description || !objectName) {
     throw new BadRequestError(
-      "Image, description and object name are required"
+      "Image, description and object name are required",
     );
   }
   try {
@@ -97,7 +97,8 @@ export const uploadProducts = async (req: Request, res: Response) => {
     //    EX: 600, // Cache for 10 minutes
     //  });
     //}
-    console.log("toJSON result UP:", freshUser.toJSON());
+
+    // console.log("toJSON result UP:", freshUser.toJSON());
 
     fs.unlinkSync(path.resolve(file.path)); // Delete local temporary file
 

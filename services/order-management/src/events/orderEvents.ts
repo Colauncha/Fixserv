@@ -26,7 +26,7 @@ export class OrderCreatedEvent extends BaseEvent {
       title: string;
       clientAddress: object;
       createdAt: string;
-    }
+    },
   ) {
     super(payload);
   }
@@ -40,7 +40,7 @@ export class PaymentReleasedEvent extends BaseEvent {
       orderId: string;
       artisanId: string;
       amount: number;
-    }
+    },
   ) {
     super(payload);
   }
@@ -53,7 +53,7 @@ export class PaymentInitiatedEvent extends BaseEvent {
     public payload: {
       orderId: string;
       escrowStatus: "IN_ESCROW";
-    }
+    },
   ) {
     super(payload);
   }
@@ -68,7 +68,7 @@ export class CreditWalletEvent extends BaseEvent {
       amount: number;
       reason: "escrow_release";
       reference: string;
-    }
+    },
   ) {
     super(payload);
   }
@@ -86,7 +86,7 @@ export class OrderAcceptedEvent extends BaseEvent {
       clientId: string;
       acceptedAt: string;
       estimatedCompletionDate?: string;
-    }
+    },
   ) {
     super(payload);
   }
@@ -104,7 +104,7 @@ export class OrderRejectedEvent extends BaseEvent {
       rejectedAt: string;
       rejectionReason: string;
       rejectionNote?: string;
-    }
+    },
   ) {
     super(payload);
   }
@@ -120,7 +120,7 @@ export class OrderExpiredEvent extends BaseEvent {
       artisanId: string;
       clientId: string;
       expiredAt: string;
-    }
+    },
   ) {
     super(payload);
   }
@@ -136,7 +136,7 @@ export class WorkStartedEvent extends BaseEvent {
       artisanId: string;
       clientId: string;
       startedAt: string;
-    }
+    },
   ) {
     super(payload);
   }
@@ -152,7 +152,31 @@ export class WorkCompletedEvent extends BaseEvent {
       artisanId: string;
       clientId: string;
       completedAt: string;
-    }
+    },
+  ) {
+    super(payload);
+  }
+}
+
+export class ArtisanOrderNotificationEvent extends BaseEvent {
+  eventName = "ArtisanOrderNotification";
+  version = 1;
+
+  constructor(
+    public payload: {
+      orderId: string;
+      artisanId: string;
+      clientId: string;
+      serviceId: string;
+      serviceTitle: string;
+      price: number;
+      clientAddress: object;
+      deviceType: string;
+      deviceBrand: string;
+      deviceModel: string;
+      serviceRequired: string;
+      createdAt: string;
+    },
   ) {
     super(payload);
   }

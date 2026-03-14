@@ -16,69 +16,53 @@ if (!process.env.MONGO_URI) throw new Error("MONGO_URI must be defined");
 if (!process.env.REDIS_URL) throw new Error("REDIS_URL must be defined");
 
 const start = async (): Promise<void> => {
-  console.log("🚀 Starting order service...");
+  console.log("🚀 Starting order-management service...");
 
-  // 1. Connect to MongoDB
   await connectDB();
-
-  // 2. Connect Redis cache client (for rate limiting, caching etc.)
   await connectRedis();
 
-  // 3. Connect Event Bus (uses its OWN 2 dedicated clients - publisher + subscriber)
-  const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
-  await eventBus.connect();
-
-  // 4. Setup event subscriptions
-  try {
-    const orderEventsHandler = new OrderEventsHandler(eventBus);
-    await orderEventsHandler.setupSubscriptions();
-
-    console.log("📡 Event handlers initialized");
-  } catch (eventError) {
-    // Non-fatal: log and continue — events can recover, don't crash the service
-    console.error("⚠️ Event handler setup failed:", eventError);
-  }
-
-  // 5. Start HTTP server AFTER all connections are ready
+  // Start HTTP server immediately — don't wait for event bus
   const server = app.listen(4004, () => {
-    console.log("✅ order-management service running on port 4004");
+    console.log("✅ order-management running on port 4004");
   });
 
-  // 6. Graceful shutdown
+  // Event bus is non-fatal — retry in background
+  const initEventBus = async () => {
+    try {
+      const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+      await eventBus.connect();
+      const orderEventsHandler = new OrderEventsHandler(eventBus);
+      await orderEventsHandler.setupSubscriptions();
+      console.log("📡 Event handlers initialized");
+    } catch (eventError: any) {
+      console.error(
+        "⚠️ Event bus failed, retrying in 10s:",
+        eventError.message,
+      );
+      setTimeout(initEventBus, 10000); // retry after 10s
+    }
+  };
+
+  initEventBus(); // fire and forget — server already running
+
   const shutdown = async (signal: string) => {
     console.log(`📴 ${signal} received, shutting down...`);
     server.close(async () => {
       await Promise.all([
         disconnectDB(),
         disconnectRedis(),
-        eventBus.disconnect(),
+        RedisEventBus.instanceRef?.disconnect(),
       ]);
-      console.log("✅ Graceful shutdown complete");
       process.exit(0);
     });
-
-    // Force exit if shutdown hangs
-    setTimeout(() => {
-      console.error("⚡ Forced shutdown after timeout");
-      process.exit(1);
-    }, 10000);
+    setTimeout(() => process.exit(1), 10000);
   };
 
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
-process.on("uncaughtException", (err) => {
-  console.error("💀 Uncaught Exception:", err.message);
-  process.exit(1);
-});
-
-process.on("unhandledRejection", (reason) => {
-  console.error("💀 Unhandled Rejection:", reason);
-  process.exit(1);
-});
-
-start().catch((error) => {
-  console.error("💀 Startup failed:", error);
+start().catch((err) => {
+  console.error("order management:", err);
   process.exit(1);
 });

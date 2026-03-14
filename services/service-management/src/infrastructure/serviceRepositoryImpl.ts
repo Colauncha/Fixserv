@@ -65,13 +65,16 @@ export class ServiceRepositoryImpl implements IServiceRepository {
     }
     const cachedData = await redis.get(cacheKey);
     if (cachedData) {
-      return JSON.parse(cachedData).map(this.toDomain);
+      // return JSON.parse(cachedData).map(this.toDomain);
+      // Deserialize properly from cached plain objects
+      return JSON.parse(cachedData).map((doc: any) => this.toDomain(doc));
     }
 
     const docs = await ServiceModel.find()
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     await redis.set(cacheKey, JSON.stringify(docs), {
       EX: 60 * 5, // Cache for 5 mins
