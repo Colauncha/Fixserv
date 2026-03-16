@@ -10,18 +10,19 @@ export class ServiceAggregate {
     artisanId: string,
     title: string,
     description: string,
+    bio: string,
     price: number,
     estimatedDuration: string,
     rating: number,
-    skillSet:SkillSet
+    skillSet: SkillSet,
   ): ServiceAggregate {
     const service = new Service(
       uuidv4(),
       artisanId,
-      new ServiceDetails(title, description, price, estimatedDuration),
+      new ServiceDetails(title, description, bio, price, estimatedDuration),
       true,
       rating,
-      skillSet
+      skillSet,
     );
     return new ServiceAggregate(service);
   }

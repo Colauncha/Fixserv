@@ -7,13 +7,14 @@ export class AdminServiceController {
 
   createBaseService = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { title, description } = req.body;
+      const { title, description, bio } = req.body;
       const createdBy = req.currentUser!.id; // assuming authentication middleware attaches currentUser
 
       const baseService = await this.adminServiceManager.createService(
         title,
         description,
-        createdBy
+        bio,
+        createdBy,
       );
 
       res.status(201).json({ success: true, data: baseService });
@@ -51,7 +52,7 @@ export class AdminServiceController {
 
   getOfferedServiceById = async (
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> => {
     try {
       const { id } = req.params;

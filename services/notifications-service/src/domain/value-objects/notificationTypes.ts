@@ -9,6 +9,12 @@ export class NotificationType {
     "SERVICE_CREATED",
     "WALLET_TOPUP",
     "SYSTEM_ALERT",
+    "ORDER_ACCEPTED",
+    "ORDER_REJECTED",
+    "NEW_ORDER_REQUEST",
+    "WORK_STARTED",
+    "WORK_COMPLETED",
+    "PAYMENT_RELEASED",
   ] as const;
 
   constructor(private _value: string) {
@@ -29,4 +35,11 @@ export class NotificationType {
   static PAYMENT_PROCESSED = new NotificationType("PAYMENT_PROCESSED");
   static SYSTEM_ALERT = new NotificationType("SYSTEM_ALERT");
   static SERVICE_CREATED = new NotificationType("SERVICE_CREATED");
+  static WALLET_TOPUP = new NotificationType("WALLET_TOPUP");
+  static ORDER_ACCEPTED = new NotificationType("ORDER_ACCEPTED");
+  static ORDER_REJECTED = new NotificationType("ORDER_REJECTED");
+  static NEW_ORDER_REQUEST = new NotificationType("NEW_ORDER_REQUEST");
+  static WORK_STARTED = new NotificationType("WORK_STARTED");
+  static WORK_COMPLETED = new NotificationType("WORK_COMPLETED");
+  static PAYMENT_RELEASED = new NotificationType("PAYMENT_RELEASED");
 }

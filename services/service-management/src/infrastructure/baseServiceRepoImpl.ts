@@ -8,6 +8,7 @@ export class BaseServiceRepositoryImpl implements IBaseServiceRepository {
       _id: service.id,
       title: service.title,
       description: service.description,
+      bio: service.bio,
       createdBy: service.createdBy,
       isActive: service.isActive,
     });
@@ -20,6 +21,7 @@ export class BaseServiceRepositoryImpl implements IBaseServiceRepository {
       doc._id!,
       doc.title,
       doc.description,
+      doc.bio,
       doc.createdBy,
       doc.isActive,
     );
@@ -33,6 +35,7 @@ export class BaseServiceRepositoryImpl implements IBaseServiceRepository {
           doc._id!,
           doc.title,
           doc.description,
+          doc.bio,
           doc.createdBy,
           doc.isActive,
         ),

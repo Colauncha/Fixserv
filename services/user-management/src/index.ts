@@ -21,68 +21,56 @@ if (!process.env.MONGO_URI) {
 }
 if (!process.env.REDIS_URL) throw new Error("REDIS_URL must be defined");
 
-// const start = async (): Promise<void> => {
-const start = async () => {
-  await connectDB();
+const start = async (): Promise<void> => {
+  console.log("🚀 Starting user-management service...");
 
+  await connectDB();
   await connectRedis();
 
-  // CREATE A SINGLE EVENT BUS INSTANCE
-  const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
-  await eventBus.connect();
-  try {
-    console.log("🚀 Starting user-management service...");
-
-    const eventsHandler = new ServiceEventsHandler(eventBus);
-    const reviewEventHandler = new ReviewEventsHandler(eventBus);
-    await eventsHandler.setupSubscriptions();
-    await reviewEventHandler.setupSubscriptions();
-
-    console.log("📡 Event handlers initialized successfully");
-  } catch (eventError) {
-    console.error("⚠️ Event handler setup failed:", eventError);
-    // Don't exit, continue without events if Redis is the issue
-  }
-
+  // Start HTTP server immediately — don't wait for event bus
   const server = app.listen(4000, () => {
-    console.log("✅ user-management service running on port 4000");
+    console.log("✅ user-management running on port 4000");
   });
 
-  // 6. Graceful shutdown
+  // Event bus is non-fatal — retry in background
+  const initEventBus = async () => {
+    try {
+      const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+      await eventBus.connect();
+      const eventsHandler = new ServiceEventsHandler(eventBus);
+      const reviewEventHandler = new ReviewEventsHandler(eventBus);
+      await eventsHandler.setupSubscriptions();
+      await reviewEventHandler.setupSubscriptions();
+      console.log("📡 Event handlers initialized");
+    } catch (eventError: any) {
+      console.error(
+        "⚠️ Event bus failed, retrying in 10s:",
+        eventError.message,
+      );
+      setTimeout(initEventBus, 10000); // retry after 10s
+    }
+  };
+
+  initEventBus(); // fire and forget — server already running
+
   const shutdown = async (signal: string) => {
-    console.log(`📴 ${signal} received, shutting //down...`);
+    console.log(`📴 ${signal} received, shutting down...`);
     server.close(async () => {
       await Promise.all([
         disconnectDB(),
         disconnectRedis(),
-        eventBus.disconnect(),
+        RedisEventBus.instanceRef?.disconnect(),
       ]);
-      console.log("✅ Graceful shutdown complete");
       process.exit(0);
     });
-
-    // Force exit if shutdown hangs
-    setTimeout(() => {
-      console.error("⚡ Forced shutdown after timeout");
-      process.exit(1);
-    }, 10000);
+    setTimeout(() => process.exit(1), 10000);
   };
 
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
-process.on("uncaughtException", (err) => {
-  console.error("💀 Uncaught Exception:", err.message);
-  process.exit(1);
-});
-
-process.on("unhandledRejection", (reason) => {
-  console.error("💀 Unhandled Rejection:", reason);
-  process.exit(1);
-});
-
-start().catch((error) => {
-  console.error("💀 Startup failed:", error);
+start().catch((err) => {
+  console.error("💀 Failed to start user management:", err);
   process.exit(1);
 });

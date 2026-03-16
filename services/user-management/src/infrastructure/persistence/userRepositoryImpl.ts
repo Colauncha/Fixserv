@@ -468,7 +468,8 @@ export class UserRepositoryImpl implements IUserRepository {
         location: user.location,
         rating: user.rating,
         skillSet: user.skills.skills,
-        businessHours: user.businessHours,
+        // businessHours: user.businessHours,
+        businessHours: user.businessHours.toJSON(),
         categories: user.categories?.toJSON() ?? [],
         certificates: user.getCertificates
           ? user.getCertificates().map((cert) => cert.toJSON())
@@ -546,7 +547,10 @@ export class UserRepositoryImpl implements IUserRepository {
         data.location || "",
         data.rating || 0,
         new SkillSet(skills),
-        new BusinessHours(data.businessHours || {}),
+        // new BusinessHours(data.businessHours || {}),
+        data.businessHours
+          ? BusinessHours.fromJSON(data.businessHours)
+          : new BusinessHours({}),
         categories,
         certificates,
         data.profilePicture,

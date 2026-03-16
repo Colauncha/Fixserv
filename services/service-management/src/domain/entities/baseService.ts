@@ -3,7 +3,8 @@ export class BaseService {
     public readonly id: string,
     public readonly title: string,
     public readonly description: string,
+    public readonly bio: string,
     public readonly createdBy: string, // e.g., adminId
-    public readonly isActive: boolean = true
+    public readonly isActive: boolean = true,
   ) {}
 }

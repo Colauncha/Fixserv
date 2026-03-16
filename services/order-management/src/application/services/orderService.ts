@@ -10,6 +10,7 @@ import {
 } from "../../infrastructure/reuseableWrapper/getUserProfile";
 import { EscrowService } from "./escrowService";
 import {
+  ArtisanOrderNotificationEvent,
   OrderAcceptedEvent,
   OrderCreatedEvent,
   OrderExpiredEvent,
@@ -171,7 +172,8 @@ export class OrderService {
       artisanId: order.artisanId,
       amount: order.price,
     });
-    await this.eventBus.publish("OrderPaymentReleased", event);
+    // await this.eventBus.publish("OrderPaymentReleased", event);
+    await this.eventBus.publish("order_events", event);
   }
 
   async markAsDisputed(orderId: string, disputeId: string): Promise<void> {
@@ -576,6 +578,23 @@ export class OrderService {
       createdAt: savedOrder.createdAt.toISOString(),
     });
     await this.eventBus.publish("order_events", event);
+
+    // NEW: Notify the specific artisan about the new order
+    const artisanNotificationEvent = new ArtisanOrderNotificationEvent({
+      orderId: savedOrder.id,
+      artisanId: service.artisanId,
+      clientId: client.id,
+      serviceId: service.id,
+      serviceTitle: service.details.title,
+      price: service.details.price,
+      clientAddress: client.deliveryAddress,
+      deviceType: draftOrder.deviceType,
+      deviceBrand: draftOrder.deviceBrand,
+      deviceModel: draftOrder.deviceModel,
+      serviceRequired: draftOrder.serviceRequired,
+      createdAt: savedOrder.createdAt.toISOString(),
+    });
+    await this.eventBus.publish("order_events", artisanNotificationEvent);
 
     return savedOrder;
   }

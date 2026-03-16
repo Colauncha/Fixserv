@@ -21,6 +21,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
         artisanId: service.artisanId,
         title: service.details.title,
         description: service.details.description,
+        bio: service.details.bio,
         price: service.details.price,
         estimatedDuration: service.details.estimatedDuration,
         isActive: service.isActive,
@@ -64,13 +65,16 @@ export class ServiceRepositoryImpl implements IServiceRepository {
     }
     const cachedData = await redis.get(cacheKey);
     if (cachedData) {
-      return JSON.parse(cachedData).map(this.toDomain);
+      // return JSON.parse(cachedData).map(this.toDomain);
+      // Deserialize properly from cached plain objects
+      return JSON.parse(cachedData).map((doc: any) => this.toDomain(doc));
     }
 
     const docs = await ServiceModel.find()
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     await redis.set(cacheKey, JSON.stringify(docs), {
       EX: 60 * 5, // Cache for 5 mins
@@ -94,6 +98,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
     updates: {
       title?: string;
       description?: string;
+      bio?: string;
       price?: number;
       estimatedDuration?: string;
       isActive?: boolean;
@@ -106,6 +111,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
       if (updates.title !== undefined) updateObj.title = updates.title;
       if (updates.description !== undefined)
         updateObj.description = updates.description;
+      if (updates.bio !== undefined) updateObj.bio = updates.bio;
       if (updates.price !== undefined) updateObj.price = updates.price;
       if (updates.estimatedDuration !== undefined)
         updateObj.estimatedDuration = updates.estimatedDuration;
@@ -160,6 +166,7 @@ export class ServiceRepositoryImpl implements IServiceRepository {
       new ServiceDetails(
         doc.title,
         doc.description,
+        doc.bio,
         doc.price,
         doc.estimatedDuration,
       ),

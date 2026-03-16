@@ -53,69 +53,63 @@ const start = async () => {
 };
 */
 
-const start = async () => {
-  await connectDB();
+const start = async (): Promise<void> => {
+  console.log("🚀 Starting notifications service...");
 
+  await connectDB();
   await connectRedis();
 
-  // CREATE A SINGLE EVENT BUS INSTANCE
-  const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
-  await eventBus.connect();
-  try {
-    const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
-    const notificationRepo = new NotificationRepositoryImpl();
-    const domainService = new NotificationDomainService();
-    const notificationService = new NotificationService(
-      notificationRepo,
-      domainService,
-      eventBus,
-    );
-    const notificationEventHandler = new NotificationEventHandler(
-      notificationService,
-    );
-    await notificationEventHandler.setupSubscriptions();
-    console.log("✅ Notification event handlers initialized");
-  } catch (eventError) {
-    console.error("⚠️ Event handler setup failed:", eventError);
-    // Don't exit, continue without events if Redis is the issue
-  }
-
+  // Start HTTP server immediately — don't wait for event bus
   const server = app.listen(4006, () => {
     console.log("✅ notifications-service is running on port 4006");
   });
 
-  // 6. Graceful shutdown
+  // Event bus is non-fatal — retry in background
+  const initEventBus = async () => {
+    try {
+      const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+      await eventBus.connect();
+      const notificationRepo = new NotificationRepositoryImpl();
+      const domainService = new NotificationDomainService();
+      const notificationService = new NotificationService(
+        notificationRepo,
+        domainService,
+        eventBus,
+      );
+      const notificationEventHandler = new NotificationEventHandler(
+        notificationService,
+      );
+      await notificationEventHandler.setupSubscriptions();
+      console.log("📡 Event handlers initialized");
+    } catch (eventError: any) {
+      console.error(
+        "⚠️ Event bus failed, retrying in 10s:",
+        eventError.message,
+      );
+      setTimeout(initEventBus, 10000); // retry after 10s
+    }
+  };
+
+  initEventBus(); // fire and forget — server already running
+
   const shutdown = async (signal: string) => {
     console.log(`📴 ${signal} received, shutting down...`);
     server.close(async () => {
       await Promise.all([
         disconnectDB(),
         disconnectRedis(),
-        eventBus.disconnect(),
+        RedisEventBus.instanceRef?.disconnect(),
       ]);
-      console.log("✅ Graceful shutdown complete");
       process.exit(0);
     });
-
-    // Force exit if shutdown hangs
-    setTimeout(() => {
-      console.error("⚡ Forced shutdown after timeout");
-      process.exit(1);
-    }, 10000);
+    setTimeout(() => process.exit(1), 10000);
   };
 
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
-process.on("uncaughtException", (err) => {
-  console.error("💀 Uncaught Exception:", err.message);
+start().catch((err) => {
+  console.error("notifications service:", err);
   process.exit(1);
 });
-
-process.on("unhandledRejection", (reason) => {
-  console.error("💀 Unhandled Rejection:", reason);
-  process.exit(1);
-});
-
-start();

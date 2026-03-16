@@ -3,7 +3,17 @@ kind: Config
 deploy:
   kubectl:
     manifests:
-      - ./services/infra/k8s/*
+      # - ./services/infra/k8s/*
+      - ./services/infra/k8s/user-management-depl.yaml
+      - ./services/infra/k8s/service-management-depl.yaml
+      - ./services/infra/k8s/wallet-service-depl.yaml
+      - ./services/infra/k8s/order-management-depl.yaml
+      - ./services/infra/k8s/notifications-service-depl.yaml
+      - ./services/infra/k8s/review-and-feedback-depl.yaml
+      - ./services/infra/k8s/ingress-srv.yaml
+      - ./services/infra/k8s/mongo-secret.yaml
+      - ./services/infra/k8s/jwt-secret.yaml
+      - ./services/infra/k8s/redis-depl.yaml
 build:
   local:
     push: false
@@ -17,10 +27,11 @@ build:
         manual:
           - src: "services/user-management/src/**/*.ts"
             dest: /app/services/user-management/src
+
     - image: docker.io/ogkpos/service-management
       context: .
       docker:
-        dockerfile: services/service-management/Dockerfile
+        dockerfile: services/service-management/Dockerfile.dev
       sync:
         manual:
           - src: "src/**/*.ts"
@@ -65,3 +76,124 @@ build:
         manual:
           - src: "src/**/*.ts"
             dest: .
+
+profiles:
+  - name: user-only
+    build:
+      local:
+        push: false
+      artifacts:
+        - image: docker.io/ogkpos/user-management
+          context: .
+          docker:
+            dockerfile: services/user-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/user-management/src/**/*.ts"
+                dest: /app/services/user-management/src
+
+  - name: service-only
+    build:
+      local:
+        push: false
+      artifacts:
+        - image: docker.io/ogkpos/service-management
+          context: .
+          docker:
+            dockerfile: services/service-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/service-management/src/**/*.ts"
+                dest: /app/services/service-management/src
+
+  - name: wallet-only
+    build:
+      local:
+        push: false
+      artifacts:
+        - image: docker.io/ogkpos/wallet-service
+          context: .
+          docker:
+            dockerfile: services/wallet-service/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/wallet-service/src/**/*.ts"
+                dest: /app/services/wallet-service/src
+
+  - name: user-and-notifications
+    build:
+      local:
+        push: false
+        concurrency: 2
+      artifacts:
+        - image: docker.io/ogkpos/user-management
+          context: .
+          docker:
+            dockerfile: services/user-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/user-management/src/**/*.ts"
+                dest: /app/services/user-management/src
+        - image: docker.io/ogkpos/notifications-service
+          context: .
+          docker:
+            dockerfile: services/notifications-service/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/notifications-service/src/**/*.ts"
+                dest: /app/services/notifications-service/src
+
+  - name: core
+    build:
+      local:
+        push: false
+        concurrency: 2
+      artifacts:
+        - image: docker.io/ogkpos/user-management
+          context: .
+          docker:
+            dockerfile: services/user-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/user-management/src/**/*.ts"
+                dest: /app/services/user-management/src
+        - image: docker.io/ogkpos/service-management
+          context: .
+          docker:
+            dockerfile: services/service-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/service-management/src/**/*.ts"
+                dest: /app/services/service-management/src
+        - image: docker.io/ogkpos/wallet-service
+          context: .
+          docker:
+            dockerfile: services/wallet-service/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/wallet-service/src/**/*.ts"
+                dest: /app/services/wallet-service/src
+        - image: docker.io/ogkpos/order-management
+          context: .
+          docker:
+            dockerfile: services/order-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/order-management/src/**/*.ts"
+                dest: /app/services/order-management/src
+        - image: docker.io/ogkpos/notifications-service
+          context: .
+          docker:
+            dockerfile: services/notifications-service/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/notifications-service/src/**/*.ts"
+                dest: /app/services/notifications-service/src
+        - image: docker.io/ogkpos/review-and-feedback
+          context: .
+          docker:
+            dockerfile: services/review-and-feedback/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/review-and-feedback/src/**/*.ts"
+                dest: /app/services/review-and-feedback/src

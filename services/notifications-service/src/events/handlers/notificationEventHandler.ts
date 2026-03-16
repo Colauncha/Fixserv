@@ -21,7 +21,7 @@ export class NotificationEventHandler {
             await this.handleUserCreated(evt);
             break;
         }
-      }
+      },
     );
     console.log("Subscribed to user_events");
     this.subscriptions.push(userEventsSub);
@@ -38,7 +38,7 @@ export class NotificationEventHandler {
             await this.handleReviewPublished(evt);
             break;
         }
-      }
+      },
     );
     this.subscriptions.push(reviewEventsSub);
 
@@ -50,14 +50,32 @@ export class NotificationEventHandler {
           case "OrderCreated":
             await this.handleOrderCreated(evt);
             break;
+          case "ArtisanOrderNotification":
+            await this.handleArtisanOrderNotification(evt);
+            break;
+          case "OrderAccepted":
+            await this.handleOrderAccepted(evt);
+            break;
+          case "OrderRejected":
+            await this.handleOrderRejected(evt);
+            break;
           case "OrderCompleted":
             await this.handleOrderCompleted(evt);
             break;
           case "PaymentProcessed":
             await this.handlePaymentProcessed(evt);
             break;
+          case "WorkStarted":
+            await this.handleWorkStarted(evt);
+            break;
+          case "WorkCompleted":
+            await this.handleWorkCompleted(evt);
+            break;
+          case "OrderPaymentReleased":
+            await this.handlePaymentRelease(evt);
+            break;
         }
-      }
+      },
     );
     this.subscriptions.push(orderEventsSub);
 
@@ -70,7 +88,7 @@ export class NotificationEventHandler {
             await this.handleServiceCreated(evt);
             break;
         }
-      }
+      },
     );
     this.subscriptions.push(serviceEventsSub);
 
@@ -82,7 +100,7 @@ export class NotificationEventHandler {
             await this.handleWalletTopUp(evt);
             break;
         }
-      }
+      },
     );
     this.subscriptions.push(walletEventsSub);
     console.log("Notification service subscribed to all events");
@@ -107,7 +125,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Welcome notification created for user: ${event.payload.fullName}`
+        `Welcome notification created for user: ${event.payload.fullName}`,
       );
     } catch (error) {
       console.error("Error handling UserCreated event:", error);
@@ -128,7 +146,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Review notification created for artisan: ${event.payload.artisanId}`
+        `Review notification created for artisan: ${event.payload.artisanId}`,
       );
     } catch (error) {
       console.error("Error handling ReviewCreated event:", error);
@@ -150,7 +168,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Review published notification created for artisan: ${event.payload.artisanId}`
+        `Review published notification created for artisan: ${event.payload.artisanId}`,
       );
     } catch (error) {
       console.error("Error handling ReviewPublished event:", error);
@@ -189,7 +207,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Order notifications created for order: ${event.payload.orderId}`
+        `Order notifications created for order: ${event.payload.orderId}`,
       );
     } catch (error) {
       console.error("Error handling OrderCreated event:", error);
@@ -211,7 +229,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Order completion notification created for client: ${event.payload.clientId}`
+        `Order completion notification created for client: ${event.payload.clientId}`,
       );
     } catch (error) {
       console.error("Error handling OrderCompleted event:", error);
@@ -246,7 +264,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Payment notifications created for order: ${event.payload.orderId}`
+        `Payment notifications created for order: ${event.payload.orderId}`,
       );
     } catch (error) {
       console.error("Error handling PaymentProcessed event:", error);
@@ -268,7 +286,7 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Service created notification created for artisan: ${event.payload.artisanId}`
+        `Service created notification created for artisan: ${event.payload.artisanId}`,
       );
     } catch (error) {
       console.error("Error handling ServiceCreated event:", error);
@@ -290,10 +308,162 @@ export class NotificationEventHandler {
       });
 
       console.log(
-        `Wallet top-up notification created for user: ${event.payload.userId}`
+        `Wallet top-up notification created for user: ${event.payload.userId}`,
       );
     } catch (error) {
       console.error("Error handling WalletTopUpEvent:", error);
+    }
+  }
+  // Add the handler method:
+  private async handleArtisanOrderNotification(event: any): Promise<void> {
+    try {
+      const {
+        artisanId,
+        orderId,
+        clientId,
+        serviceTitle,
+        price,
+        deviceType,
+        deviceBrand,
+        deviceModel,
+        serviceRequired,
+      } = event.payload;
+
+      await this.notificationService.createNotification({
+        userId: artisanId, // targets ONLY this specific artisan
+        type: "NEW_ORDER_REQUEST",
+        title: "New Order Request",
+        message: `A client has requested your service: ${serviceTitle}. Device: ${deviceBrand} ${deviceModel} (${deviceType}). Issue: ${serviceRequired}. Price: ₦${price}. Please accept or reject this order.`,
+        data: {
+          orderId,
+          clientId,
+          serviceTitle,
+          price,
+          deviceType,
+          deviceBrand,
+          deviceModel,
+          serviceRequired,
+          actionRequired: true, // useful for frontend to show action buttons
+          actions: ["ACCEPT", "REJECT"],
+        },
+      });
+
+      console.log(
+        `✅ Order notification sent to artisan: ${artisanId} for order: ${orderId}`,
+      );
+    } catch (error) {
+      console.error("Error handling ArtisanOrderNotification event:", error);
+    }
+  }
+
+  // Also add handlers for accept/reject so the CLIENT gets notified too:
+  private async handleOrderAccepted(event: any): Promise<void> {
+    try {
+      await this.notificationService.createNotification({
+        userId: event.payload.clientId,
+        type: "ORDER_ACCEPTED",
+        title: "Order Accepted!",
+        message: `Great news! Your order has been accepted by the artisan.${
+          event.payload.estimatedCompletionDate
+            ? ` Estimated completion: ${new Date(event.payload.estimatedCompletionDate).toLocaleDateString()}`
+            : ""
+        }`,
+        data: {
+          orderId: event.payload.orderId,
+          artisanId: event.payload.artisanId,
+          estimatedCompletionDate: event.payload.estimatedCompletionDate,
+        },
+      });
+      console.log(
+        `✅ Order accepted notification sent to client: ${event.payload.clientId}`,
+      );
+    } catch (error) {
+      console.error("Error handling OrderAccepted event:", error);
+    }
+  }
+
+  private async handleOrderRejected(event: any): Promise<void> {
+    try {
+      await this.notificationService.createNotification({
+        userId: event.payload.clientId,
+        type: "ORDER_REJECTED",
+        title: "Order Not Accepted",
+        message: `Unfortunately, the artisan could not accept your order. Reason: ${event.payload.rejectionReason}.${
+          event.payload.rejectionNote
+            ? ` Note: ${event.payload.rejectionNote}`
+            : ""
+        } Your funds have been refunded.`,
+        data: {
+          orderId: event.payload.orderId,
+          artisanId: event.payload.artisanId,
+          rejectionReason: event.payload.rejectionReason,
+          rejectionNote: event.payload.rejectionNote,
+        },
+      });
+      console.log(
+        `✅ Order rejected notification sent to client: ${event.payload.clientId}`,
+      );
+    } catch (error) {
+      console.error("Error handling OrderRejected event:", error);
+    }
+  }
+
+  private async handleWorkStarted(event: any): Promise<void> {
+    try {
+      await this.notificationService.createNotification({
+        userId: event.payload.clientId,
+        type: "WORK_STARTED",
+        title: "Work Started",
+        message: `The work on your order has started.`,
+        data: {
+          orderId: event.payload.orderId,
+          artisanId: event.payload.artisanId,
+        },
+      });
+      console.log(
+        `✅ Work started notification sent to client: ${event.payload.clientId}`,
+      );
+    } catch (error) {
+      console.error("Error handling WorkStarted event:", error);
+    }
+  }
+  private async handleWorkCompleted(event: any): Promise<void> {
+    try {
+      await this.notificationService.createNotification({
+        userId: event.payload.clientId,
+        type: "WORK_COMPLETED",
+        title: "Work Completed",
+        message: `The work on your order has been completed.`,
+        data: {
+          orderId: event.payload.orderId,
+          artisanId: event.payload.artisanId,
+        },
+      });
+      console.log(
+        `✅ Work completed notification sent to client: ${event.payload.clientId}`,
+      );
+    } catch (error) {
+      console.error("Error handling WorkCompleted event:", error);
+    }
+  }
+  private async handlePaymentRelease(event: any): Promise<void> {
+    try {
+      await this.notificationService.createNotification({
+        userId: event.payload.clientId,
+        type: "PAYMENT_RELEASED",
+        title: "Payment Released",
+        message: `Your payment for order ${event.payload.orderId} has been released.`,
+        data: {
+          orderId: event.payload.orderId,
+          artisanId: event.payload.artisanId,
+          amount: event.payload.amount,
+        },
+      });
+      console.log(
+        `✅ Payment released notification sent to client: ${event.payload.clientId} and artisan: ${event.payload.artisanId} for order: ${event.payload.orderId}`,
+      );
+    } catch (error) {
+      console.error("Error handling PaymentRelease event:", error);
     }
   }
 }

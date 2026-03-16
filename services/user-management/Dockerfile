@@ -72,14 +72,14 @@ WORKDIR /app
 #  
 RUN npm install -g pnpm
  
- COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
- COPY services/user-management/package.json ./services/user-management/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY services/user-management/package.json ./services/user-management/
  
 RUN pnpm install --shamefully-hoist
  
 COPY services ./services
 
- RUN cd services/user-management && pnpm install --shamefully-hoist
+RUN cd services/user-management && pnpm install --shamefully-hoist
 RUN cd services/user-management && pnpm run build
 
 # ---- STAGE 3: Runtime ----
@@ -87,8 +87,8 @@ FROM node:18-alpine
 WORKDIR /app
 # 
 COPY --from=builder /app/node_modules ./node_modules
- COPY --from=builder /app/services/user-management/dist ./dist
- COPY --from=builder /app/services/user-management/package.json ./
+COPY --from=builder /app/services/user-management/dist ./dist
+COPY --from=builder /app/services/user-management/package.json ./
  
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]

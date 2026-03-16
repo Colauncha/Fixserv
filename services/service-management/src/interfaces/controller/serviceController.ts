@@ -7,10 +7,17 @@ export class ServiceController {
 
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const { title, description, price, estimatedDuration, rating } = req.body;
+      const { title, description, bio, price, estimatedDuration, rating } =
+        req.body;
 
       // Input validation
-      if (!title || !description || price === undefined || !estimatedDuration) {
+      if (
+        !title ||
+        !description ||
+        !bio ||
+        price === undefined ||
+        !estimatedDuration
+      ) {
         throw new BadRequestError("Missing required fields");
       }
 
@@ -22,9 +29,10 @@ export class ServiceController {
         req.currentUser!.id,
         title,
         description,
+        bio,
         price,
         estimatedDuration,
-        rating
+        rating,
       );
 
       res.status(201).json({
@@ -32,6 +40,7 @@ export class ServiceController {
         artisanId: service.artisanId,
         title: service.details.title,
         description: service.details.description,
+        bio: service.details.bio,
         price: service.details.price,
         estimatedDuration: service.details.estimatedDuration,
         isActive: service.isActive,
@@ -65,12 +74,13 @@ export class ServiceController {
           id: service.id,
           title: service.details.title,
           description: service.details.description,
+          bio: service.details.bio,
           price: service.details.price,
           estimatedDuration: service.details.estimatedDuration,
           isActive: service.isActive,
           rating: service.rating,
           skillSet: service.skillSet.toArray(),
-        }))
+        })),
       );
     } catch (error) {
       if (error instanceof BadRequestError) {
@@ -105,6 +115,7 @@ export class ServiceController {
       const allowedFields = [
         "title",
         "description",
+        "bio",
         "price",
         "estimatedDuration",
         "isActive",
@@ -113,13 +124,13 @@ export class ServiceController {
       const validUpdates = Object.fromEntries(
         allowedFields
           .filter((key) => updates[key] !== undefined)
-          .map((key) => [key, updates[key]])
+          .map((key) => [key, updates[key]]),
       );
 
       await this.serviceService.updateService(
         serviceId,
         validUpdates,
-        artisanId
+        artisanId,
       );
 
       res.status(200).json({
@@ -143,7 +154,7 @@ export class ServiceController {
       const limit = parseInt(req.query.limit as string) || 10;
       const services = await this.serviceService.getPaginatedServices(
         page,
-        limit
+        limit,
       );
       res.status(200).json(
         services.map((service) => ({
@@ -151,12 +162,13 @@ export class ServiceController {
           artisanId: service.artisanId,
           title: service.details.title,
           description: service.details.description,
+          bio: service.details.bio,
           price: service.details.price,
           estimatedDuration: service.details.estimatedDuration,
           isActive: service.isActive,
           rating: service.rating,
           skillSet: service.skillSet.toArray(),
-        }))
+        })),
       );
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -199,6 +211,7 @@ export class ServiceController {
           artisanId: doc.artisanId,
           title: doc.title,
           description: doc.description,
+          bio: doc.bio,
           price: doc.price,
           estimatedDuration: doc.estimatedDuration,
           isActive: doc.isActive,
@@ -234,7 +247,7 @@ export class ServiceController {
 
       if (!baseServiceId || !price || !estimatedDuration) {
         throw new BadRequestError(
-          "baseServiceId, price, and estimatedDuration are required"
+          "baseServiceId, price, and estimatedDuration are required",
         );
       }
 
@@ -243,7 +256,7 @@ export class ServiceController {
         baseServiceId,
         price,
         estimatedDuration,
-        skillSet
+        skillSet,
       );
 
       res.status(201).json({

@@ -17,18 +17,19 @@ const batchGetServices = async (ids: readonly string[]) => {
         new ServiceDetails(
           doc.title,
           doc.description,
+          doc.bio,
           doc.price,
-          doc.estimatedDuration
+          doc.estimatedDuration,
         ),
         doc.isActive,
         doc.rating,
-        SkillSet.create(doc.skillSet || [])
+        SkillSet.create(doc.skillSet || []),
       ),
-    ])
+    ]),
   );
   return ids.map((id) => serviceMap.get(id) || null);
 };
 
 export const serviceLoader = new DataLoader<string, Service | null>(
-  batchGetServices
+  batchGetServices,
 );
