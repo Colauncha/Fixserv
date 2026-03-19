@@ -6,13 +6,15 @@ export class GetUserNotificationsUseCase {
 
   async execute(
     userId: string,
+    userRole: string,
     limit: number = 20,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<NotificationResponseDto[]> {
     const notifications = await this.notificationRepository.findByUserId(
       userId,
+      userRole,
       limit,
-      offset
+      offset,
     );
 
     return notifications.map((notification) => notification.toJSON());
