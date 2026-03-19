@@ -1,26 +1,33 @@
 FROM node:18-alpine
 
+
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
 
-COPY services/wallet-service/package.json ./services/wallet-service/
+# Install pnpm
+RUN npm install -g pnpm
 
 
-COPY services/shared/package.json ./services/shared/
+# Copy ONLY root workspace config
+COPY package.json pnpm-workspace.yaml ./
 
-# Install with --shamefully-flatten to completely avoid symlinks
 
-RUN npm install -g pnpm && \
-    pnpm install --shamefully-hoist 
- 
-# COPY /app/node_modules ./node_modules
-     
- COPY services/wallet-service ./services/wallet-service/
+# Copy ONLY this service's package.json (not all services)
+COPY services/wallet-service/package.json ./services/wallet-service/package.json
+
+
+# Install ONLY this service's dependencies
+RUN pnpm install --filter wallet-service --shamefully-hoist
+
+
+# Copy ONLY this service's source
+COPY services/wallet-service ./services/wallet-service/
+
 
 WORKDIR /app/services/wallet-service
 
 
 EXPOSE 4005
 
-CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+
+CMD ["../../node_modules/.bin/ts-node-dev", "--respawn", "--transpile-only", "--exit-child", "src/index.ts"]

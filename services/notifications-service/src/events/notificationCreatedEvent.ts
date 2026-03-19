@@ -8,11 +8,12 @@ export class NotificationCreatedEvent extends BaseEvent {
     public payload: {
       notificationId: string;
       userId: string;
+      targetRole?: string;
       type: string;
       title: string;
       message: string;
       data: Record<string, any>;
-    }
+    },
   ) {
     super(payload);
   }

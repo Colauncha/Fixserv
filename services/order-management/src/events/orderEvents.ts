@@ -39,6 +39,7 @@ export class PaymentReleasedEvent extends BaseEvent {
     public payload: {
       orderId: string;
       artisanId: string;
+      clientId: string;
       amount: number;
     },
   ) {

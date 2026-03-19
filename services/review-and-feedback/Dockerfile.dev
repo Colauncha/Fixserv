@@ -1,26 +1,52 @@
 FROM node:18-alpine
 
+
+
+
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
-
-COPY services/review-and-feedback/package.json ./services/review-and-feedback/
 
 
-COPY services/shared/package.json ./services/shared/
 
-# Install with --shamefully-flatten to completely avoid symlinks
+# Install pnpm
+RUN npm install -g pnpm
 
-RUN npm install -g pnpm && \
-    pnpm install --shamefully-hoist 
- 
-# COPY /app/node_modules ./node_modules
-     
- COPY services/review-and-feedback ./services/review-and-feedback/
+
+
+
+# Copy ONLY root workspace config
+COPY package.json pnpm-workspace.yaml ./
+
+
+
+
+# Copy ONLY this service's package.json (not allservices)
+COPY services/review-and-feedback/package.json ./services/review-and-feedback/package.json
+
+
+
+
+# Install ONLY this service's dependencies
+RUN pnpm install --filter review-and-feedback --shamefully-hoist
+
+
+
+
+# Copy ONLY this service's source
+COPY services/review-and-feedback ./services/review-and-feedback/
+
+
+
 
 WORKDIR /app/services/review-and-feedback
 
 
+
+
 EXPOSE 4002
 
-CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+
+
+
+CMD ["../../node_modules/.bin/ts-node-dev", "--respawn", "--transpile-only", "--exit-child","src/index.ts"]
+

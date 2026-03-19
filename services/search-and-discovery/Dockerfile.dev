@@ -1,26 +1,33 @@
 FROM node:18-alpine
 
+
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
 
-COPY services/search-and-discovery/package.json ./services/search-and-discovery/
+# Install pnpm
+RUN npm install -g pnpm
 
 
-COPY services/shared/package.json ./services/shared/
+# Copy ONLY root workspace config
+COPY package.json pnpm-workspace.yaml ./
 
-# Install with --shamefully-flatten to completely avoid symlinks
 
-RUN npm install -g pnpm && \
-    pnpm install --shamefully-hoist 
- 
-# COPY /app/node_modules ./node_modules
-     
- COPY services/search-and-discovery ./services/search-and-discovery/
+# Copy ONLY this service's package.json (not all services)
+COPY services/search-and-discovery/package.json ./services/search-and-discovery/package.json
+
+
+# Install ONLY this service's dependencies
+RUN pnpm install --filter search-and-discovery --shamefully-hoist
+
+
+# Copy ONLY this service's source
+COPY services/search-and-discovery ./services/search-and-discovery/
+
 
 WORKDIR /app/services/search-and-discovery
 
 
+EXPOSE 4003
 
 
-CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+CMD ["../../node_modules/.bin/ts-node-dev", "--respawn", "--transpile-only", "--exit-child", "src/index.ts"]

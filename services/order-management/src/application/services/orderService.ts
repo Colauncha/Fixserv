@@ -170,6 +170,7 @@ export class OrderService {
     const event = new PaymentReleasedEvent({
       orderId,
       artisanId: order.artisanId,
+      clientId: order.clientId,
       amount: order.price,
     });
     // await this.eventBus.publish("OrderPaymentReleased", event);
@@ -572,8 +573,8 @@ export class OrderService {
       clientId: client.id,
       artisanId: service.artisanId,
       serviceId: service.id,
-      price: service.price,
-      title: service.title,
+      price: service.details.price,
+      title: service.details.title,
       clientAddress: client.deliveryAddress,
       createdAt: savedOrder.createdAt.toISOString(),
     });
