@@ -155,7 +155,7 @@ profiles:
               - src: "services/wallet-service/src/**/*.ts"
                 dest: /app/services/wallet-service/src
 
-  - name: notifications-only
+  - name: user-and-notifications
     deploy:
       kubectl:
         manifests:
@@ -164,6 +164,7 @@ profiles:
           - ./services/infra/k8s/jwt-secret.yaml
           - ./services/infra/k8s/ingress-srv.yaml
           - ./services/infra/k8s/notifications-service-depl.yaml
+          - ./services/infra/k8s/user-management-depl.yaml
     build:
       local:
         push: false
@@ -176,6 +177,14 @@ profiles:
             manual:
               - src: "services/notifications-service/src/**/*.ts"
                 dest: /app/services/notifications-service/src
+        - image: docker.io/ogkpos/user-management
+          context: .
+          docker:
+            dockerfile: services/user-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/user-management/src/**/*.ts"
+                dest: /app/services/user-management/src
 
   - name: user-and-service
     deploy:
