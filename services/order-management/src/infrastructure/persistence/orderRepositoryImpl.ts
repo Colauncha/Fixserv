@@ -93,7 +93,15 @@ export class orderRepositoryImpls implements OrderRepository {
         : undefined,
       raw.artisanResponseDeadline
         ? new Date(raw.artisanResponseDeadline)
-        : new Date(Date.now() + 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000),
+      // Restore statusHistory, with fallback for old orders that don't have it
+      Array.isArray(raw.statusHistory) && raw.statusHistory.length > 0
+        ? raw.statusHistory.map((entry: any) => ({
+            status: entry.status,
+            timestamp: new Date(entry.timestamp),
+            note: entry.note,
+          }))
+        : [{ status: raw.status, timestamp: new Date(raw.createdAt) }],
     );
   }
   toPersistence(order: Order): any {
@@ -132,6 +140,7 @@ export class orderRepositoryImpls implements OrderRepository {
           }
         : undefined,
       artisanResponseDeadline: order.artisanResponseDeadline,
+      statusHistory: order.statusHistory,
     };
   }
 }

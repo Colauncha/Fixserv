@@ -3,7 +3,7 @@ kind: Config
 deploy:
   kubectl:
     manifests:
-      # - ./services/infra/k8s/*
+      - ./services/infra/k8s/*
       # - ./services/infra/k8s/user-management-depl.yaml
       # - ./services/infra/k8s/service-management-depl.yaml
       # - ./services/infra/k8s/notifications-service-depl.yaml
@@ -12,19 +12,19 @@ deploy:
       # - ./services/infra/k8s/jwt-secret.yaml
       # - ./services/infra/k8s/redis-depl.yaml
       # - ./services/infra/k8s/ingress-srv.yaml
-      - ./services/infra/k8s/wallet-service-depl.yaml
-      - ./services/infra/k8s/order-management-depl.yaml
-      - ./services/infra/k8s/redis-depl.yaml
-      - ./services/infra/k8s/mongo-secret.yaml
-      - ./services/infra/k8s/jwt-secret.yaml
-      - ./services/infra/k8s/ingress-srv.yaml
-      - ./services/infra/k8s/user-management-depl.yaml
-      - ./services/infra/k8s/service-management-depl.yaml
+      # - ./services/infra/k8s/wallet-service-depl.yaml
+      # # - ./services/infra/k8s/order-management-depl.yaml
+      # - ./services/infra/k8s/redis-depl.yaml
+      # - ./services/infra/k8s/mongo-secret.yaml
+      # - ./services/infra/k8s/jwt-secret.yaml
+      # - ./services/infra/k8s/ingress-srv.yaml
+      # # - ./services/infra/k8s/user-management-depl.yaml
+      # - ./services/infra/k8s/service-management-depl.yaml
       # - ./services/infra/k8s/wallet-service-depl.yaml
       # - ./services/infra/k8s/order-management-depl.yaml
-      - ./services/infra/k8s/notifications-service-depl.yaml
-      - ./services/infra/k8s/review-and-feedback-depl.yaml
-      - ./services/infra/k8s/search-and-discovery-depl.yaml
+      # - ./services/infra/k8s/notifications-service-depl.yaml
+      # # - ./services/infra/k8s/review-and-feedback-depl.yaml
+      # - ./services/infra/k8s/search-and-discovery-depl.yaml
 build:
   local:
     push: false
@@ -218,7 +218,51 @@ profiles:
               - src: "services/service-management/src/**/*.ts"
                 dest: /app/services/service-management/src
 
+  - name: search-and-review
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/review-and-feedback-depl.yaml
+          - ./services/infra/k8s/search-and-discovery-depl.yaml
+    build:
+      local:
+        push: false
+        concurrency: 1
+      artifacts:
+        - image: docker.io/ogkpos/review-and-feedback
+          context: .
+          docker:
+            dockerfile: services/review-and-feedback/Dockerfile.dev
+          sync:
+            manual:
+              - src: "src/**/*.ts"
+                dest: .
+        - image: docker.io/ogkpos/search-and-discovery
+          context: .
+          docker:
+            dockerfile: services/search-and-discovery/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/search-and-discovery/src/**/*.ts"
+                dest: /app/services/search-and-discovery/src
+
   - name: core
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/user-management-depl.yaml
+          - ./services/infra/k8s/service-management-depl.yaml
+          - ./services/infra/k8s/order-management-depl.yaml
+          - ./services/infra/k8s/wallet-service-depl.yaml
+          - ./services/infra/k8s/notifications-service-depl.yaml
     build:
       local:
         push: false
