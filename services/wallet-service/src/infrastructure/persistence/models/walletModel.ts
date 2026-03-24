@@ -138,6 +138,8 @@ const TransactionSchema = new mongoose.Schema(
         // NEW: Add these for referral system
         "FIXPOINTS_REDEMPTION", // When user converts fixpoints to naira
         "REFERRAL_BONUS", // When user gets bonus from referrals
+        "MANUAL_LOCK",
+        "MANUAL_UNLOCK",
       ],
     },
     amount: { type: Number, required: true },

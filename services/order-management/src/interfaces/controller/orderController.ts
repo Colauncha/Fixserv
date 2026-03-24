@@ -34,7 +34,7 @@ export class OrderController {
         deviceType,
         deviceBrand,
         deviceModel,
-        serviceRequired
+        serviceRequired,
       );
 
       res.status(201).json(order);
@@ -57,6 +57,44 @@ export class OrderController {
       throw new BadRequestError(error);
     }
   }
+
+  deleteOrder = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { orderId } = req.params;
+      const currentUser = req.currentUser!.id;
+      const role = req.currentUser!.role;
+      const order = await this.orderService.getOrder(orderId);
+      if (!order) {
+        throw new BadRequestError("Order not found");
+      }
+
+      // Check authorization based on role
+      if (role === "CLIENT" && order.clientId !== currentUser) {
+        throw new BadRequestError(
+          "You are not authorized to delete this order",
+        );
+      }
+
+      if (role === "ARTISAN" && order.artisanId !== currentUser) {
+        throw new BadRequestError(
+          "You are not authorized to delete this order",
+        );
+      }
+
+      // Optional: restrict deletion based on order status
+      const deletableStatuses = ["REJECTED", "CANCELLED", "COMPLETED"];
+      if (!deletableStatuses.includes(order.status)) {
+        throw new BadRequestError(
+          `Cannot delete an order with status: ${order.status}. Only REJECTED, CANCELLED, or COMPLETED orders can be deleted`,
+        );
+      }
+
+      await this.orderService.deleteOrder(orderId);
+      res.status(200).json({ message: "Order deleted successfully" });
+    } catch (error: any) {
+      throw new BadRequestError(error.message);
+    }
+  };
 
   getPublicOrders = async (req: Request, res: Response): Promise<void> => {
     const orders = await this.orderService.getPublicOrders();
@@ -214,7 +252,7 @@ export class OrderController {
 
       const orders = await this.orderService.getArtisanOrders(
         artisanId,
-        status as string
+        status as string,
       );
 
       res.status(200).json({
@@ -236,7 +274,7 @@ export class OrderController {
 
       const orders = await this.orderService.getClientOrders(
         clientId,
-        status as string
+        status as string,
       );
 
       res.status(200).json({
@@ -253,14 +291,13 @@ export class OrderController {
 
   getPendingOrdersForArtisan = async (
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> => {
     try {
       const artisanId = req.currentUser!.id;
 
-      const orders = await this.orderService.getPendingOrdersForArtisan(
-        artisanId
-      );
+      const orders =
+        await this.orderService.getPendingOrdersForArtisan(artisanId);
 
       res.status(200).json({
         artisanId,
@@ -273,8 +310,8 @@ export class OrderController {
             0,
             Math.ceil(
               (order.artisanResponseDeadline.getTime() - new Date().getTime()) /
-                (1000 * 60 * 60)
-            )
+                (1000 * 60 * 60),
+            ),
           ),
         })),
       });
@@ -305,7 +342,7 @@ export class OrderController {
         deviceType,
         deviceBrand,
         deviceModel,
-        serviceRequired
+        serviceRequired,
       );
       res.status(200).json({
         message: "Draft order created. Please select a service to continue.",
@@ -328,7 +365,7 @@ export class OrderController {
       const order = await this.orderService.confirmOrder(
         req.currentUser!.id,
         draftOrderId,
-        serviceId
+        serviceId,
       );
 
       res.status(201).json({

@@ -84,7 +84,7 @@ export class OrderService {
       saveOrder.price,
     );
 
-    //PUBLISH Event
+    //PUBLISH Event//
     const event = new OrderCreatedEvent({
       orderId: saveOrder.id,
       clientId: client.id,
@@ -111,6 +111,15 @@ export class OrderService {
 
   async getPublicOrders(): Promise<Order[]> {
     return await this.orderRepository.findPublicOrders();
+  }
+
+  async deleteOrder(orderId: string): Promise<void> {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) {
+      throw new BadRequestError("Order not found");
+    }
+
+    await this.orderRepository.delete(orderId);
   }
 
   async initiatePayment(orderId: string): Promise<string> {

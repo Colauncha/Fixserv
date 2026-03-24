@@ -22,7 +22,7 @@ export class WalletController {
       const result = await WalletService.lockFundsForOrder(
         userId,
         orderId,
-        amount
+        amount,
       );
 
       res.status(200).json({
@@ -466,7 +466,7 @@ export class WalletController {
   // Handle dispute creation
   static async handleDisputeCreated(
     disputeData: any,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       const { reference, amount, reason, customer, status } = disputeData;
@@ -510,7 +510,7 @@ export class WalletController {
         `Error processing dispute creation ${
           requestId ? `[${requestId}]` : ""
         } for ${disputeData.reference}:`,
-        error
+        error,
       );
     }
   }
@@ -518,7 +518,7 @@ export class WalletController {
   // Handle dispute resolution
   static async handleDisputeResolved(
     disputeData: any,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       const { reference, status, resolution } = disputeData;
@@ -545,7 +545,7 @@ export class WalletController {
         `Error processing dispute resolution ${
           requestId ? `[${requestId}]` : ""
         } for ${disputeData.reference}:`,
-        error
+        error,
       );
     }
   }
@@ -699,7 +699,7 @@ export class WalletController {
   // Handle refund events
   static async handleRefundProcessed(
     refundData: any,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       const { transaction, amount, status } = refundData;
@@ -727,7 +727,7 @@ export class WalletController {
         `Error processing refund ${requestId ? `[${requestId}]` : ""} for ${
           refundData.transaction?.reference
         }:`,
-        error
+        error,
       );
     }
   }
@@ -735,7 +735,7 @@ export class WalletController {
   // Handle subscription events
   static async handleSubscriptionCreated(
     subscriptionData: any,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       const { subscription_code, customer, plan } = subscriptionData;
@@ -746,7 +746,7 @@ export class WalletController {
           subscription_code,
           customer: customer.email,
           plan: plan.name,
-        }
+        },
       );
 
       // Optional: Activate subscription in your system
@@ -766,7 +766,7 @@ export class WalletController {
         `Error processing subscription creation ${
           requestId ? `[${requestId}]` : ""
         } for ${subscriptionData.subscription_code}:`,
-        error
+        error,
       );
     }
   }
@@ -774,7 +774,7 @@ export class WalletController {
   // Handle subscription disabled
   static async handleSubscriptionDisabled(
     subscriptionData: any,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       const { subscription_code, customer } = subscriptionData;
@@ -784,7 +784,7 @@ export class WalletController {
         {
           subscription_code,
           customer: customer?.email,
-        }
+        },
       );
 
       // Optional: Disable subscription in your system
@@ -803,7 +803,7 @@ export class WalletController {
         `Error processing subscription disabling ${
           requestId ? `[${requestId}]` : ""
         } for ${subscriptionData.subscription_code}:`,
-        error
+        error,
       );
     }
   }
@@ -882,7 +882,7 @@ export class WalletController {
 
       const accountDetails = await WalletService.resolveAccountDetails(
         accountNumber,
-        bankCode
+        bankCode,
       );
 
       res.status(200).json({
@@ -935,7 +935,7 @@ export class WalletController {
         amount,
         accountNumber,
         bankCode,
-        pin
+        pin,
       );
 
       res.status(200).json({
@@ -1001,7 +1001,7 @@ export class WalletController {
       const result = await WalletService.getWithdrawalHistory(
         userId,
         page,
-        limit
+        limit,
       );
 
       res.status(200).json({
@@ -1109,7 +1109,7 @@ export class WalletController {
 
         console.log(
           "✅ Parsed webhook data:",
-          JSON.stringify(webhookData, null, 2)
+          JSON.stringify(webhookData, null, 2),
         );
       } catch (error) {
         console.error("❌ Failed to parse webhook body:", error);
@@ -1152,7 +1152,7 @@ export class WalletController {
         }
       } else {
         console.log(
-          "⚠️ Skipping signature verification (development/testing mode)"
+          "⚠️ Skipping signature verification (development/testing mode)",
         );
       }
 
@@ -1227,7 +1227,7 @@ export class WalletController {
     } catch (error: any) {
       console.error(
         `❌ Error processing transfer success for ${transferData.reference}:`,
-        error
+        error,
       );
     }
   }
@@ -1248,14 +1248,14 @@ export class WalletController {
       // Handle withdrawal failure and refund user
       await WalletService.handleWithdrawalFailure(
         reference,
-        failure_reason || "Transfer failed"
+        failure_reason || "Transfer failed",
       );
 
       console.log("✅ Failed withdrawal refunded:", reference);
     } catch (error: any) {
       console.error(
         `❌ Error processing transfer failure for ${transferData.reference}:`,
-        error
+        error,
       );
     }
   }
@@ -1275,14 +1275,14 @@ export class WalletController {
       // Handle as a withdrawal failure (refund the user)
       await WalletService.handleWithdrawalFailure(
         reference,
-        "Transfer was reversed by the bank"
+        "Transfer was reversed by the bank",
       );
 
       console.log("✅ Transfer reversal processed:", reference);
     } catch (error: any) {
       console.error(
         `❌ Error processing transfer reversal for ${transferData.reference}:`,
-        error
+        error,
       );
     }
   }
@@ -1317,7 +1317,7 @@ export class WalletController {
     } catch (error: any) {
       console.error(
         `❌ Error processing charge success for ${chargeData.reference}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -1338,7 +1338,7 @@ export class WalletController {
     } catch (error: any) {
       console.error(
         `Error processing charge failure for ${chargeData.reference}:`,
-        error
+        error,
       );
     }
   }
@@ -1377,7 +1377,7 @@ export class WalletController {
       const result = await ReferralService.handleUserSignup(
         userId,
         userType,
-        referralCode
+        referralCode,
       );
 
       res.status(201).json({
@@ -1548,7 +1548,7 @@ export class WalletController {
       const history = await ReferralService.getTransactionHistory(
         userId,
         page,
-        limit
+        limit,
       );
 
       res.status(200).json({
@@ -1641,6 +1641,115 @@ export class WalletController {
       res.status(500).json({
         success: false,
         message: error.message || "Failed to get referral analytics",
+      });
+    }
+  }
+
+  // In walletController.ts
+
+  static async manualLockFundsHandler(req: any, res: any) {
+    try {
+      const { userId, amount, password } = req.body;
+
+      if (!userId || !amount || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "userId, amount, and password are required",
+        });
+      }
+
+      if (typeof amount !== "number" || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Amount must be a positive number",
+        });
+      }
+
+      const result = await WalletService.manualLockFunds(
+        userId,
+        amount,
+        password,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          lockedBalance: result.lockedBalance,
+          availableBalance: result.availableBalance,
+        },
+      });
+    } catch (error: any) {
+      console.error("Manual lock funds error:", error);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to lock funds",
+      });
+    }
+  }
+
+  static async manualUnlockFundsHandler(req: any, res: any) {
+    try {
+      const { userId, amount, password } = req.body;
+
+      if (!userId || !amount || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "userId, amount, and password are required",
+        });
+      }
+
+      if (typeof amount !== "number" || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Amount must be a positive number",
+        });
+      }
+
+      const result = await WalletService.manualUnlockFunds(
+        userId,
+        amount,
+        password,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          lockedBalance: result.lockedBalance,
+          availableBalance: result.availableBalance,
+        },
+      });
+    } catch (error: any) {
+      console.error("Manual unlock funds error:", error);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to unlock funds",
+      });
+    }
+  }
+
+  static async getLockedFundsBreakdownHandler(req: any, res: any) {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: "userId is required",
+        });
+      }
+
+      const breakdown = await WalletService.getLockedFundsBreakdown(userId);
+
+      res.status(200).json({
+        success: true,
+        data: breakdown,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to get locked funds breakdown",
       });
     }
   }

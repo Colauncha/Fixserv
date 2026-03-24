@@ -127,4 +127,9 @@ router.get("/endpoints", (req: Request, res: Response) => {
   res.json(endpoints);
 });
 
+router.post(
+  "/verify-password",
+  authController.verifyPassword.bind(authController),
+);
+
 export { router as adminRouter };
