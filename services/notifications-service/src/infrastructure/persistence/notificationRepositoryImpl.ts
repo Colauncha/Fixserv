@@ -7,6 +7,8 @@ import { NotificationType } from "../../domain/value-objects/notificationTypes";
 import {
   NotificationModel,
   NotificationPreferenceModel,
+  NotificationReadTrackingModel,
+  NotificationDismissedModel,
 } from "./models/notificationModel";
 
 export class NotificationRepositoryImpl implements INotificationRepository {
@@ -76,28 +78,113 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
   async findByUserId(
     userId: string,
+    userRole: string,
     limit = 20,
-    offset = 0
+    offset = 0,
   ): Promise<Notification[]> {
     try {
-      const docs = await NotificationModel.find({ userId })
+      // const docs = await NotificationModel.find({ userId })
+      // .sort({ createdAt: -1 })
+      // .skip(offset)
+      // .limit(limit)
+      // .lean();
+      /*
+      const docs = await NotificationModel.find({
+        $or: [
+          { userId }, // personal notifications
+          { targetRole: userRole }, // role-based broadcasts
+          { targetRole: "ALL" }, // global broadcasts
+        ],
+      })
         .sort({ createdAt: -1 })
         .skip(offset)
         .limit(limit)
         .lean();
 
       return docs.map((doc) => this.toDomain(doc));
+      */
+      // Get IDs of notifications this user has dismissed
+      const dismissed = await NotificationDismissedModel.find({ userId })
+        .select("notificationId")
+        .lean();
+      const dismissedIds = dismissed.map((d) => d.notificationId);
+
+      // Get IDs of broadcast notifications this user has read
+      const readTracking = await NotificationReadTrackingModel.find({ userId })
+        .select("notificationId readAt")
+        .lean();
+      const readMap = new Map(
+        readTracking.map((r) => [r.notificationId, r.readAt]),
+      );
+
+      const docs = await NotificationModel.find({
+        _id: { $nin: dismissedIds }, // exclude dismissed
+        $or: [{ userId }, { targetRole: userRole }, { targetRole: "ALL" }],
+      })
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .lean();
+
+      return docs.map((doc) => {
+        // For broadcast notifications, use tracking table for read status
+        const isBroadcast = !!doc.targetRole;
+        if (isBroadcast) {
+          const readAt = readMap.get(doc._id.toString());
+          doc.status = readAt ? "read" : "unread";
+          doc.readAt = readAt || undefined;
+        }
+        return this.toDomain(doc);
+      });
     } catch (error: any) {
       console.error("Error finding notifications by userId:", error);
       throw new Error(
-        `Failed to find notifications for user: ${error.message}`
+        `Failed to find notifications for user: ${error.message}`,
       );
     }
   }
 
-  async findUnreadByUserId(userId: string): Promise<Notification[]> {
+  async findUnreadByUserId(
+    userId: string,
+    userRole: string,
+  ): Promise<Notification[]> {
     try {
-      const docs = await NotificationModel.find({ userId, status: "unread" })
+      // const docs = await NotificationModel.find({ userId, status: "unread" })
+      // .sort({ createdAt: -1 })
+      // .lean();
+      /*
+      const docs = await NotificationModel.find({
+        $or: [
+          { userId, status: "unread" },
+          { targetRole: userRole, status: "unread" },
+          { targetRole: "ALL", status: "unread" },
+        ],
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return docs.map((doc) => this.toDomain(doc));
+      */
+      const dismissed = await NotificationDismissedModel.find({ userId })
+        .select("notificationId")
+        .lean();
+      const dismissedIds = dismissed.map((d) => d.notificationId);
+
+      const readTracking = await NotificationReadTrackingModel.find({ userId })
+        .select("notificationId")
+        .lean();
+      const readIds = readTracking.map((r) => r.notificationId);
+
+      const docs = await NotificationModel.find({
+        _id: {
+          $nin: [...dismissedIds, ...readIds], // exclude dismissed AND read broadcasts
+        },
+        $or: [
+          { userId, status: "unread" }, // personal unread
+          { targetRole: userRole }, // broadcast (unread tracked separately)
+          { targetRole: "ALL" },
+        ],
+      })
         .sort({ createdAt: -1 })
         .lean();
 
@@ -132,10 +219,27 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   }
 
   */
-  async delete(id: NotificationId): Promise<void> {
+  async delete(id: NotificationId, userId: string): Promise<void> {
     try {
-      await NotificationModel.deleteOne({ id: id.value });
+      // await NotificationModel.deleteOne({ id: id.value });
+      /*
+      await NotificationModel.findByIdAndDelete(id.value);
       console.log(`Notification deleted: ${id.value}`);
+      */
+      const doc = await NotificationModel.findById(id.value);
+      if (!doc) throw new Error("Notification not found");
+
+      if (doc.targetRole) {
+        // Broadcast — don't delete the doc, just track dismissal for this user
+        await NotificationDismissedModel.findOneAndUpdate(
+          { notificationId: id.value, userId },
+          { notificationId: id.value, userId, dismissedAt: new Date() },
+          { upsert: true },
+        );
+      } else {
+        // Personal notification — actually delete it
+        await NotificationModel.findByIdAndDelete(id.value);
+      }
     } catch (error: any) {
       console.error("Error deleting notification:", error);
       throw new Error(`Failed to delete notification: ${error.message}`);
@@ -143,6 +247,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   }
   async update(notification: Notification): Promise<void> {
     try {
+      /*
       console.log("Updating notification with ID:", notification.id.value);
       console.log("New status:", notification.status.value);
       console.log("New readAt:", notification.readAt);
@@ -160,7 +265,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
         {
           new: true, // Return updated document
           runValidators: true, // Run schema validators
-        }
+        },
       );
 
       console.log("Update result:", result ? "Success" : "Failed");
@@ -169,6 +274,33 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
       if (!result) {
         throw new Error("Failed to update notification - document not found");
+      }
+        */
+      const doc = await NotificationModel.findById(notification.id.value);
+      if (!doc) throw new Error("Notification not found");
+
+      if (doc.targetRole) {
+        // Broadcast notification — track read state per user separately
+        // The userId comes from the service layer (the person marking it read)
+        await NotificationReadTrackingModel.findOneAndUpdate(
+          {
+            notificationId: notification.id.value,
+            userId: notification.userId,
+          },
+          {
+            notificationId: notification.id.value,
+            userId: notification.userId,
+            readAt: new Date(),
+          },
+          { upsert: true },
+        );
+      } else {
+        // Personal notification — update the document directly
+        await NotificationModel.findByIdAndUpdate(
+          notification.id.value,
+          { status: notification.status.value, readAt: notification.readAt },
+          { new: true },
+        );
       }
     } catch (error) {
       console.error("Error updating notification:", error);
@@ -188,7 +320,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
             readAt: now,
             updatedAt: now,
           },
-        }
+        },
       );
 
       console.log(`All notifications marked as read for user: ${userId}`);
@@ -214,11 +346,11 @@ export class NotificationRepositoryImpl implements INotificationRepository {
         {
           upsert: true,
           new: true,
-        }
+        },
       );
 
       console.log(
-        `Notification preferences saved for user: ${preferences.userId}`
+        `Notification preferences saved for user: ${preferences.userId}`,
       );
     } catch (error: any) {
       console.error("Error saving notification preferences:", error);
@@ -227,7 +359,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   }
 
   async findPreferencesByUserId(
-    userId: string
+    userId: string,
   ): Promise<NotificationPreference | null> {
     try {
       const doc = await NotificationPreferenceModel.findOne({ userId }).lean();
@@ -238,7 +370,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
         doc.emailEnabled,
         doc.pushEnabled,
         doc.smsEnabled,
-        doc.categories
+        doc.categories,
       );
     } catch (error: any) {
       console.error("Error finding notification preferences:", error);
@@ -247,11 +379,34 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   }
 
   // Additional utility methods for better query performance
-  async countUnreadByUserId(userId: string): Promise<number> {
+  async countUnreadByUserId(userId: string, userRole: string): Promise<number> {
     try {
+      /*
       return await NotificationModel.countDocuments({
-        userId,
-        status: "unread",
+        $or: [
+          { userId, status: "unread" },
+          { targetRole: userRole, status: "unread" },
+          { targetRole: "ALL", status: "unread" },
+        ],
+      });
+      */
+      const dismissed = await NotificationDismissedModel.find({ userId })
+        .select("notificationId")
+        .lean();
+      const dismissedIds = dismissed.map((d) => d.notificationId);
+
+      const readTracking = await NotificationReadTrackingModel.find({ userId })
+        .select("notificationId")
+        .lean();
+      const readIds = readTracking.map((r) => r.notificationId);
+
+      return NotificationModel.countDocuments({
+        _id: { $nin: [...dismissedIds, ...readIds] },
+        $or: [
+          { userId, status: "unread" },
+          { targetRole: userRole },
+          { targetRole: "ALL" },
+        ],
       });
     } catch (error: any) {
       console.error("Error counting unread notifications:", error);
@@ -262,7 +417,7 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   async findByUserIdAndType(
     userId: string,
     type: string,
-    limit = 10
+    limit = 10,
   ): Promise<Notification[]> {
     try {
       const docs = await NotificationModel.find({ userId, type })
@@ -312,7 +467,31 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       // new Date(doc.createdAt),
       doc.createdAt,
       // doc.readAt ? new Date(doc.readAt) : undefined
-      doc.readAt || undefined
+      doc.readAt || undefined,
     );
+  }
+
+  async saveWithRole(
+    notification: Notification,
+    targetRole?: string,
+  ): Promise<void> {
+    try {
+      const notificationData = {
+        userId: targetRole ? undefined : notification.userId, // null for broadcasts
+        targetRole: targetRole || null,
+        type: notification.type.value,
+        title: notification.title,
+        message: notification.message,
+        data: notification.data,
+        status: notification.status.value,
+        readAt: notification.readAt,
+      };
+
+      const doc = new NotificationModel(notificationData);
+      await doc.save();
+    } catch (error: any) {
+      console.error("Error saving notification:", error);
+      throw new Error(`Failed to save notification: ${error.message}`);
+    }
   }
 }

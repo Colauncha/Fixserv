@@ -1,5 +1,6 @@
 export interface CreateNotificationDto {
-  userId: string;
+  userId?: string;
+  targetRole?: string;
   type: string;
   title: string;
   message: string;

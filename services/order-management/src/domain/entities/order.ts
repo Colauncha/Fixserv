@@ -28,6 +28,12 @@ export interface ArtisanResponse {
   estimatedCompletionDate?: Date;
 }
 
+export interface StatusHistoryEntry {
+  status: OrderStatus;
+  timestamp: Date;
+  note?: string;
+}
+
 export class Order {
   constructor(
     public readonly id: string,
@@ -57,6 +63,7 @@ export class Order {
     public artisanResponseDeadline: Date = new Date(
       Date.now() + 24 * 60 * 60 * 1000,
     ), // 24 hours from creation
+    public statusHistory: StatusHistoryEntry[] = [],
   ) {}
 
   // markInProgress() {
@@ -72,6 +79,7 @@ export class Order {
     }
     this.status = "IN_PROGRESS";
     this.escrowStatus = "IN_ESCROW";
+    this.addStatusHistoryEntry("IN_PROGRESS");
   }
 
   markAsWorkCompleted() {
@@ -81,6 +89,7 @@ export class Order {
       );
     }
     this.status = "WORK_COMPLETED";
+    this.addStatusHistoryEntry("WORK_COMPLETED");
   }
 
   markCompleted() {
@@ -89,12 +98,14 @@ export class Order {
     this.status = "COMPLETED";
     this.escrowStatus = "RELEASED";
     this.completedAt = new Date();
+    this.addStatusHistoryEntry("COMPLETED");
   }
 
   markCancelled() {
     if (this.status === "COMPLETED")
       throw new BadRequestError("Cannot cancel a completed order.");
     this.status = "CANCELLED";
+    this.addStatusHistoryEntry("CANCELLED");
   }
 
   updateEscrowStatus(status: EscrowStatus) {
@@ -123,6 +134,7 @@ export class Order {
       estimatedCompletionDate,
     };
     this.escrowStatus = "IN_ESCROW"; // Move to escrow when accepted
+    this.addStatusHistoryEntry("ACCEPTED");
   }
 
   rejectOrder(reason: RejectionReason, note?: string) {
@@ -144,6 +156,7 @@ export class Order {
       rejectionReason: reason,
       rejectionNote: note,
     };
+    this.addStatusHistoryEntry("REJECTED", note);
   }
 
   expireOrder() {
@@ -152,6 +165,11 @@ export class Order {
     }
 
     this.status = "CANCELLED";
+    this.escrowStatus = "NOT_PAID";
+    this.addStatusHistoryEntry(
+      "CANCELLED",
+      "Order expired — artisan did not respond in time",
+    );
   }
 
   private isResponseDeadlinePassed(): boolean {
@@ -163,5 +181,9 @@ export class Order {
       this.status === "PENDING_ARTISAN_RESPONSE" &&
       !this.isResponseDeadlinePassed()
     );
+  }
+
+  addStatusHistoryEntry(status: OrderStatus, note?: string) {
+    this.statusHistory.push({ status, timestamp: new Date(), note });
   }
 }

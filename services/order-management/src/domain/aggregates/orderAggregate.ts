@@ -48,6 +48,7 @@ export class OrderAggregate {
       uploadedProducts, // uploadedProducts is passed as an argument
       undefined,
       responseDeadline,
+      [{ status: "PENDING_ARTISAN_RESPONSE", timestamp: now }], // orderHistory starts with the initial status
     );
 
     return new OrderAggregate(order);

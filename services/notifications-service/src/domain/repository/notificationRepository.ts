@@ -7,17 +7,21 @@ export interface INotificationRepository {
   findById(id: NotificationId): Promise<Notification | null>;
   findByUserId(
     userId: string,
+    userRole: string,
     limit?: number,
-    offset?: number
+    offset?: number,
   ): Promise<Notification[]>;
-  findUnreadByUserId(userId: string): Promise<Notification[]>;
+  findUnreadByUserId(userId: string, userRole: string): Promise<Notification[]>;
   update(notification: Notification): Promise<void>;
-  delete(id: NotificationId): Promise<void>;
+  delete(id: NotificationId, userId: string): Promise<void>;
   markAllAsRead(userId: string): Promise<void>;
+  saveWithRole(notification: Notification, targetRole?: string): Promise<void>;
+
+  countUnreadByUserId(userId: string, userRole: string): Promise<number>;
 
   // Preferences
   savePreferences(preferences: NotificationPreference): Promise<void>;
   findPreferencesByUserId(
-    userId: string
+    userId: string,
   ): Promise<NotificationPreference | null>;
 }

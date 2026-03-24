@@ -84,6 +84,13 @@ router.post(
   orderController.initiatePayment.bind(orderController),
 );
 
+router.delete(
+  "/:orderId",
+  authMiddleware.protect,
+  requireRole("CLIENT", "ARTISAN"),
+  orderController.deleteOrder.bind(orderController),
+);
+
 // NEW ARTISAN RESPONSE ROUTES
 router.post(
   "/:orderId/accept",

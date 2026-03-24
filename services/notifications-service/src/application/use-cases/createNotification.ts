@@ -10,16 +10,19 @@ export class CreateNotificationUseCase {
   constructor(
     private notificationRepository: INotificationRepository,
     private domainService: NotificationDomainService,
-    private eventBus: RedisEventBus
+    private eventBus: RedisEventBus,
   ) {}
 
   async execute(dto: CreateNotificationDto): Promise<void> {
+    if (!dto.userId) {
+      throw new Error("userId is required");
+    }
     const notification = this.domainService.createNotification(
       dto.userId,
       new NotificationType(dto.type),
       dto.title,
       dto.message,
-      dto.data
+      dto.data,
     );
 
     await this.notificationRepository.save(notification);

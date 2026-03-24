@@ -296,6 +296,7 @@ export class UserRepositoryImpl implements IUserRepository {
     return null;
   }
     */
+  /*
   async findByEmail(email: string): Promise<UserAggregate | null> {
     const normalizedEmail = email.toLowerCase().trim();
 
@@ -334,6 +335,91 @@ export class UserRepositoryImpl implements IUserRepository {
       // Clean up the orphaned identity record
       await UserIdentityModel.deleteOne({ email: normalizedEmail });
       return null;
+    }
+
+    return this.toDomain(userData);
+  }
+    */
+  async findByEmail(email: string): Promise<UserAggregate | null> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // First try the identity collection (fast path for new users)
+    const identity = await UserIdentityModel.findOne({
+      email: normalizedEmail,
+    });
+
+    if (identity) {
+      // Identity exists — fetch from appropriate collection
+      let userData: any;
+      switch (identity.role) {
+        case "CLIENT":
+          userData = await ClientModel.findById(identity.userId).select(
+            "+password",
+          );
+          break;
+        case "ARTISAN":
+          userData = await ArtisanModel.findById(identity.userId).select(
+            "+password",
+          );
+          break;
+        case "ADMIN":
+          userData = await AdminModel.findById(identity.userId).select(
+            "+password",
+          );
+          break;
+      }
+
+      if (!userData) {
+        // Orphaned identity — clean up and fall through to direct search
+        await UserIdentityModel.deleteOne({ email: normalizedEmail });
+      } else {
+        return this.toDomain(userData);
+      }
+    }
+
+    // Fallback: search all collections directly (handles old users with no identity record)
+    let userData: any = null;
+    let foundRole: string | null = null;
+
+    userData = await ClientModel.findOne({ email: normalizedEmail }).select(
+      "+password",
+    );
+    if (userData) foundRole = "CLIENT";
+
+    if (!userData) {
+      userData = await ArtisanModel.findOne({ email: normalizedEmail }).select(
+        "+password",
+      );
+      if (userData) foundRole = "ARTISAN";
+    }
+
+    if (!userData) {
+      userData = await AdminModel.findOne({ email: normalizedEmail }).select(
+        "+password",
+      );
+      if (userData) foundRole = "ADMIN";
+    }
+
+    if (!userData || !foundRole) return null;
+
+    // Auto-heal: create the missing identity record so next login uses fast path
+    try {
+      await UserIdentityModel.findOneAndUpdate(
+        { email: normalizedEmail },
+        {
+          email: normalizedEmail,
+          userId: userData._id.toString(),
+          role: foundRole,
+        },
+        { upsert: true },
+      );
+      console.log(`✅ Auto-healed identity record for: ${normalizedEmail}`);
+    } catch (healError) {
+      // Non-fatal — log and continue, user can still login
+      console.error(
+        `⚠️ Failed to auto-heal identity for ${normalizedEmail}:`,
+        healError,
+      );
     }
 
     return this.toDomain(userData);

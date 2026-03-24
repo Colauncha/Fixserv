@@ -1,28 +1,63 @@
+# FROM node:18-alpine
+# 
+# WORKDIR /app
+# 
+# # COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
+# 
+# # COPY services/service-management/package.json ./services/service-management/
+# 
+# 
+# COPY services/shared/package.json ./services/shared/
+# 
+# Install with --shamefully-flatten to completely avoid symlinks
+# 
+# RUN npm install -g pnpm && \
+    # pnpm install --shamefully-hoist 
+#  
+# COPY /app/node_modules ./node_modules
+    #  
+# #  COPY services/service-management ./services/service-management/
+# 
+# WORKDIR /app/services/service-management
+# 
+# 
+# EXPOSE 4001
+# 
+# ENV ENV=development
+# 
+# # CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+
+
 FROM node:18-alpine
+
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
 
-COPY services/service-management/package.json ./services/service-management/
+# Install pnpm
+RUN npm install -g pnpm
 
 
-COPY services/shared/package.json ./services/shared/
+# Copy ONLY root workspace config
+COPY package.json pnpm-workspace.yaml ./
 
-# Install with --shamefully-flatten to completely avoid symlinks
 
-RUN npm install -g pnpm && \
-    pnpm install --shamefully-hoist 
- 
-# COPY /app/node_modules ./node_modules
-     
- COPY services/service-management ./services/service-management/
+# Copy ONLY this service's package.json (not all services)
+COPY services/service-management/package.json ./services/service-management/package.json
+
+
+# Install ONLY this service's dependencies
+RUN pnpm install --filter service-management --shamefully-hoist
+
+
+# Copy ONLY this service's source
+COPY services/service-management ./services/service-management/
+
 
 WORKDIR /app/services/service-management
 
 
 EXPOSE 4001
 
-ENV ENV=development
 
-CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+CMD ["../../node_modules/.bin/ts-node-dev", "--respawn", "--transpile-only", "--exit-child", "src/index.ts"]

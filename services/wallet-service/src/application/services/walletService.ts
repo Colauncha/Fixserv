@@ -8,6 +8,7 @@ import {
   WalletTransactionModel,
   WithdrawalRequestModel,
 } from "../../infrastructure/persistence/models/walletModel";
+import { UserManagementClient } from "../../infrastructure/reuseableWrapper/userManagementClient";
 
 const userCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -17,7 +18,7 @@ export class WalletService {
     try {
       const paymentData = await PaystackService.initializePayment(
         amount * 100,
-        email
+        email,
       );
       return paymentData;
     } catch (error) {
@@ -76,7 +77,7 @@ export class WalletService {
       // Check if verification is already in progress
       if (verificationInProgress.has(reference)) {
         console.log(
-          `Verification already in progress for ${reference}, waiting...`
+          `Verification already in progress for ${reference}, waiting...`,
         );
         return await verificationInProgress.get(reference);
       }
@@ -110,7 +111,7 @@ export class WalletService {
 
     if (status !== "success") {
       throw new BadRequestError(
-        `Payment status is '${status}', expected 'success'`
+        `Payment status is '${status}', expected 'success'`,
       );
     }
 
@@ -124,13 +125,13 @@ export class WalletService {
     } catch (userError: any) {
       console.error(
         `Failed to fetch user for email ${email}:`,
-        userError.message
+        userError.message,
       );
 
       // Provide more specific error messages
       if (userError.message.includes("Rate limited")) {
         throw new BadRequestError(
-          "User service is temporarily unavailable due to rate limiting. Please try again in a few minutes."
+          "User service is temporarily unavailable due to rate limiting. Please try again in a few minutes.",
         );
       }
 
@@ -139,7 +140,7 @@ export class WalletService {
       }
 
       throw new BadRequestError(
-        "Unable to verify user information. Please try again later."
+        "Unable to verify user information. Please try again later.",
       );
     }
 
@@ -182,7 +183,7 @@ export class WalletService {
           createdAt: new Date(),
         },
       },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
 
     console.log(`Wallet updated successfully for user ${user.id}`);
@@ -267,12 +268,12 @@ export class WalletService {
             const expiredCache = userCache.get(email);
             if (expiredCache) {
               console.log(
-                `Using expired cache for ${email} due to persistent rate limiting`
+                `Using expired cache for ${email} due to persistent rate limiting`,
               );
               return expiredCache.user;
             }
             throw new Error(
-              `Rate limited after ${maxRetries} attempts. Please try again later.`
+              `Rate limited after ${maxRetries} attempts. Please try again later.`,
             );
           }
         }
@@ -294,7 +295,7 @@ export class WalletService {
         // If we've exhausted retries or it's not a retryable error
         if (attempt === maxRetries) {
           throw new Error(
-            "Failed to fetch user by email after multiple attempts"
+            "Failed to fetch user by email after multiple attempts",
           );
         }
       }
@@ -304,14 +305,14 @@ export class WalletService {
   static async lockFundsForOrder(
     clientId: string,
     orderId: string,
-    amount: number
+    amount: number,
   ) {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
       console.log("Looking for wallet with userId:", clientId);
       const wallet = await WalletModel.findOne({ userId: clientId }).session(
-        session
+        session,
       );
       if (!wallet) {
         throw new BadRequestError("Wallet not found for the user");
@@ -384,13 +385,13 @@ export class WalletService {
   static async releaseFundsToArtisan(
     orderId: string,
     artisanId: string,
-    clientId?: string
+    clientId?: string,
   ): Promise<void> {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
       console.log(
-        `Releasing funds for order ${orderId} to artisan ${artisanId}`
+        `Releasing funds for order ${orderId} to artisan ${artisanId}`,
       );
 
       const lockedTx = await WalletTransactionModel.findOne({
@@ -402,7 +403,7 @@ export class WalletService {
         throw new BadRequestError("Locked transaction not found");
       }
       console.log(
-        `Found locked transaction: ${lockedTx.amount} for user ${lockedTx.userId}`
+        `Found locked transaction: ${lockedTx.amount} for user ${lockedTx.userId}`,
       );
 
       // Get the client wallet to reduce locked balance
@@ -478,7 +479,7 @@ export class WalletService {
       //commit the transaction
       await session.commitTransaction();
       console.log(
-        `Successfully released ${amount} to artisan ${artisanId} for order ${orderId}`
+        `Successfully released ${amount} to artisan ${artisanId} for order ${orderId}`,
       );
 
       // await lockedTx.save();
@@ -508,7 +509,7 @@ export class WalletService {
 
   static async refundFundsToClient(
     orderId: string,
-    clientId?: string // Optional parameter for validation
+    clientId?: string, // Optional parameter for validation
   ): Promise<void> {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -571,7 +572,7 @@ export class WalletService {
       //commit the tx
       await session.commitTransaction();
       console.log(
-        `Successfully refunded ${amount} to client ${lockedTx.userId} for order ${orderId}`
+        `Successfully refunded ${amount} to client ${lockedTx.userId} for order ${orderId}`,
       );
     } catch (error) {
       await session.abortTransaction();
@@ -630,7 +631,7 @@ export class WalletService {
     try {
       const result = await PaystackService.resolveAccountNumber(
         accountNumber,
-        bankCode
+        bankCode,
       );
       return {
         accountNumber: result.account_number,
@@ -640,7 +641,7 @@ export class WalletService {
     } catch (error: any) {
       console.error("Error resolving account:", error);
       throw new BadRequestError(
-        "Failed to resolve account details. Please check account number and bank code."
+        "Failed to resolve account details. Please check account number and bank code.",
       );
     }
   }
@@ -653,21 +654,21 @@ export class WalletService {
     amount: number,
     accountNumber: string,
     bankCode: string,
-    pin?: string // Optional security PIN
+    pin?: string, // Optional security PIN
   ) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
       console.log(
-        `Initiating withdrawal for user ${userId}, amount: ${amount}`
+        `Initiating withdrawal for user ${userId}, amount: ${amount}`,
       );
 
       // Validate minimum withdrawal amount
       const MIN_WITHDRAWAL = 100; // 100 NGN minimum
       if (amount < MIN_WITHDRAWAL) {
         throw new BadRequestError(
-          `Minimum withdrawal amount is ₦${MIN_WITHDRAWAL}`
+          `Minimum withdrawal amount is ₦${MIN_WITHDRAWAL}`,
         );
       }
 
@@ -681,21 +682,21 @@ export class WalletService {
       const availableBalance = wallet.balance - wallet.lockedBalance;
       if (availableBalance < amount) {
         throw new BadRequestError(
-          `Insufficient balance. Available: ₦${availableBalance}`
+          `Insufficient balance. Available: ₦${availableBalance}`,
         );
       }
 
       // Resolve account details
       const accountDetails = await this.resolveAccountDetails(
         accountNumber,
-        bankCode
+        bankCode,
       );
 
       // Create transfer recipient
       const recipient = await PaystackService.createTransferRecipient(
         accountNumber,
         bankCode,
-        accountDetails.accountName
+        accountDetails.accountName,
       );
 
       // Generate unique reference
@@ -761,16 +762,15 @@ export class WalletService {
       console.log(`Processing withdrawal: ${withdrawalId}`);
 
       // Step 1: Validate and update withdrawal status
-      const withdrawalRequest = await this.updateWithdrawalToProcessing(
-        withdrawalId
-      );
+      const withdrawalRequest =
+        await this.updateWithdrawalToProcessing(withdrawalId);
 
       // Step 2: Attempt the transfer
       try {
         const transferResult = await PaystackService.initializeTransfer(
           withdrawalRequest.amount * 100, // Convert to kobo
           withdrawalRequest.recipientCode,
-          withdrawalRequest.reason || "Wallet withdrawal"
+          withdrawalRequest.reason || "Wallet withdrawal",
         );
 
         // Step 3: Update with transfer details
@@ -793,11 +793,11 @@ export class WalletService {
         // Handle the failure (revert status and refund user)
         await this.handleWithdrawalFailure(
           withdrawalRequest.reference,
-          transferError.message || "Transfer failed"
+          transferError.message || "Transfer failed",
         );
 
         throw new BadRequestError(
-          `Withdrawal failed: ${transferError.message}`
+          `Withdrawal failed: ${transferError.message}`,
         );
       }
     } catch (error: any) {
@@ -823,7 +823,7 @@ export class WalletService {
 
       if (withdrawalRequest.status !== "PENDING") {
         throw new BadRequestError(
-          `Withdrawal is ${withdrawalRequest.status.toLowerCase()}, cannot process`
+          `Withdrawal is ${withdrawalRequest.status.toLowerCase()}, cannot process`,
         );
       }
 
@@ -944,7 +944,7 @@ export class WalletService {
 
       if (!withdrawalRequest) {
         console.error(
-          `Withdrawal request not found for reference: ${transferReference}`
+          `Withdrawal request not found for reference: ${transferReference}`,
         );
         return;
       }
@@ -967,7 +967,7 @@ export class WalletService {
       const pendingTx = wallet.transactions.find(
         (tx) =>
           tx.reference === withdrawalRequest.reference &&
-          tx.purpose === "WITHDRAWAL_PENDING"
+          tx.purpose === "WITHDRAWAL_PENDING",
       );
 
       if (pendingTx) {
@@ -1000,7 +1000,7 @@ export class WalletService {
    */
   static async handleWithdrawalFailure(
     transferReference: string,
-    failureReason: string
+    failureReason: string,
   ) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -1017,7 +1017,7 @@ export class WalletService {
 
       if (!withdrawalRequest) {
         console.error(
-          `Withdrawal request not found for reference: ${transferReference}`
+          `Withdrawal request not found for reference: ${transferReference}`,
         );
         return;
       }
@@ -1040,7 +1040,7 @@ export class WalletService {
       const pendingTx = wallet.transactions.find(
         (tx) =>
           tx.reference === withdrawalRequest.reference &&
-          tx.purpose === "WITHDRAWAL_PENDING"
+          tx.purpose === "WITHDRAWAL_PENDING",
       );
 
       if (pendingTx) {
@@ -1143,14 +1143,14 @@ export class WalletService {
 
       if (withdrawalRequest.status !== "PENDING") {
         throw new BadRequestError(
-          `Cannot cancel ${withdrawalRequest.status.toLowerCase()} withdrawal`
+          `Cannot cancel ${withdrawalRequest.status.toLowerCase()} withdrawal`,
         );
       }
 
       // Refund the amount
       await this.handleWithdrawalFailure(
         withdrawalRequest.reference,
-        "Cancelled by user"
+        "Cancelled by user",
       );
 
       await session.commitTransaction();
@@ -1165,6 +1165,199 @@ export class WalletService {
     } finally {
       session.endSession();
     }
+  }
+
+  // In walletService.ts
+
+  static async manualLockFunds(
+    userId: string,
+    amount: number,
+    password: string,
+  ): Promise<{
+    message: string;
+    lockedBalance: number;
+    availableBalance: number;
+  }> {
+    // Step 1: Verify password via user-management service
+    const isValidPassword = await UserManagementClient.verifyPassword(
+      userId,
+      password,
+    );
+    if (!isValidPassword) {
+      throw new BadRequestError("Incorrect password");
+    }
+
+    // Step 2: Perform the lock within a transaction
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const wallet = await WalletModel.findOne({ userId }).session(session);
+      if (!wallet) {
+        throw new BadRequestError("Wallet not found");
+      }
+
+      const availableBalance = wallet.balance - wallet.lockedBalance;
+      if (availableBalance < amount) {
+        throw new BadRequestError(
+          `Insufficient available balance. Available: ₦${availableBalance}`,
+        );
+      }
+
+      if (amount <= 0) {
+        throw new BadRequestError("Amount must be greater than zero");
+      }
+
+      const reference = `MANUAL_LOCK_${userId}_${Date.now()}`;
+
+      wallet.balance -= amount; // my fix
+
+      wallet.lockedBalance += amount;
+      wallet.transactions.push({
+        id: uuidv4(),
+        type: "DEBIT",
+        purpose: "MANUAL_LOCK",
+        amount,
+        reference,
+        description: `Manual fund lock of ₦${amount}`,
+        createdAt: new Date(),
+        status: "SUCCESS",
+      });
+      wallet.updatedAt = new Date();
+
+      await wallet.save({ session });
+      await session.commitTransaction();
+
+      return {
+        message: `₦${amount} locked successfully`,
+        lockedBalance: wallet.lockedBalance,
+        // availableBalance: wallet.balance - wallet.lockedBalance,
+        availableBalance: wallet.balance,
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async manualUnlockFunds(
+    userId: string,
+    amount: number,
+    password: string,
+  ): Promise<{
+    message: string;
+    lockedBalance: number;
+    availableBalance: number;
+  }> {
+    // Step 1: Verify password
+    const isValidPassword = await UserManagementClient.verifyPassword(
+      userId,
+      password,
+    );
+    if (!isValidPassword) {
+      throw new BadRequestError("Incorrect password");
+    }
+
+    // Step 2: Perform the unlock
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const wallet = await WalletModel.findOne({ userId }).session(session);
+      if (!wallet) {
+        throw new BadRequestError("Wallet not found");
+      }
+
+      if (amount <= 0) {
+        throw new BadRequestError("Amount must be greater than zero");
+      }
+
+      // Only allow unlocking manually locked funds
+      // We track manual locks separately to avoid accidentally unlocking escrow funds
+      const manualLockedAmount = await this.getManualLockedAmount(userId);
+      if (amount > manualLockedAmount) {
+        throw new BadRequestError(
+          `Cannot unlock ₦${amount}. You only have ₦${manualLockedAmount} in manually locked funds`,
+        );
+      }
+
+      const reference = `MANUAL_UNLOCK_${userId}_${Date.now()}`;
+
+      wallet.balance += amount; // my fix
+
+      wallet.lockedBalance -= amount;
+      wallet.transactions.push({
+        id: uuidv4(),
+        type: "CREDIT",
+        purpose: "MANUAL_UNLOCK",
+        amount,
+        reference,
+        description: `Manual fund unlock of ₦${amount}`,
+        createdAt: new Date(),
+        status: "SUCCESS",
+      });
+      wallet.updatedAt = new Date();
+
+      await wallet.save({ session });
+      await session.commitTransaction();
+
+      return {
+        message: `₦${amount} unlocked successfully`,
+        lockedBalance: wallet.lockedBalance,
+        // availableBalance: wallet.balance - wallet.lockedBalance,
+        availableBalance: wallet.balance,
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  // Helper to sum only manual locks (not order escrow locks)
+  private static async getManualLockedAmount(userId: string): Promise<number> {
+    const wallet = await WalletModel.findOne({ userId });
+    if (!wallet) return 0;
+
+    return (
+      wallet.transactions
+        .filter((tx) => tx.purpose === "MANUAL_LOCK" && tx.status === "SUCCESS")
+        .reduce((sum, tx) => {
+          // Subtract any manual unlocks
+          return sum + tx.amount;
+        }, 0) -
+      wallet.transactions
+        .filter(
+          (tx) => tx.purpose === "MANUAL_UNLOCK" && tx.status === "SUCCESS",
+        )
+        .reduce((sum, tx) => sum + tx.amount, 0)
+    );
+  }
+
+  // Get breakdown of locked funds (manual vs order escrow)
+  static async getLockedFundsBreakdown(userId: string): Promise<{
+    totalLocked: number;
+    manuallyLocked: number;
+    orderEscrow: number;
+    available: number;
+  }> {
+    const wallet = await WalletModel.findOne({ userId });
+    if (!wallet) throw new BadRequestError("Wallet not found");
+
+    const manuallyLocked = await this.getManualLockedAmount(userId);
+    const totalLocked = wallet.lockedBalance;
+    const orderEscrow = totalLocked - manuallyLocked;
+
+    return {
+      totalLocked,
+      manuallyLocked,
+      orderEscrow,
+      // available: wallet.balance - totalLocked,
+      available: wallet.balance,
+    };
   }
 }
 

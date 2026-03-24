@@ -1,26 +1,33 @@
 FROM node:18-alpine
 
+
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml  ./
 
-COPY services/order-management/package.json ./services/order-management/
+# Install pnpm
+RUN npm install -g pnpm
 
 
-COPY services/shared/package.json ./services/shared/
+# Copy ONLY root workspace config
+COPY package.json pnpm-workspace.yaml ./
 
-# Install with --shamefully-flatten to completely avoid symlinks
 
-RUN npm install -g pnpm && \
-    pnpm install --shamefully-hoist 
- 
-# COPY /app/node_modules ./node_modules
-     
- COPY services/order-management ./services/order-management/
+# Copy ONLY this service's package.json (not all services)
+COPY services/order-management/package.json ./services/order-management/package.json
+
+
+# Install ONLY this service's dependencies
+RUN pnpm install --filter order-management --shamefully-hoist
+
+
+# Copy ONLY this service's source
+COPY services/order-management ./services/order-management/
+
 
 WORKDIR /app/services/order-management
 
 
 EXPOSE 4004
 
-CMD ["/app/node_modules/ts-node-dev/lib/bin.js", "--respawn", "src/index.ts"]
+
+CMD ["../../node_modules/.bin/ts-node-dev", "--respawn", "--transpile-only", "--exit-child", "src/index.ts"]

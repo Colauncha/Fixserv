@@ -212,6 +212,26 @@ router.get(
   WalletController.getReferralAnalyticsHandler,
 ); // Admin only
 
+router.post(
+  "/lock",
+  authMiddleware.protect,
+  requireRole("CLIENT"),
+  WalletController.manualLockFundsHandler,
+);
+
+router.post(
+  "/unlock",
+  authMiddleware.protect,
+  requireRole("CLIENT"),
+  WalletController.manualUnlockFundsHandler,
+);
+
+router.get(
+  "/locked-breakdown/:userId",
+  authMiddleware.protect,
+  WalletController.getLockedFundsBreakdownHandler,
+);
+
 //router.get("/paystack/webhook/test", (req, res) => {
 //  console.log("🧪 Webhook test endpoint called");
 //  res.status(200).json({

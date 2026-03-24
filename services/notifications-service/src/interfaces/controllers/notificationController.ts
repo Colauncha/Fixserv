@@ -6,18 +6,28 @@ export class NotificationController {
 
   async createNotification(req: Request, res: Response): Promise<void> {
     try {
-      const { userId, type, title, message, data } = req.body;
+      const { userId, targetRole, type, title, message, data } = req.body;
 
-      if (!userId || !type || !title || !message) {
+      // if (!userId || !type || !title || !message) {
+      // res.status(400).json({
+      // success: false,
+      // // message: "userId, type, title, and message are required",
+      // });
+      // return;
+      // }
+
+      // Either userId OR targetRole must be provided
+      if (!userId && !targetRole) {
         res.status(400).json({
           success: false,
-          message: "userId, type, title, and message are required",
+          message: "Either userId or targetRole must be provided",
         });
         return;
       }
 
       await this.notificationService.createNotification({
         userId,
+        targetRole,
         type,
         title,
         message,
@@ -40,6 +50,7 @@ export class NotificationController {
   async getNotifications(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.currentUser!.id;
+      const userRole = req.currentUser!.role || "ALL";
       const { limit = 20, offset = 0, status } = req.query;
 
       if (!userId) {
@@ -54,17 +65,22 @@ export class NotificationController {
 
       if (status === "unread") {
         notifications = await this.notificationService.getUnreadNotifications(
-          userId
+          userId,
+          userRole,
         );
       } else {
         notifications = await this.notificationService.getUserNotifications(
           userId,
+          userRole,
           Number(limit),
-          Number(offset)
+          Number(offset),
         );
       }
 
-      const unreadCount = await this.notificationService.getUnreadCount(userId);
+      const unreadCount = await this.notificationService.getUnreadCount(
+        userId,
+        userRole,
+      );
 
       res.status(200).json({
         success: true,
@@ -112,7 +128,7 @@ export class NotificationController {
       await this.notificationService.markAsRead(
         notificationId,
         userId,
-        metadata
+        metadata,
       );
 
       res.status(200).json({
@@ -130,7 +146,9 @@ export class NotificationController {
   async markAllAsRead(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.currentUser!.id;
+      const userRole = req.currentUser!.role || "ALL";
 
+      /*
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -140,6 +158,8 @@ export class NotificationController {
       }
 
       await this.notificationService.markAllAsRead(userId);
+      */
+      await this.notificationService.markAllAsRead(userId, userRole);
 
       res.status(200).json({
         success: true,
@@ -157,6 +177,7 @@ export class NotificationController {
   async getUnreadCount(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.currentUser?.id;
+      const userRole = req.currentUser?.role! || "ALL";
 
       if (!userId) {
         res.status(401).json({
@@ -166,7 +187,10 @@ export class NotificationController {
         return;
       }
 
-      const unreadCount = await this.notificationService.getUnreadCount(userId);
+      const unreadCount = await this.notificationService.getUnreadCount(
+        userId,
+        userRole,
+      );
 
       res.status(200).json({
         success: true,

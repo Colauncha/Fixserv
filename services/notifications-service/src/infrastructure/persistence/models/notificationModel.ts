@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface INotificationDocument extends Document {
   userId: string;
+  targetRole: string;
   type: string;
   title: string;
   message: string;
@@ -32,7 +33,14 @@ const NotificationSchema = new Schema<INotificationDocument>(
     // },
     userId: {
       type: String,
-      required: true,
+      required: false,
+      index: true,
+    },
+    targetRole: {
+      type: String,
+      required: false,
+      enum: ["CLIENT", "ARTISAN", "ADMIN", "ALL", null],
+      default: null,
       index: true,
     },
     type: {
@@ -109,6 +117,37 @@ NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, status: 1 });
 NotificationSchema.index({ userId: 1, type: 1 });
 NotificationSchema.index({ createdAt: 1 }); // For cleanup/archiving
+NotificationSchema.index({ targetRole: 1, createdAt: -1 });
+
+// Add to notificationModel.ts
+const NotificationReadTrackingSchema = new Schema(
+  {
+    notificationId: { type: String, required: true, index: true },
+    userId: { type: String, required: true, index: true },
+    readAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true, collection: "notification_read_tracking" },
+);
+
+// Ensure a user can only have one read record per notification
+NotificationReadTrackingSchema.index(
+  { notificationId: 1, userId: 1 },
+  { unique: true },
+);
+
+const NotificationDismissedSchema = new Schema(
+  {
+    notificationId: { type: String, required: true, index: true },
+    userId: { type: String, required: true, index: true },
+    dismissedAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true, collection: "notification_dismissed" },
+);
+
+NotificationDismissedSchema.index(
+  { notificationId: 1, userId: 1 },
+  { unique: true },
+);
 
 const NotificationPreferenceSchema =
   new Schema<INotificationPreferenceDocument>(
@@ -146,8 +185,17 @@ export const NotificationModel = mongoose.model<INotificationDocument>(
   "Notification",
   NotificationSchema,
 );
+
+export const NotificationReadTrackingModel = mongoose.model(
+  "NotificationReadTracking",
+  NotificationReadTrackingSchema,
+);
 export const NotificationPreferenceModel =
   mongoose.model<INotificationPreferenceDocument>(
     "NotificationPreference",
     NotificationPreferenceSchema,
   );
+export const NotificationDismissedModel = mongoose.model(
+  "NotificationDismissed",
+  NotificationDismissedSchema,
+);

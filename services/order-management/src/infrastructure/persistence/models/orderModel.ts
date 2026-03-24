@@ -117,8 +117,30 @@ const OrderSchema = new mongoose.Schema(
     serviceRequired: {
       type: String,
     },
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: [
+            "PENDING_ARTISAN_RESPONSE",
+            "ACCEPTED",
+            "IN_PROGRESS",
+            "WORK_COMPLETED",
+            "COMPLETED",
+            "CANCELLED",
+            "REJECTED",
+          ],
+        },
+        timestamp: {
+          type: Date,
+        },
+        note: {
+          type: String,
+        },
+      },
+    ],
   },
-  { versionKey: false }
+  { versionKey: false },
 );
 
 export const OrderModel = mongoose.model("OrderModel", OrderSchema);

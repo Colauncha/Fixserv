@@ -448,15 +448,29 @@ export class NotificationEventHandler {
   }
   private async handlePaymentRelease(event: any): Promise<void> {
     try {
+      const { orderId, artisanId, clientId, amount } = event.payload;
+
       await this.notificationService.createNotification({
         userId: event.payload.clientId,
         type: "PAYMENT_RELEASED",
         title: "Payment Released",
-        message: `Your payment for order ${event.payload.orderId} has been released.`,
+        message: `₦${amount} has been released to your wallet for order ${orderId}.`,
         data: {
-          orderId: event.payload.orderId,
-          artisanId: event.payload.artisanId,
-          amount: event.payload.amount,
+          orderId,
+          artisanId: event,
+          amount,
+        },
+      });
+
+      await this.notificationService.createNotification({
+        userId: clientId,
+        type: "PAYMENT_RELEASED",
+        title: "Payment Released",
+        message: `Your payment of ₦${amount} has been released to the artisan for order ${orderId}.`,
+        data: {
+          orderId,
+          artisanId,
+          amount,
         },
       });
       console.log(

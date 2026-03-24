@@ -11,6 +11,7 @@ import { BusinessHours } from "../../domain/value-objects/businessHours";
 import { SkillSet } from "../../domain/value-objects/skillSet";
 import { refreshUserCache } from "../../infrastructure/utils/refreshUserCache";
 import { Categories } from "../../domain/value-objects/categories";
+import { Password } from "../../domain/value-objects/password";
 
 export class AuthController {
   private userRepository = new UserRepositoryImpl();
@@ -795,6 +796,33 @@ export class AuthController {
           </body>
           </html>
       `);
+    }
+  }
+
+  async verifyPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, password } = req.body;
+
+      if (!userId || !password) {
+        res.status(400).json({
+          success: false,
+          message: "userId and password are required",
+        });
+        return;
+      }
+
+      const user = await this.authService.findUserById(userId);
+      if (!user) {
+        res.status(404).json({ success: false, message: "User not found" });
+        return;
+      }
+
+      const passwordData = Password.fromHash(user.password);
+      const isMatch = await passwordData.compare(password);
+
+      res.status(200).json({ success: true, isValid: isMatch });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
     }
   }
 }

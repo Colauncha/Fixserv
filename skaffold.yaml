@@ -3,21 +3,32 @@ kind: Config
 deploy:
   kubectl:
     manifests:
-      # - ./services/infra/k8s/*
-      - ./services/infra/k8s/user-management-depl.yaml
-      - ./services/infra/k8s/service-management-depl.yaml
-      - ./services/infra/k8s/wallet-service-depl.yaml
-      - ./services/infra/k8s/order-management-depl.yaml
-      - ./services/infra/k8s/notifications-service-depl.yaml
-      - ./services/infra/k8s/review-and-feedback-depl.yaml
-      - ./services/infra/k8s/ingress-srv.yaml
-      - ./services/infra/k8s/mongo-secret.yaml
-      - ./services/infra/k8s/jwt-secret.yaml
-      - ./services/infra/k8s/redis-depl.yaml
+      - ./services/infra/k8s/*
+      # - ./services/infra/k8s/user-management-depl.yaml
+      # - ./services/infra/k8s/service-management-depl.yaml
+      # - ./services/infra/k8s/notifications-service-depl.yaml
+      # - ./services/infra/k8s/review-and-feedback-depl.yaml
+      # - ./services/infra/k8s/mongo-secret.yaml
+      # - ./services/infra/k8s/jwt-secret.yaml
+      # - ./services/infra/k8s/redis-depl.yaml
+      # - ./services/infra/k8s/ingress-srv.yaml
+      # - ./services/infra/k8s/wallet-service-depl.yaml
+      # # - ./services/infra/k8s/order-management-depl.yaml
+      # - ./services/infra/k8s/redis-depl.yaml
+      # - ./services/infra/k8s/mongo-secret.yaml
+      # - ./services/infra/k8s/jwt-secret.yaml
+      # - ./services/infra/k8s/ingress-srv.yaml
+      # # - ./services/infra/k8s/user-management-depl.yaml
+      # - ./services/infra/k8s/service-management-depl.yaml
+      # - ./services/infra/k8s/wallet-service-depl.yaml
+      # - ./services/infra/k8s/order-management-depl.yaml
+      # - ./services/infra/k8s/notifications-service-depl.yaml
+      # # - ./services/infra/k8s/review-and-feedback-depl.yaml
+      # - ./services/infra/k8s/search-and-discovery-depl.yaml
 build:
   local:
     push: false
-    concurrency: 2
+    concurrency: 1
   artifacts:
     - image: docker.io/ogkpos/user-management
       context: .
@@ -34,8 +45,8 @@ build:
         dockerfile: services/service-management/Dockerfile.dev
       sync:
         manual:
-          - src: "src/**/*.ts"
-            dest: .
+          - src: "services/service-management/src/**/*.ts"
+            dest: /app/services/service-management/src
     - image: docker.io/ogkpos/review-and-feedback
       context: .
       docker:
@@ -50,35 +61,43 @@ build:
         dockerfile: services/search-and-discovery/Dockerfile.dev
       sync:
         manual:
-          - src: "src/**/*.ts"
-            dest: .
+          - src: "services/search-and-discovery/src/**/*.ts"
+            dest: /app/services/search-and-discovery/src
     - image: docker.io/ogkpos/order-management
       context: .
       docker:
         dockerfile: services/order-management/Dockerfile.dev
       sync:
         manual:
-          - src: "src/**/*.ts"
-            dest: .
+          - src: "services/order-management/src/**/*.ts"
+            dest: /app/services/order-management/src
     - image: docker.io/ogkpos/wallet-service
       context: .
       docker:
         dockerfile: services/wallet-service/Dockerfile.dev
       sync:
         manual:
-          - src: "src/**/*.ts"
-            dest: .
+          - src: "services/wallet-service/src/**/*.ts"
+            dest: /app/services/wallet-service/src
     - image: docker.io/ogkpos/notifications-service
       context: .
       docker:
         dockerfile: services/notifications-service/Dockerfile.dev
       sync:
         manual:
-          - src: "src/**/*.ts"
-            dest: .
+          - src: "services/notifications-service/src/**/*.ts"
+            dest: /app/services/notifications-service/src
 
 profiles:
   - name: user-only
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/user-management-depl.yaml
     build:
       local:
         push: false
@@ -93,6 +112,14 @@ profiles:
                 dest: /app/services/user-management/src
 
   - name: service-only
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/service-management-depl.yaml
     build:
       local:
         push: false
@@ -107,6 +134,14 @@ profiles:
                 dest: /app/services/service-management/src
 
   - name: wallet-only
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/wallet-service-depl.yaml
     build:
       local:
         push: false
@@ -121,19 +156,19 @@ profiles:
                 dest: /app/services/wallet-service/src
 
   - name: user-and-notifications
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/notifications-service-depl.yaml
+          - ./services/infra/k8s/user-management-depl.yaml
     build:
       local:
         push: false
-        concurrency: 2
       artifacts:
-        - image: docker.io/ogkpos/user-management
-          context: .
-          docker:
-            dockerfile: services/user-management/Dockerfile.dev
-          sync:
-            manual:
-              - src: "services/user-management/src/**/*.ts"
-                dest: /app/services/user-management/src
         - image: docker.io/ogkpos/notifications-service
           context: .
           docker:
@@ -142,12 +177,29 @@ profiles:
             manual:
               - src: "services/notifications-service/src/**/*.ts"
                 dest: /app/services/notifications-service/src
+        - image: docker.io/ogkpos/user-management
+          context: .
+          docker:
+            dockerfile: services/user-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/user-management/src/**/*.ts"
+                dest: /app/services/user-management/src
 
-  - name: core
+  - name: user-and-service
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/user-management-depl.yaml
+          - ./services/infra/k8s/service-management-depl.yaml
     build:
       local:
         push: false
-        concurrency: 2
+        concurrency: 1
       artifacts:
         - image: docker.io/ogkpos/user-management
           context: .
@@ -165,22 +217,73 @@ profiles:
             manual:
               - src: "services/service-management/src/**/*.ts"
                 dest: /app/services/service-management/src
-        - image: docker.io/ogkpos/wallet-service
+
+  - name: search-and-review
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/review-and-feedback-depl.yaml
+          - ./services/infra/k8s/search-and-discovery-depl.yaml
+    build:
+      local:
+        push: false
+        concurrency: 1
+      artifacts:
+        - image: docker.io/ogkpos/review-and-feedback
           context: .
           docker:
-            dockerfile: services/wallet-service/Dockerfile.dev
+            dockerfile: services/review-and-feedback/Dockerfile.dev
           sync:
             manual:
-              - src: "services/wallet-service/src/**/*.ts"
-                dest: /app/services/wallet-service/src
-        - image: docker.io/ogkpos/order-management
+              - src: "src/**/*.ts"
+                dest: .
+        - image: docker.io/ogkpos/search-and-discovery
           context: .
           docker:
-            dockerfile: services/order-management/Dockerfile.dev
+            dockerfile: services/search-and-discovery/Dockerfile.dev
           sync:
             manual:
-              - src: "services/order-management/src/**/*.ts"
-                dest: /app/services/order-management/src
+              - src: "services/search-and-discovery/src/**/*.ts"
+                dest: /app/services/search-and-discovery/src
+
+  - name: core
+    deploy:
+      kubectl:
+        manifests:
+          - ./services/infra/k8s/redis-depl.yaml
+          - ./services/infra/k8s/mongo-secret.yaml
+          - ./services/infra/k8s/jwt-secret.yaml
+          - ./services/infra/k8s/ingress-srv.yaml
+          - ./services/infra/k8s/user-management-depl.yaml
+          - ./services/infra/k8s/service-management-depl.yaml
+          - ./services/infra/k8s/order-management-depl.yaml
+          - ./services/infra/k8s/wallet-service-depl.yaml
+          - ./services/infra/k8s/notifications-service-depl.yaml
+    build:
+      local:
+        push: false
+        concurrency: 1
+      artifacts:
+        - image: docker.io/ogkpos/user-management
+          context: .
+          docker:
+            dockerfile: services/user-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/user-management/src/**/*.ts"
+                dest: /app/services/user-management/src
+        - image: docker.io/ogkpos/service-management
+          context: .
+          docker:
+            dockerfile: services/service-management/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/service-management/src/**/*.ts"
+                dest: /app/services/service-management/src
         - image: docker.io/ogkpos/notifications-service
           context: .
           docker:
@@ -189,11 +292,19 @@ profiles:
             manual:
               - src: "services/notifications-service/src/**/*.ts"
                 dest: /app/services/notifications-service/src
-        - image: docker.io/ogkpos/review-and-feedback
+        - image: docker.io/ogkpos/order-management
           context: .
           docker:
-            dockerfile: services/review-and-feedback/Dockerfile.dev
+            dockerfile: services/order-management/Dockerfile.dev
           sync:
             manual:
-              - src: "services/review-and-feedback/src/**/*.ts"
-                dest: /app/services/review-and-feedback/src
+              - src: "services/order-management/src/**/*.ts"
+                dest: /app/services/order-management/src
+        - image: docker.io/ogkpos/wallet-service
+          context: .
+          docker:
+            dockerfile: services/wallet-service/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/wallet-service/src/**/*.ts"
+                dest: /app/services/wallet-service/src
