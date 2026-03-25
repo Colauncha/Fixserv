@@ -171,4 +171,11 @@ router.get(
   orderController.getArtisanOrders.bind(orderController),
 );
 
+router.patch(
+  "/:orderId/cancel",
+  authMiddleware.protect,
+  requireRole("CLIENT"),
+  orderController.cancelOrder.bind(orderController),
+);
+
 export { router as orderRouter };

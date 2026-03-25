@@ -1210,8 +1210,7 @@ export class WalletService {
 
       const reference = `MANUAL_LOCK_${userId}_${Date.now()}`;
 
-      wallet.balance -= amount; // my fix
-
+      wallet.balance -= amount; //my fix
       wallet.lockedBalance += amount;
       wallet.transactions.push({
         id: uuidv4(),
@@ -1343,6 +1342,7 @@ export class WalletService {
     manuallyLocked: number;
     orderEscrow: number;
     available: number;
+    availableAfterDifference: number;
   }> {
     const wallet = await WalletModel.findOne({ userId });
     if (!wallet) throw new BadRequestError("Wallet not found");
@@ -1357,6 +1357,7 @@ export class WalletService {
       orderEscrow,
       // available: wallet.balance - totalLocked,
       available: wallet.balance,
+      availableAfterDifference: wallet.balance - totalLocked,
     };
   }
 }

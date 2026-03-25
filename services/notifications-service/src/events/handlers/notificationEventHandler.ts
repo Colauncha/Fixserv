@@ -74,6 +74,9 @@ export class NotificationEventHandler {
           case "OrderPaymentReleased":
             await this.handlePaymentRelease(evt);
             break;
+          case "OrderCancelled":
+            await this.handleOrderCancelled(evt);
+            break;
         }
       },
     );
@@ -478,6 +481,42 @@ export class NotificationEventHandler {
       );
     } catch (error) {
       console.error("Error handling PaymentRelease event:", error);
+    }
+  }
+  private async handleOrderCancelled(event: any): Promise<void> {
+    try {
+      // Notify artisan that client cancelled
+      await this.notificationService.createNotification({
+        userId: event.payload.artisanId,
+        type: "ORDER_CANCELLED", // reuse existing type or add ORDER_CANCELLED
+        title: "Order Cancelled",
+        message: "A client has cancelled their order.",
+        data: {
+          orderId: event.payload.orderId,
+          clientId: event.payload.clientId,
+          cancelledAt: event.payload.cancelledAt,
+        },
+      });
+
+      // Notify client that cancellation + refund is processing
+      await this.notificationService.createNotification({
+        userId: event.payload.clientId,
+        type: "ORDER_CANCELLED",
+        title: "Order Cancelled",
+        message:
+          "Your order has been cancelled and your funds will be refunded.",
+        data: {
+          orderId: event.payload.orderId,
+          cancelledAt: event.payload.cancelledAt,
+        },
+      });
+      console.log(
+        `✅ Order cancelled notifications sent for order: ${
+          event.payload.orderId
+        } to artisan: ${event.payload.artisanId} and client: ${event.payload.clientId}`,
+      );
+    } catch (error) {
+      console.error("Error handling OrderCancelled event:", error);
     }
   }
 }

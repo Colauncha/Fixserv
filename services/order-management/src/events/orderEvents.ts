@@ -182,3 +182,20 @@ export class ArtisanOrderNotificationEvent extends BaseEvent {
     super(payload);
   }
 }
+
+export class OrderCancelledEvent extends BaseEvent {
+  eventName = "OrderCancelled";
+  version = 1;
+
+  constructor(
+    public payload: {
+      orderId: string;
+      clientId: string;
+      artisanId: string;
+      cancelledAt: string;
+      previousStatus: string;
+    },
+  ) {
+    super(payload);
+  }
+}

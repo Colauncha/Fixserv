@@ -381,4 +381,32 @@ export class OrderController {
       }
     }
   }
+
+  async cancelOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const { orderId } = req.params;
+      const clientId = req.currentUser!.id;
+      const role = req.currentUser!.role;
+
+      if (role !== "CLIENT") {
+        throw new BadRequestError("Only clients can cancel orders");
+      }
+      await this.orderService.cancelOrder(orderId, clientId);
+
+      res
+        .status(200)
+        .json({
+          message:
+            "Order cancelled successfully.  Your funds will be refunded.",
+          orderId,
+        });
+    } catch (error: any) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Unexpected error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    }
+  }
 }

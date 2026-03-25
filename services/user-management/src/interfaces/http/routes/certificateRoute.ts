@@ -1,5 +1,3 @@
-// interfaces/routes/certificateRoutes.ts
-
 import express, { Request, Response } from "express";
 import {
   uploadCertificates,
