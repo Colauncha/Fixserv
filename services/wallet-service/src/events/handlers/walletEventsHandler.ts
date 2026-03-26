@@ -32,7 +32,7 @@ export class WalletEventsHandler {
           default:
             console.log("Unknown event type:", event.eventName);
         }
-      }
+      },
     );
     this.subscriptions.push(userEventSubscription);
     console.log("Wallet-Service: Subscribed to user_events");
@@ -46,7 +46,7 @@ export class WalletEventsHandler {
             await this.handleWalletTopUp(evt);
             break;
         }
-      }
+      },
     );
     this.subscriptions.push(walletEventSubscription);
     console.log("Wallet-Service: Subscribed to wallet_events");
@@ -63,14 +63,14 @@ export class WalletEventsHandler {
       console.log(
         `📨 Processing user creation for ${userId}, role: ${role}, referral: ${
           referralCode || "none"
-        }`
+        }`,
       );
 
       // Process referral signup (creates fixpoints balance and handles referrals)
       const result = await ReferralService.handleUserSignup(
         userId,
         role as "CLIENT" | "ARTISAN",
-        referralCode
+        referralCode,
       );
 
       console.log(`✅ Referral system setup complete for user ${userId}:`, {
@@ -97,7 +97,7 @@ export class WalletEventsHandler {
       console.log(`Wallet created for ${role} user ${userId} (${fullName})`);
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(event.id, "processed", "wallet created successfully")
+        new EventAck(event.id, "processed", "wallet created successfully"),
       );
     } catch (error: any) {
       //await this.eventBus.publish(
@@ -107,7 +107,7 @@ export class WalletEventsHandler {
       //throw new BadRequestError(error.message);
       console.error(
         `Failed to create wallet for user ${event.payload?.userId}:`,
-        error
+        error,
       );
       await this.publishAck(event.id, "failed", error.message);
     }
@@ -115,12 +115,12 @@ export class WalletEventsHandler {
   private async publishAck(
     eventId: string,
     status: "processed" | "failed",
-    message?: string
+    message?: string,
   ) {
     try {
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(eventId, status, "wallet-service", message)
+        new EventAck(eventId, status, "wallet-service", message),
       );
     } catch (error) {
       console.error("Failed to publish acknowledgment:", error);
@@ -142,12 +142,12 @@ export class WalletEventsHandler {
       await this.publishAck(
         event.id,
         "processed",
-        "Wallet topped up successfully"
+        "Wallet topped up successfully",
       );
     } catch (error: any) {
       console.error(
         `Failed to top up wallet for user ${event.payload?.userId}:`,
-        error
+        error,
       );
       await this.publishAck(event.id, "failed", error.message);
     }
@@ -164,7 +164,7 @@ export class WalletEventsHandler {
     } catch (error) {
       console.error(
         `❌ Failed to award verification bonus to ${userId}:`,
-        error
+        error,
       );
     }
   }

@@ -41,6 +41,10 @@ export class PaymentReleasedEvent extends BaseEvent {
       artisanId: string;
       clientId: string;
       amount: number;
+      deviceType: string;
+      deviceBrand: string;
+      deviceModel: string;
+      serviceRequired: string;
     },
   ) {
     super(payload);
@@ -137,6 +141,10 @@ export class WorkStartedEvent extends BaseEvent {
       artisanId: string;
       clientId: string;
       startedAt: string;
+      deviceType: string;
+      deviceBrand: string;
+      deviceModel: string;
+      serviceRequired: string;
     },
   ) {
     super(payload);
@@ -153,6 +161,10 @@ export class WorkCompletedEvent extends BaseEvent {
       artisanId: string;
       clientId: string;
       completedAt: string;
+      deviceType: string;
+      deviceBrand: string;
+      deviceModel: string;
+      serviceRequired: string;
     },
   ) {
     super(payload);
@@ -194,6 +206,10 @@ export class OrderCancelledEvent extends BaseEvent {
       artisanId: string;
       cancelledAt: string;
       previousStatus: string;
+      deviceType: string;
+      deviceBrand: string;
+      deviceModel: string;
+      serviceRequired: string;
     },
   ) {
     super(payload);

@@ -137,7 +137,7 @@ class PaystackWebhookProcessor {
         return PaystackWebhookProcessor.sendErrorResponse(
           res,
           400,
-          "Invalid webhook body"
+          "Invalid webhook body",
         );
       }
 
@@ -146,7 +146,7 @@ class PaystackWebhookProcessor {
         return PaystackWebhookProcessor.sendErrorResponse(
           res,
           401,
-          "Invalid signature"
+          "Invalid signature",
         );
       }
 
@@ -155,12 +155,12 @@ class PaystackWebhookProcessor {
         PaystackWebhookProcessor.isDuplicateWebhook(webhookData);
       if (isDuplicate) {
         console.log(
-          `Duplicate webhook detected: ${webhookData.event}:$ebhookData.data.reference}`
+          `Duplicate webhook detected: ${webhookData.event}:$ebhookData.data.reference}`,
         );
         return PaystackWebhookProcessor.sendSuccessResponse(
           res,
           "Duplicate webhook ignored",
-          webhookData
+          webhookData,
         );
       }
 
@@ -176,7 +176,7 @@ class PaystackWebhookProcessor {
       return PaystackWebhookProcessor.sendSuccessResponse(
         res,
         "Webhook processed successfully",
-        webhookData
+        webhookData,
       );
     } catch (error: any) {
       const duration = Date.now() - startTime;
@@ -187,7 +187,7 @@ class PaystackWebhookProcessor {
         res,
         "Webhook received but processing failed",
         null,
-        error.message
+        error.message,
       );
     }
   }
@@ -236,6 +236,34 @@ class PaystackWebhookProcessor {
     const signature = req.headers["x-paystack-signature"];
     const secret = process.env.PAYSTACK_SECRET_KEY;
 
+    //For Production
+    /*
+    if(!signature||!secret){
+      console.error("Missing signature or secret key for webhook verification");
+      return false;
+    }
+
+    try{
+      // Hash the RAW body bytes — not the re-stringified object
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(JSON.stringify(webhookData));
+
+    const hash = crypto
+      .createHmac("sha512", secret)
+      .update(rawBody)
+      .digest("hex");
+
+    const isValid = hash === signature;
+
+    if (!isValid) {
+      console.error("Invalid webhook signature — possible spoofing attempt");
+    }
+
+    return isValid;
+    }
+*/
+    //For Dev
     // Skip verification in development or for test signatures
     const isTestMode =
       // process.env.NODE_ENV === "development" ||
@@ -252,9 +280,15 @@ class PaystackWebhookProcessor {
     }
 
     try {
+      // CRITICAL: hash the RAW body bytes, not the re-stringified object
+      // This is why you need express.raw() middleware on the webhook route
+      const rawBody = Buffer.isBuffer(req.body)
+        ? req.body
+        : Buffer.from(JSON.stringify(webhookData)); // fallback
       const hash = crypto
         .createHmac("sha512", secret)
-        .update(JSON.stringify(webhookData))
+        // .update(JSON.stringify(webhookData))
+        .update(rawBody)
         .digest("hex");
 
       if (hash !== signature) {
@@ -265,8 +299,10 @@ class PaystackWebhookProcessor {
       }
 
       console.log("Signature verified successfully");
-      return true;
-    } catch (error) {
+      return hash === signature;
+
+      // return true;
+    } catch (error: any) {
       console.error("Signature verification error:", error);
       return false;
     }
@@ -303,7 +339,7 @@ class PaystackWebhookProcessor {
   // Process different event types
   private static async processEvent(
     webhookData: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     console.log(`Processing event: ${webhookData.event} [${requestId}]`);
 
@@ -312,28 +348,28 @@ class PaystackWebhookProcessor {
       case "charge.success":
         await PaystackWebhookProcessor.handleChargeSuccess(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "charge.failed":
         await PaystackWebhookProcessor.handleChargeFailed(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "charge.dispute.create":
         await PaystackWebhookProcessor.handleDisputeCreated(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "charge.dispute.resolve":
         await PaystackWebhookProcessor.handleDisputeResolved(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
@@ -341,21 +377,21 @@ class PaystackWebhookProcessor {
       case "transfer.success":
         await PaystackWebhookProcessor.handleTransferSuccess(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "transfer.failed":
         await PaystackWebhookProcessor.handleTransferFailed(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "transfer.reversed":
         await PaystackWebhookProcessor.handleTransferReversed(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
@@ -363,14 +399,14 @@ class PaystackWebhookProcessor {
       case "subscription.create":
         await PaystackWebhookProcessor.handleSubscriptionCreated(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "subscription.disable":
         await PaystackWebhookProcessor.handleSubscriptionDisabled(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
@@ -378,14 +414,14 @@ class PaystackWebhookProcessor {
       case "invoice.create":
         await PaystackWebhookProcessor.handleInvoiceCreated(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "invoice.payment_failed":
         await PaystackWebhookProcessor.handleInvoicePaymentFailed(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
@@ -393,14 +429,14 @@ class PaystackWebhookProcessor {
       case "refund.pending":
         await PaystackWebhookProcessor.handleRefundPending(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "refund.processed":
         await PaystackWebhookProcessor.handleRefundProcessed(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
@@ -408,14 +444,14 @@ class PaystackWebhookProcessor {
       case "customeridentification.success":
         await PaystackWebhookProcessor.handleCustomerIdentificationSuccess(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
       case "customeridentification.failed":
         await PaystackWebhookProcessor.handleCustomerIdentificationFailed(
           webhookData.data,
-          requestId
+          requestId,
         );
         break;
 
@@ -424,7 +460,7 @@ class PaystackWebhookProcessor {
         // Log unhandled events for future implementation
         await PaystackWebhookProcessor.logUnhandledEvent(
           webhookData,
-          requestId
+          requestId,
         );
     }
   }
@@ -433,7 +469,7 @@ class PaystackWebhookProcessor {
 
   private static async handleChargeSuccess(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       const { reference, amount, status, customer, channel } = data;
@@ -470,7 +506,7 @@ class PaystackWebhookProcessor {
 
   private static async handleChargeFailed(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       const { reference, gateway_response, customer } = data;
@@ -493,7 +529,7 @@ class PaystackWebhookProcessor {
 
   private static async handleDisputeCreated(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       const { reference, amount, reason, customer } = data;
@@ -514,7 +550,7 @@ class PaystackWebhookProcessor {
 
   private static async handleDisputeResolved(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       const { reference, status, resolution } = data;
@@ -530,7 +566,7 @@ class PaystackWebhookProcessor {
     } catch (error: any) {
       console.error(
         `Error processing dispute resolution [${requestId}]:`,
-        error
+        error,
       );
     }
   }
@@ -539,7 +575,7 @@ class PaystackWebhookProcessor {
 
   private static async handleTransferSuccess(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       const { reference, amount, recipient } = data;
@@ -561,7 +597,7 @@ class PaystackWebhookProcessor {
 
   private static async handleTransferFailed(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       const { reference, failure_reason } = data;
@@ -580,7 +616,7 @@ class PaystackWebhookProcessor {
 
   private static async handleTransferReversed(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       const { reference, amount } = data;
@@ -595,7 +631,7 @@ class PaystackWebhookProcessor {
     } catch (error: any) {
       console.error(
         `Error processing transfer reversal [${requestId}]:`,
-        error
+        error,
       );
     }
   }
@@ -604,7 +640,7 @@ class PaystackWebhookProcessor {
 
   private static async handleSubscriptionCreated(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Subscription created [${requestId}]:`, {
@@ -617,14 +653,14 @@ class PaystackWebhookProcessor {
     } catch (error: any) {
       console.error(
         `Error processing subscription creation [${requestId}]:`,
-        error
+        error,
       );
     }
   }
 
   private static async handleSubscriptionDisabled(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Subscription disabled [${requestId}]:`, {
@@ -636,7 +672,7 @@ class PaystackWebhookProcessor {
     } catch (error: any) {
       console.error(
         `Error processing subscription disabling [${requestId}]:`,
-        error
+        error,
       );
     }
   }
@@ -645,7 +681,7 @@ class PaystackWebhookProcessor {
 
   private static async handleInvoiceCreated(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Invoice created [${requestId}]:`, {
@@ -662,7 +698,7 @@ class PaystackWebhookProcessor {
 
   private static async handleInvoicePaymentFailed(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Invoice payment failed [${requestId}]:`, {
@@ -674,7 +710,7 @@ class PaystackWebhookProcessor {
     } catch (error: any) {
       console.error(
         `Error processing invoice payment failure [${requestId}]:`,
-        error
+        error,
       );
     }
   }
@@ -683,7 +719,7 @@ class PaystackWebhookProcessor {
 
   private static async handleRefundPending(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Refund pending [${requestId}]:`, {
@@ -700,7 +736,7 @@ class PaystackWebhookProcessor {
 
   private static async handleRefundProcessed(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Refund processed [${requestId}]:`, {
@@ -719,7 +755,7 @@ class PaystackWebhookProcessor {
 
   private static async handleCustomerIdentificationSuccess(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Customer identification successful [${requestId}]:`, {
@@ -731,14 +767,14 @@ class PaystackWebhookProcessor {
     } catch (error: any) {
       console.error(
         `Error processing customer identification success [${requestId}]:`,
-        error
+        error,
       );
     }
   }
 
   private static async handleCustomerIdentificationFailed(
     data: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       console.log(`Customer identification failed [${requestId}]:`, {
@@ -750,7 +786,7 @@ class PaystackWebhookProcessor {
     } catch (error: any) {
       console.error(
         `Error processing customer identification failure [${requestId}]:`,
-        error
+        error,
       );
     }
   }
@@ -759,7 +795,7 @@ class PaystackWebhookProcessor {
 
   private static async logUnhandledEvent(
     webhookData: any,
-    requestId: string
+    requestId: string,
   ): Promise<void> {
     try {
       // Log unhandled events for future implementation
@@ -779,7 +815,7 @@ class PaystackWebhookProcessor {
     res: any,
     message: string,
     webhookData: any,
-    error?: string
+    error?: string,
   ) {
     return res.status(200).json({
       success: !error,
@@ -806,7 +842,7 @@ class PaystackWebhookProcessor {
 webhookRouter.post(
   "/paystack/webhook",
   express.raw({ type: "application/json" }),
-  PaystackWebhookProcessor.handleWebhook
+  PaystackWebhookProcessor.handleWebhook,
 );
 
 // Health check endpoint

@@ -904,10 +904,11 @@ export class WalletController {
    */
   static async initiateWithdrawalHandler(req: any, res: any) {
     try {
-      const { userId, amount, accountNumber, bankCode, pin } = req.body;
+      const userId = req.currentUser!.id;
+      const { amount, accountNumber, bankCode, pin } = req.body;
 
       // Validation
-      if (!userId || !amount || !accountNumber || !bankCode) {
+      if (!amount || !accountNumber || !bankCode) {
         return res.status(400).json({
           success: false,
           message:

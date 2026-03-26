@@ -182,6 +182,10 @@ export class OrderService {
       artisanId: order.artisanId,
       clientId: order.clientId,
       amount: order.price,
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
     });
     // await this.eventBus.publish("OrderPaymentReleased", event);
     await this.eventBus.publish("order_events", event);
@@ -284,6 +288,10 @@ export class OrderService {
       artisanId: order.artisanId,
       clientId: order.clientId,
       startedAt: new Date().toISOString(),
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
   }
@@ -309,6 +317,10 @@ export class OrderService {
       artisanId: order.artisanId,
       clientId: order.clientId,
       completedAt: new Date().toISOString(),
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
   }
@@ -665,6 +677,10 @@ export class OrderService {
       artisanId: order.artisanId,
       cancelledAt: new Date().toISOString(),
       previousStatus: order.status,
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
   }

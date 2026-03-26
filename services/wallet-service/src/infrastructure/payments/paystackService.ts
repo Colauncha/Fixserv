@@ -59,7 +59,7 @@ export class PaystackService {
   static async initializePayment(
     amount: number,
     email: string,
-    metadata?: any
+    metadata?: any,
   ): Promise<{
     authorization_url: string;
     access_code: string;
@@ -93,12 +93,12 @@ export class PaystackService {
             "Content-Type": "application/json",
           },
           timeout: 15000, // 15 second timeout
-        }
+        },
       );
 
       if (!response.data.status) {
         throw new Error(
-          response.data.message || "Payment initialization failed"
+          response.data.message || "Payment initialization failed",
         );
       }
 
@@ -128,7 +128,7 @@ export class PaystackService {
         throw new Error(`Invalid payment data: ${error.response.data.message}`);
       } else {
         throw new Error(
-          "Failed to initialize payment. Please try again later."
+          "Failed to initialize payment. Please try again later.",
         );
       }
     }
@@ -158,7 +158,7 @@ export class PaystackService {
             Authorization: `Bearer ${this.SECRET_KEY}`,
           },
           timeout: 15000,
-        }
+        },
       );
 
       if (!response.data.status) {
@@ -196,7 +196,7 @@ export class PaystackService {
   static async initializeTransfer(
     amount: number,
     recipientCode: string,
-    reason: string = "Wallet withdrawal"
+    reason: string = "Wallet withdrawal",
   ): Promise<{
     transfer_code: string;
     reference: string;
@@ -240,6 +240,7 @@ export class PaystackService {
       console.log("Transfer initialized successfully:", {
         transfer_code: result.transfer_code,
         reference: result.reference,
+        status: result.status,
       });
 
       return result;
@@ -262,7 +263,7 @@ export class PaystackService {
 
       throw new Error(
         error.response?.data?.message ||
-          "Failed to initialize transfer. Please try again later."
+          "Failed to initialize transfer. Please try again later.",
       );
     }
   }
@@ -271,7 +272,7 @@ export class PaystackService {
   static async createTransferRecipient(
     accountNumber: string,
     bankCode: string,
-    name: string
+    name: string,
   ): Promise<{
     recipient_code: string;
     type: string;
@@ -305,12 +306,12 @@ export class PaystackService {
             "Content-Type": "application/json",
           },
           timeout: 15000,
-        }
+        },
       );
 
       if (!response.data.status) {
         throw new Error(
-          response.data.message || "Failed to create transfer recipient"
+          response.data.message || "Failed to create transfer recipient",
         );
       }
 
@@ -330,7 +331,7 @@ export class PaystackService {
 
       throw new Error(
         error.response?.data?.message ||
-          "Failed to create transfer recipient. Please check account details."
+          "Failed to create transfer recipient. Please check account details.",
       );
     }
   }
@@ -359,7 +360,7 @@ export class PaystackService {
             Authorization: `Bearer ${this.SECRET_KEY}`,
           },
           timeout: 10000,
-        }
+        },
       );
 
       if (!response.data.status) {
@@ -382,7 +383,7 @@ export class PaystackService {
   // Resolve account number
   static async resolveAccountNumber(
     accountNumber: string,
-    bankCode: string
+    bankCode: string,
   ): Promise<{
     account_number: string;
     account_name: string;
@@ -402,12 +403,12 @@ export class PaystackService {
             Authorization: `Bearer ${this.SECRET_KEY}`,
           },
           timeout: 10000,
-        }
+        },
       );
 
       if (!response.data.status) {
         throw new Error(
-          response.data.message || "Failed to resolve account number"
+          response.data.message || "Failed to resolve account number",
         );
       }
 
@@ -432,7 +433,7 @@ export class PaystackService {
       }
 
       throw new Error(
-        "Failed to resolve account number. Please check the details."
+        "Failed to resolve account number. Please check the details.",
       );
     }
   }
@@ -451,7 +452,7 @@ export class PaystackService {
             Authorization: `Bearer ${this.SECRET_KEY}`,
           },
           timeout: 10000,
-        }
+        },
       );
 
       if (!response.data.status) {
