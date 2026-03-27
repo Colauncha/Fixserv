@@ -71,8 +71,10 @@ router.post(
 // Initiate withdrawal
 router.post(
   "/withdrawal/initiate",
+  authMiddleware.protect,
+  requireRole("CLIENT", "ARTISAN"),
   [
-    body("userId").notEmpty().withMessage("User ID is required"),
+    // body("userId").notEmpty().withMessage("User ID is required"),
     body("amount")
       .isFloat({ min: 100 })
       .withMessage("Amount must be at least 100 NGN"),

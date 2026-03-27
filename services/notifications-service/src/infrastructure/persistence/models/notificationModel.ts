@@ -62,6 +62,8 @@ const NotificationSchema = new Schema<INotificationDocument>(
         "WORK_STARTED",
         "WORK_COMPLETED",
         "PAYMENT_RELEASED",
+        "ORDER_CANCELLED",
+        "WALLET_WITHDRAWAL",
       ],
       index: true,
     },

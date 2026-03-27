@@ -186,4 +186,28 @@ export class Order {
   addStatusHistoryEntry(status: OrderStatus, note?: string) {
     this.statusHistory.push({ status, timestamp: new Date(), note });
   }
+
+  cancelOrder(cancelledBy: "CLIENT" | "ARTISAN") {
+    const cancellableStatuses: OrderStatus[] = [
+      "PENDING_ARTISAN_RESPONSE",
+      "ACCEPTED",
+    ];
+    if (!cancellableStatuses.includes(this.status)) {
+      throw new BadRequestError(
+        `Order cannot be cancelled at status: ${this.status}. Orders can only be cancelled before work has started.`,
+      );
+    }
+    if (cancelledBy === "CLIENT" && this.status === "IN_PROGRESS") {
+      throw new BadRequestError(
+        "Cannot cancel an order that is already in progress",
+      );
+    }
+
+    this.status = "CANCELLED";
+    // this.escrowStatus = "NOT_PAID";
+    this.addStatusHistoryEntry(
+      "CANCELLED",
+      `Cancelled by ${cancelledBy.toLowerCase()} before work started`,
+    );
+  }
 }

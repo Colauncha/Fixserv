@@ -19,6 +19,7 @@ import {
   PaymentReleasedEvent,
   WorkCompletedEvent,
   WorkStartedEvent,
+  OrderCancelledEvent,
 } from "../../events/orderEvents";
 import { WalletClient } from "../../infrastructure/reuseableWrapper/walletClient";
 import { redis } from "@fixserv-colauncha/shared";
@@ -181,6 +182,10 @@ export class OrderService {
       artisanId: order.artisanId,
       clientId: order.clientId,
       amount: order.price,
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
     });
     // await this.eventBus.publish("OrderPaymentReleased", event);
     await this.eventBus.publish("order_events", event);
@@ -283,6 +288,10 @@ export class OrderService {
       artisanId: order.artisanId,
       clientId: order.clientId,
       startedAt: new Date().toISOString(),
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
   }
@@ -308,6 +317,10 @@ export class OrderService {
       artisanId: order.artisanId,
       clientId: order.clientId,
       completedAt: new Date().toISOString(),
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
   }
@@ -607,6 +620,69 @@ export class OrderService {
     await this.eventBus.publish("order_events", artisanNotificationEvent);
 
     return savedOrder;
+  }
+
+  // In orderService.ts — add this method
+  async cancelOrder(orderId: string, clientId: string): Promise<void> {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) throw new BadRequestError("Order not found");
+
+    // Only the client who owns the order can cancel
+    if (order.clientId !== clientId) {
+      throw new BadRequestError("You are not authorized to cancel this order");
+    }
+
+    // Cannot cancel if work has started
+    if (order.status === "IN_PROGRESS" || order.status === "WORK_COMPLETED") {
+      throw new BadRequestError(
+        "Cannot cancel an order after work has started. Please raise a dispute instead.",
+      );
+    }
+
+    // Cannot cancel if already terminal
+    if (
+      order.status === "COMPLETED" ||
+      order.status === "CANCELLED" ||
+      order.status === "REJECTED"
+    ) {
+      throw new BadRequestError(
+        `Order is already ${order.status.toLowerCase()}`,
+      );
+    }
+
+    const aggregate = new OrderAggregate(order);
+    aggregate.cancelOrder("CLIENT");
+    await this.orderRepository.update(aggregate.order);
+
+    // Refund locked funds back to client
+    // Reuse your existing refundClient — same logic as artisan rejection
+    try {
+      await WalletClient.refundClient(order.id, order.clientId);
+      console.log(
+        `✅ Funds refunded to client ${order.clientId} for cancelled order ${orderId}`,
+      );
+    } catch (refundError: any) {
+      // Log but don't fail the cancellation — order is already cancelled
+      // You can add a retry mechanism or flag for manual review here
+      console.error(
+        `⚠️ Order ${orderId} cancelled but refund failed:`,
+        refundError.message,
+      );
+    }
+
+    // Publish cancellation event
+    const event = new OrderCancelledEvent({
+      orderId: order.id,
+      clientId: order.clientId,
+      artisanId: order.artisanId,
+      cancelledAt: new Date().toISOString(),
+      previousStatus: order.status,
+      deviceType: order.deviceType?.toString() || "",
+      deviceBrand: order.deviceBrand?.toString() || "",
+      deviceModel: order.deviceModel?.toString() || "",
+      serviceRequired: order.serviceRequired?.toString() || "",
+    });
+    await this.eventBus.publish("order_events", event);
   }
 
   //Request history(order history)

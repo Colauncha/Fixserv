@@ -2,17 +2,20 @@ import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
 import { PaystackService } from "../../infrastructure/payments/paystackService";
-import { BadRequestError } from "@fixserv-colauncha/shared";
+import { BadRequestError, RedisEventBus } from "@fixserv-colauncha/shared";
 import {
   WalletModel,
   WalletTransactionModel,
   WithdrawalRequestModel,
 } from "../../infrastructure/persistence/models/walletModel";
 import { UserManagementClient } from "../../infrastructure/reuseableWrapper/userManagementClient";
+import { WalletWithdrawalEvent } from "../../events/walletEvent";
 
 const userCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 const verificationInProgress = new Map<string, Promise<any>>();
+
+const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
 export class WalletService {
   static async initiateTopup(amount: number, email: string) {
     try {
@@ -740,6 +743,13 @@ export class WalletService {
 
       console.log(`Withdrawal request created: ${reference}`);
 
+      const event = new WalletWithdrawalEvent({
+        userId,
+        amount,
+        accountNumber,
+      });
+      await eventBus.publish("wallet_events", event);
+
       return {
         message: "Withdrawal request created successfully",
         withdrawalId: withdrawalRequest.id,
@@ -757,6 +767,7 @@ export class WalletService {
     }
   }
 
+  /*
   static async processWithdrawal(withdrawalId: string) {
     try {
       console.log(`Processing withdrawal: ${withdrawalId}`);
@@ -803,6 +814,71 @@ export class WalletService {
     } catch (error: any) {
       console.error("Process withdrawal error:", error);
       throw error;
+    }
+  }
+    */
+  // Fix processWithdrawal to be cleaner
+  static async processWithdrawal(withdrawalId: string) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const withdrawalRequest = await WithdrawalRequestModel.findOne({
+        $or: [{ id: withdrawalId }, { reference: withdrawalId }],
+      }).session(session);
+
+      if (!withdrawalRequest) {
+        throw new BadRequestError("Withdrawal request not found");
+      }
+
+      if (withdrawalRequest.status !== "PENDING") {
+        throw new BadRequestError(
+          `Withdrawal is ${withdrawalRequest.status.toLowerCase()}, cannot process`,
+        );
+      }
+
+      // Update to processing within same session
+      withdrawalRequest.status = "PROCESSING";
+      await withdrawalRequest.save({ session });
+      await session.commitTransaction();
+
+      // Make the Paystack transfer OUTSIDE the DB transaction
+      // (external API calls should never be inside DB transactions)
+      try {
+        const transferResult = await PaystackService.initializeTransfer(
+          withdrawalRequest.amount * 100,
+          withdrawalRequest.recipientCode,
+          withdrawalRequest.reason || "Wallet withdrawal",
+        );
+
+        // Update transfer code separately after commit
+        await WithdrawalRequestModel.findByIdAndUpdate(withdrawalRequest._id, {
+          transferCode: transferResult.transfer_code,
+        });
+
+        return {
+          message: "Withdrawal is being processed",
+          transferCode: transferResult.transfer_code,
+          reference: withdrawalRequest.reference,
+          status: "PROCESSING",
+        };
+      } catch (transferError: any) {
+        // Transfer failed after DB commit — revert via failure handler
+        await this.handleWithdrawalFailure(
+          withdrawalRequest.reference,
+          transferError.message || "Transfer failed",
+        );
+        throw new BadRequestError(
+          `Withdrawal failed: ${transferError.message}`,
+        );
+      }
+    } catch (error: any) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      throw error;
+    } finally {
+      session.endSession();
     }
   }
 
@@ -946,6 +1022,24 @@ export class WalletService {
         console.error(
           `Withdrawal request not found for reference: ${transferReference}`,
         );
+        await session.abortTransaction();
+        return;
+      }
+
+      // Guard against double-processing
+      if (withdrawalRequest.status === "COMPLETED") {
+        console.log(
+          `Withdrawal ${transferReference} already completed, skipping`,
+        );
+        await session.abortTransaction();
+        return;
+      }
+
+      if (withdrawalRequest.status !== "PROCESSING") {
+        console.warn(
+          `Unexpected status ${withdrawalRequest.status} for ${transferReference}`,
+        );
+        await session.abortTransaction();
         return;
       }
 
@@ -962,6 +1056,7 @@ export class WalletService {
 
       // Remove from locked balance (money is now sent)
       wallet.lockedBalance -= amount;
+      wallet.updatedAt = new Date();
 
       // Update transaction status to SUCCESS
       const pendingTx = wallet.transactions.find(
@@ -973,7 +1068,7 @@ export class WalletService {
       if (pendingTx) {
         pendingTx.status = "SUCCESS";
         pendingTx.purpose = "WITHDRAWAL_COMPLETED";
-        pendingTx.description = `Withdrawal completed - ${withdrawalRequest.accountName}`;
+        pendingTx.description = `Withdrawal completed to- ${withdrawalRequest.accountName}`;
       }
 
       // Update withdrawal request status
@@ -985,7 +1080,9 @@ export class WalletService {
 
       await session.commitTransaction();
 
-      console.log(`Withdrawal completed successfully: ${transferReference}`);
+      console.log(
+        `Withdrawal completed successfully: ${transferReference},amount: ${amount}`,
+      );
     } catch (error: any) {
       await session.abortTransaction();
       console.error("Error handling withdrawal success:", error);
@@ -1019,6 +1116,13 @@ export class WalletService {
         console.error(
           `Withdrawal request not found for reference: ${transferReference}`,
         );
+        return;
+      }
+
+      // Guard against double-refunding
+      if (withdrawalRequest.status === "FAILED") {
+        console.log(`Withdrawal ${transferReference} already failed, skipping`);
+        await session.abortTransaction();
         return;
       }
 
@@ -1128,14 +1232,15 @@ export class WalletService {
    * Cancel withdrawal (only if still pending)
    */
   static async cancelWithdrawal(userId: string, withdrawalId: string) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // const session = await mongoose.startSession();
+    // session.startTransaction();
 
     try {
       const withdrawalRequest = await WithdrawalRequestModel.findOne({
         $or: [{ id: withdrawalId }, { reference: withdrawalId }],
         userId,
-      }).session(session);
+      });
+      // }).session(session);
 
       if (!withdrawalRequest) {
         throw new BadRequestError("Withdrawal request not found");
@@ -1148,23 +1253,25 @@ export class WalletService {
       }
 
       // Refund the amount
+      // handleWithdrawalFailure manages its own transaction internally
       await this.handleWithdrawalFailure(
         withdrawalRequest.reference,
         "Cancelled by user",
       );
 
-      await session.commitTransaction();
+      // await session.commitTransaction();
 
       return {
         message: "Withdrawal cancelled successfully",
         refundedAmount: withdrawalRequest.amount,
       };
     } catch (error: any) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
+      // await session.abortTransaction();
+      throw new BadRequestError(error.message || "Failed to cancel withdrawal");
     }
+    // finally {
+    // session.endSession();
+    // }
   }
 
   // In walletService.ts
@@ -1210,8 +1317,7 @@ export class WalletService {
 
       const reference = `MANUAL_LOCK_${userId}_${Date.now()}`;
 
-      wallet.balance -= amount; // my fix
-
+      wallet.balance -= amount; //my fix
       wallet.lockedBalance += amount;
       wallet.transactions.push({
         id: uuidv4(),
@@ -1343,6 +1449,7 @@ export class WalletService {
     manuallyLocked: number;
     orderEscrow: number;
     available: number;
+    availableAfterDifference: number;
   }> {
     const wallet = await WalletModel.findOne({ userId });
     if (!wallet) throw new BadRequestError("Wallet not found");
@@ -1357,6 +1464,7 @@ export class WalletService {
       orderEscrow,
       // available: wallet.balance - totalLocked,
       available: wallet.balance,
+      availableAfterDifference: wallet.balance - totalLocked,
     };
   }
 }

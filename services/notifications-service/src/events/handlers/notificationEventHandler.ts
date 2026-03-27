@@ -74,6 +74,9 @@ export class NotificationEventHandler {
           case "OrderPaymentReleased":
             await this.handlePaymentRelease(evt);
             break;
+          case "OrderCancelled":
+            await this.handleOrderCancelled(evt);
+            break;
         }
       },
     );
@@ -98,6 +101,9 @@ export class NotificationEventHandler {
         switch (evt.eventName) {
           case "WalletTopUpEvent":
             await this.handleWalletTopUp(evt);
+            break;
+          case "WalletWithdrawal":
+            await this.handleWalletWithdrawal(evt);
             break;
         }
       },
@@ -418,6 +424,10 @@ export class NotificationEventHandler {
         data: {
           orderId: event.payload.orderId,
           artisanId: event.payload.artisanId,
+          deviceType: event.payload.deviceType,
+          deviceBrand: event.payload.deviceBrand,
+          deviceModel: event.payload.deviceModel,
+          serviceRequired: event.payload.serviceRequired,
         },
       });
       console.log(
@@ -437,6 +447,10 @@ export class NotificationEventHandler {
         data: {
           orderId: event.payload.orderId,
           artisanId: event.payload.artisanId,
+          deviceType: event.payload.deviceType,
+          deviceBrand: event.payload.deviceBrand,
+          deviceModel: event.payload.deviceModel,
+          serviceRequired: event.payload.serviceRequired,
         },
       });
       console.log(
@@ -448,7 +462,16 @@ export class NotificationEventHandler {
   }
   private async handlePaymentRelease(event: any): Promise<void> {
     try {
-      const { orderId, artisanId, clientId, amount } = event.payload;
+      const {
+        orderId,
+        artisanId,
+        clientId,
+        amount,
+        deviceType,
+        deviceBrand,
+        deviceModel,
+        serviceRequired,
+      } = event.payload;
 
       await this.notificationService.createNotification({
         userId: event.payload.clientId,
@@ -459,6 +482,10 @@ export class NotificationEventHandler {
           orderId,
           artisanId: event,
           amount,
+          deviceType,
+          deviceBrand,
+          deviceModel,
+          serviceRequired,
         },
       });
 
@@ -471,6 +498,10 @@ export class NotificationEventHandler {
           orderId,
           artisanId,
           amount,
+          deviceType,
+          deviceBrand,
+          deviceModel,
+          serviceRequired,
         },
       });
       console.log(
@@ -478,6 +509,72 @@ export class NotificationEventHandler {
       );
     } catch (error) {
       console.error("Error handling PaymentRelease event:", error);
+    }
+  }
+  private async handleOrderCancelled(event: any): Promise<void> {
+    try {
+      // Notify artisan that client cancelled
+      await this.notificationService.createNotification({
+        userId: event.payload.artisanId,
+        type: "ORDER_CANCELLED", // reuse existing type or add ORDER_CANCELLED
+        title: "Order Cancelled",
+        message: "The client has cancelled their order.",
+        data: {
+          orderId: event.payload.orderId,
+          clientId: event.payload.clientId,
+          cancelledAt: event.payload.cancelledAt,
+          deviceType: event.payload.deviceType,
+          deviceBrand: event.payload.deviceBrand,
+          deviceModel: event.payload.deviceModel,
+          serviceRequired: event.payload.serviceRequired,
+        },
+      });
+
+      // Notify client that cancellation + refund is processing
+      await this.notificationService.createNotification({
+        userId: event.payload.clientId,
+        type: "ORDER_CANCELLED",
+        title: "Order Cancelled",
+        message:
+          "Your order has been cancelled and your funds will be refunded.",
+        data: {
+          orderId: event.payload.orderId,
+          cancelledAt: event.payload.cancelledAt,
+          deviceType: event.payload.deviceType,
+          deviceBrand: event.payload.deviceBrand,
+          deviceModel: event.payload.deviceModel,
+          serviceRequired: event.payload.serviceRequired,
+        },
+      });
+      console.log(
+        `✅ Order cancelled notifications sent for order: ${
+          event.payload.orderId
+        } to artisan: ${event.payload.artisanId} and client: ${event.payload.clientId}`,
+      );
+    } catch (error) {
+      console.error("Error handling OrderCancelled event:", error);
+    }
+  }
+  private async handleWalletWithdrawal(event: any): Promise<void> {
+    try {
+      const { userId, amount, accountNumber } = event.payload;
+
+      await this.notificationService.createNotification({
+        userId,
+        type: "WALLET_WITHDRAWAL",
+        title: "Withdrawal Processed",
+        message: `₦${amount} has been withdrawn from your wallet.`,
+        data: {
+          userId,
+          amount,
+          accountNumber,
+        },
+      });
+      console.log(
+        `✅ Wallet withdrawal notification sent to user: ${event.payload.userId}`,
+      );
+    } catch (error) {
+      console.error("Error handling WalletWithdrawal event:", error);
     }
   }
 }
