@@ -9,7 +9,10 @@ import {
   WithdrawalRequestModel,
 } from "../../infrastructure/persistence/models/walletModel";
 import { UserManagementClient } from "../../infrastructure/reuseableWrapper/userManagementClient";
-import { WalletWithdrawalEvent } from "../../events/walletEvent";
+import {
+  WalletTopUpEvent,
+  WalletWithdrawalEvent,
+} from "../../events/walletEvent";
 
 const userCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -23,6 +26,13 @@ export class WalletService {
         amount * 100,
         email,
       );
+
+      const event = new WalletTopUpEvent({
+        email,
+        amount,
+      });
+      await eventBus.publish("wallet_events", event);
+
       return paymentData;
     } catch (error) {
       console.error("Error initiating topup:", error);

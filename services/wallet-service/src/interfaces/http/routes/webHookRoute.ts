@@ -112,6 +112,7 @@ import { Router } from "express";
 import express from "express";
 import crypto from "crypto";
 import { WalletService } from "../../../application/services/walletService";
+import { RedisEventBus } from "@fixserv-colauncha/shared";
 
 const webhookRouter = Router();
 

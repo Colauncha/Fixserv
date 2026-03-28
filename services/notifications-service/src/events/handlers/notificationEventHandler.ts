@@ -99,7 +99,8 @@ export class NotificationEventHandler {
       "wallet_events",
       async (evt: any) => {
         switch (evt.eventName) {
-          case "WalletTopUpEvent":
+          // case "WalletTopUpEvent":
+          case "WalletTopUp":
             await this.handleWalletTopUp(evt);
             break;
           case "WalletWithdrawal":
@@ -306,7 +307,8 @@ export class NotificationEventHandler {
         userId: event.payload.userId,
         type: "WALLET_TOPUP",
         title: "Wallet Top-Up Successful",
-        message: `Your wallet has been topped up with ₦${event.payload.amount}.`,
+        // message: `Your wallet has been credited with ₦${event.payload.amount}.`,
+        message: `You requested to top up your wallet with ₦${event.payload.amount}.`,
         data: {
           amount: event.payload.amount,
           transactionId: event.payload.transactionId,
@@ -406,6 +408,7 @@ export class NotificationEventHandler {
           rejectionNote: event.payload.rejectionNote,
         },
       });
+
       console.log(
         `✅ Order rejected notification sent to client: ${event.payload.clientId}`,
       );
@@ -563,7 +566,8 @@ export class NotificationEventHandler {
         userId,
         type: "WALLET_WITHDRAWAL",
         title: "Withdrawal Processed",
-        message: `₦${amount} has been withdrawn from your wallet.`,
+        // message: `₦${amount} has been withdrawn from your wallet.`,
+        message: `₦${amount} has been requested for withdrawal from your wallet.`,
         data: {
           userId,
           amount,

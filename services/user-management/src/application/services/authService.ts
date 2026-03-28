@@ -350,7 +350,11 @@ export class AuthService implements IAuthService {
   ): Promise<{ user: UserAggregate; BearerToken: string; isNewUser: boolean }> {
     try {
       // Exchange code for tokens
-      const { tokens } = await client.getToken(code);
+      // const { tokens } = await client.getToken(code);
+      const { tokens } = await client.getToken({
+        code,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI, // Ensure this matches the redirect URI used in getGoogleAuthUrl
+      });
 
       if (!tokens.id_token) {
         throw new BadRequestError("No ID token received from Google");
@@ -381,6 +385,7 @@ export class AuthService implements IAuthService {
       scope: scopes,
       state: role, // Pass role in state parameter
       prompt: "consent",
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI, // Ensure this is set in your environment variables
     });
 
     return authUrl;

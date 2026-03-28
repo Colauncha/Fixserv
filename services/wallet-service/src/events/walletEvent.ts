@@ -14,3 +14,17 @@ export class WalletWithdrawalEvent extends BaseEvent {
     super(payload);
   }
 }
+
+export class WalletTopUpEvent extends BaseEvent {
+  eventName = "WalletTopUp";
+  version = 1;
+
+  constructor(
+    public payload: {
+      email: string;
+      amount: number;
+    },
+  ) {
+    super(payload);
+  }
+}
