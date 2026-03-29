@@ -9,7 +9,10 @@ import {
   WithdrawalRequestModel,
 } from "../../infrastructure/persistence/models/walletModel";
 import { UserManagementClient } from "../../infrastructure/reuseableWrapper/userManagementClient";
-import { WalletWithdrawalEvent } from "../../events/walletEvent";
+import {
+  WalletTopUpEvent,
+  WalletWithdrawalEvent,
+} from "../../events/walletEvent";
 
 const userCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -23,6 +26,7 @@ export class WalletService {
         amount * 100,
         email,
       );
+
       return paymentData;
     } catch (error) {
       console.error("Error initiating topup:", error);
@@ -189,7 +193,25 @@ export class WalletService {
       { new: true, upsert: true },
     );
 
-    console.log(`Wallet updated successfully for user ${user.id}`);
+    console.log(`✅ Wallet credited for user ${user.id}: ₦${amount / 100}`);
+
+    // Publish WalletTopUpEvent AFTER successful wallet credit
+    // This triggers notification in notification-service
+    try {
+      await eventBus.publish(
+        "wallet_events",
+        new WalletTopUpEvent({
+          userId: user.id,
+          email,
+          amount: amount / 100,
+          reference,
+        }),
+      );
+      console.log(`✅ WalletTopUpEvent published for user ${user.id}`);
+    } catch (eventError: any) {
+      // Non-fatal — wallet is credited, only notification fails
+      console.error("Failed to publish WalletTopUpEvent:", eventError.message);
+    }
 
     return {
       message: "Topup successful",
@@ -215,7 +237,7 @@ export class WalletService {
     }
   }
     */
-  static async getUserByEmail(email: string, maxRetries = 3) {
+  public static async getUserByEmail(email: string, maxRetries = 3) {
     // Check cache first
     const cached = userCache.get(email);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -742,13 +764,6 @@ export class WalletService {
       await session.commitTransaction();
 
       console.log(`Withdrawal request created: ${reference}`);
-
-      const event = new WalletWithdrawalEvent({
-        userId,
-        amount,
-        accountNumber,
-      });
-      await eventBus.publish("wallet_events", event);
 
       return {
         message: "Withdrawal request created successfully",

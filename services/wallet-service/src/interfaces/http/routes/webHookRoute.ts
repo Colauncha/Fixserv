@@ -4,7 +4,9 @@ import express from "express";
 import { WalletController } from "../../../interfaces/controller/walletController";
 import { WalletService } from "../../../application/services/walletService";
 
-const webhookRouter = Router();
+
+
+
 
 // Webhook routes - NO express.json() middleware applied here
 //webhookRouter.post(
@@ -108,14 +110,18 @@ webhookRouter.get("/webhook-status/:reference", async (req, res) => {
 
 export { webhookRouter };
 */
+
 import { Router } from "express";
 import express from "express";
 import crypto from "crypto";
 import { WalletService } from "../../../application/services/walletService";
+import { RedisEventBus } from "@fixserv-colauncha/shared";
+import { WalletTopUpFailedEvent } from "../../../events/walletEvent";
 
 const webhookRouter = Router();
 
 // Webhook event processor class
+const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
 class PaystackWebhookProcessor {
   private static processedWebhooks = new Map<string, number>();
   private static readonly WEBHOOK_TTL = 24 * 60 * 60 * 1000; // 24 hours
@@ -262,7 +268,7 @@ class PaystackWebhookProcessor {
 
     return isValid;
     }
-*/
+    */
     //For Dev
     // Skip verification in development or for test signatures
     const isTestMode =
@@ -508,20 +514,34 @@ class PaystackWebhookProcessor {
     data: any,
     requestId: string,
   ): Promise<void> {
+    const { reference, gateway_response, customer, amount } = data;
+
+    console.log(`Processing failed charge [${requestId}]:`, {
+      reference,
+      reason: gateway_response,
+      email: customer.email,
+    });
+
+    // Optional: Send failure notification
+    // await NotificationService.sendTopupFailedNotification(customer.email, gateway_response);
+
+    // Optional: Log failed payment for analysis
+    // await PaymentAnalyticsService.logFailedPayment(data);
+    // Get user and publish a failed topup notification
     try {
-      const { reference, gateway_response, customer } = data;
-
-      console.log(`Processing failed charge [${requestId}]:`, {
-        reference,
-        reason: gateway_response,
-        email: customer.email,
-      });
-
-      // Optional: Send failure notification
-      // await NotificationService.sendTopupFailedNotification(customer.email, gateway_response);
-
-      // Optional: Log failed payment for analysis
-      // await PaymentAnalyticsService.logFailedPayment(data);
+      const user = await WalletService.getUserByEmail(customer.email);
+      if (user) {
+        await eventBus.publish(
+          "wallet_events",
+          new WalletTopUpFailedEvent({
+            userId: user.id,
+            email: customer.email,
+            amount: amount / 100,
+            reference,
+            reason: gateway_response,
+          }),
+        );
+      }
     } catch (error: any) {
       console.error(`Error processing charge failure [${requestId}]:`, error);
     }

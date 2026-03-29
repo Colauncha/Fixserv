@@ -8,7 +8,14 @@ import { UserAggregate } from "../../domain/aggregates/userAggregate";
 import { NotAuthorizeError } from "@fixserv-colauncha/shared";
 import { BadRequestError } from "@fixserv-colauncha/shared";
 import { Password } from "../../domain/value-objects/password";
-import { redis, connectRedis } from "@fixserv-colauncha/shared";
+import {
+  redis,
+  connectRedis,
+  EventAck,
+  RedisEventBus,
+} from "@fixserv-colauncha/shared";
+import { ArtisanCreatedEvent } from "../../events/artisanCreatedEvent";
+import { UserCreatedEvent } from "../../events/userCreatedEvent";
 import { IEmailService } from "../../infrastructure/services/emailService";
 import { Email } from "../../domain/value-objects/email";
 import { DeliveryAddress } from "../../domain/value-objects/deliveryAddress";
@@ -23,6 +30,8 @@ import crypto from "crypto";
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthService implements IAuthService {
+  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+  private pendingEvents = new Map<string, Promise<EventAck>>();
   constructor(
     private userRepository: IUserRepository,
     private tokenService: TokenService,
@@ -218,6 +227,7 @@ export class AuthService implements IAuthService {
       throw new BadRequestError("Invalid Google token");
     }
   }
+  /*
   async loginWithGoogle(
     idToken: string,
     role?: "CLIENT" | "ARTISAN" | "ADMIN", // Optional: specify role during signup
@@ -343,6 +353,7 @@ export class AuthService implements IAuthService {
 
     return { user, BearerToken, isNewUser };
   }
+  */
 
   async handleGoogleCallback(
     code: string,
@@ -350,7 +361,11 @@ export class AuthService implements IAuthService {
   ): Promise<{ user: UserAggregate; BearerToken: string; isNewUser: boolean }> {
     try {
       // Exchange code for tokens
-      const { tokens } = await client.getToken(code);
+      // const { tokens } = await client.getToken(code);
+      const { tokens } = await client.getToken({
+        code,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI, // Ensure this matches the redirect URI used in getGoogleAuthUrl
+      });
 
       if (!tokens.id_token) {
         throw new BadRequestError("No ID token received from Google");
@@ -381,6 +396,7 @@ export class AuthService implements IAuthService {
       scope: scopes,
       state: role, // Pass role in state parameter
       prompt: "consent",
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI, // Ensure this is set in your environment variables
     });
 
     return authUrl;
@@ -490,5 +506,213 @@ export class AuthService implements IAuthService {
     }
 
     return freshArtisan;
+  }
+
+  async loginWithGoogle(
+    idToken: string,
+    role?: "CLIENT" | "ARTISAN" | "ADMIN",
+  ): Promise<{ user: UserAggregate; BearerToken: string; isNewUser: boolean }> {
+    const { email, fullName, picture, emailVerified } =
+      await this.verifyGoogleToken(idToken);
+
+    let user = await this.userRepository.findByEmail(email);
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+
+      const randomPassword = await Password.create(
+        crypto.randomBytes(32).toString("hex"),
+      );
+
+      const userRole = role || "CLIENT";
+
+      if (userRole === "CLIENT") {
+        user = UserAggregate.createClient(
+          uuidv4(),
+          new Email(email),
+          randomPassword,
+          fullName,
+          "",
+          new DeliveryAddress("", "", "", "", ""),
+          new ServicePreferences([]),
+          picture || "",
+          [],
+          emailVerified,
+          null,
+          emailVerified ? new Date() : null,
+        );
+      } else if (userRole === "ARTISAN") {
+        user = UserAggregate.createArtisan(
+          uuidv4(),
+          new Email(email),
+          randomPassword,
+          fullName,
+          "",
+          "",
+          "",
+          0,
+          new SkillSet([]),
+          new BusinessHours({}),
+          new Categories([]),
+          new Certificates([]),
+          picture || "",
+          emailVerified,
+          null,
+          emailVerified ? new Date() : null,
+        );
+      } else if (userRole === "ADMIN") {
+        user = UserAggregate.createAdmin(
+          uuidv4(),
+          new Email(email),
+          randomPassword,
+          fullName,
+          "",
+          [],
+          picture || "",
+          emailVerified,
+          null,
+          emailVerified ? new Date() : null,
+        );
+      }
+
+      await this.userRepository.save(user!);
+      console.log(`✅ New user created via Google: ${email} (${userRole})`);
+
+      // Publish events so wallet + notifications are created
+      // exactly like registerUser does
+      try {
+        const eventsToPublish: any[] = [];
+
+        const userCreatedEvent = new UserCreatedEvent({
+          userId: user!.id,
+          email: user!.email,
+          fullName: user!.fullName,
+          role: userRole,
+          referralCode: undefined, // no referral for Google signup
+          additionalData:
+            userRole === "CLIENT"
+              ? { servicePreferences: [] }
+              : userRole === "ARTISAN"
+                ? { businessName: "", skills: [], location: "" }
+                : {},
+        });
+
+        eventsToPublish.push({
+          channel: "user_events",
+          event: userCreatedEvent,
+        });
+
+        // Also publish ArtisanCreatedEvent for artisans
+        if (userRole === "ARTISAN") {
+          const artisanEvent = new ArtisanCreatedEvent({
+            userId: user!.id,
+            fullName: user!.fullName,
+            skills: [],
+            businessName: "",
+          });
+          eventsToPublish.push({
+            channel: "artisan_events",
+            event: artisanEvent,
+          });
+        }
+
+        // Publish all events — same logic as registerUser
+        const publishPromises = eventsToPublish.map(
+          async ({ channel, event }) => {
+            if (channel === "artisan_events") {
+              const ackPromise = this.setupEventAcknowledgment(event.id);
+              this.pendingEvents.set(event.id, ackPromise);
+            }
+
+            if (channel === "user_events") {
+              const ackPromise = this.setupEventAcknowledgment(event.id);
+              this.pendingEvents.set(event.id, ackPromise);
+            }
+
+            await this.eventBus.publish(channel, event);
+
+            if (channel === "artisan_events") {
+              try {
+                const ack = await Promise.race([
+                  this.pendingEvents.get(event.id)!,
+                  this.timeout(8000),
+                ]);
+                this.pendingEvents.delete(event.id);
+                if (ack && ack.status === "failed") {
+                  console.error(`Event processing failed: ${ack.error}`);
+                }
+              } catch (timeoutError) {
+                console.error(
+                  `Event acknowledgment timeout for event ${event.id}`,
+                );
+                this.pendingEvents.delete(event.id);
+              }
+            }
+          },
+        );
+
+        await Promise.all(publishPromises);
+        console.log(`✅ Events published for Google user: ${email}`);
+      } catch (eventError: any) {
+        // Non-fatal — user is created, events failed
+        // Log for monitoring but don't fail the login
+        console.error(
+          `⚠️ Failed to publish events for Google user ${email}:`,
+          eventError.message,
+        );
+      }
+
+      // Send welcome email non-blocking
+      if (emailVerified) {
+        this.emailService
+          .sendWaitlistWelcomeEmail(email, fullName)
+          .catch((error) => {
+            console.error("Failed to send welcome email:", error.message);
+          });
+      }
+    } else {
+      console.log(`✅ Existing user logged in via Google: ${email}`);
+
+      if (picture && user.profilePicture !== picture) {
+        user.updateProfilePicture(picture);
+        await this.userRepository.save(user);
+      }
+
+      if (!user.isEmailVerified && emailVerified) {
+        user.markEmailAsVerified();
+        await this.userRepository.save(user);
+      }
+    }
+
+    if (!user) {
+      throw new BadRequestError("User creation failed");
+    }
+
+    const BearerToken = this.tokenService.generateBearerToken(
+      user.id,
+      user.email,
+      user.role,
+    );
+
+    return { user, BearerToken, isNewUser };
+  }
+  private setupEventAcknowledgment(eventId: string): Promise<EventAck> {
+    return new Promise<EventAck>(async (resolve) => {
+      const sub = await this.eventBus.subscribe(
+        "event_acks",
+        (ack: EventAck) => {
+          if (ack.originalEventId === eventId) {
+            resolve(ack);
+            sub.unsubscribe();
+          }
+        },
+      );
+    });
+  }
+  private timeout(ms: number): Promise<never> {
+    return new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout reached")), ms),
+    );
   }
 }

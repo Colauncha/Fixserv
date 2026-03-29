@@ -328,35 +328,35 @@ export class OrderController {
 
   //draft order
   async createDraftOrder(req: Request, res: Response): Promise<void> {
-    try {
-      const {
-        uploadedProductId,
-        deviceType,
-        deviceBrand,
-        deviceModel,
-        serviceRequired,
-      } = req.body;
-      const result = await this.orderService.createDraftOrder(
-        req.currentUser!.id,
-        uploadedProductId,
-        deviceType,
-        deviceBrand,
-        deviceModel,
-        serviceRequired,
-      );
-      res.status(200).json({
-        message: "Draft order created. Please select a service to continue.",
-        draftOrderId: result.draftOrderId,
-        matchingServices: result.matchingServices,
-      });
-    } catch (error: any) {
-      if (error instanceof BadRequestError) {
-        res.status(400).json({ error: error.message });
-      } else {
-        console.error("Unexpected error:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-      }
-    }
+    // try{
+    const {
+      uploadedProductId,
+      deviceType,
+      deviceBrand,
+      deviceModel,
+      serviceRequired,
+    } = req.body;
+    const result = await this.orderService.createDraftOrder(
+      req.currentUser!.id,
+      uploadedProductId,
+      deviceType,
+      deviceBrand,
+      deviceModel,
+      serviceRequired,
+    );
+    res.status(200).json({
+      message: "Draft order created. Please select a service to continue.",
+      draftOrderId: result.draftOrderId,
+      matchingServices: result.matchingServices,
+    });
+    // } catch (error: any) {
+    //   if (error instanceof BadRequestError) {
+    //     res.status(400).json({ error: error.//message });
+    //   } else {
+    //     console.error("Unexpected error:", error);
+    //     res.status(500).json({ error: "Internal //Server Error" });
+    //   }
+    // }
   }
 
   async confirmOrder(req: Request, res: Response): Promise<void> {
@@ -393,13 +393,10 @@ export class OrderController {
       }
       await this.orderService.cancelOrder(orderId, clientId);
 
-      res
-        .status(200)
-        .json({
-          message:
-            "Order cancelled successfully.  Your funds will be refunded.",
-          orderId,
-        });
+      res.status(200).json({
+        message: "Order cancelled successfully.  Your funds will be refunded.",
+        orderId,
+      });
     } catch (error: any) {
       if (error instanceof BadRequestError) {
         res.status(400).json({ error: error.message });
