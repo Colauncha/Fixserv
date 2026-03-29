@@ -106,6 +106,9 @@ export class NotificationEventHandler {
           case "WalletWithdrawal":
             await this.handleWalletWithdrawal(evt);
             break;
+          case "WalletTopUpFailed":
+            await this.handleWalletTopUpFailed(evt);
+            break;
         }
       },
     );
@@ -302,16 +305,17 @@ export class NotificationEventHandler {
 
   private async handleWalletTopUp(event: any): Promise<void> {
     try {
+      const { amount, reference } = event.payload;
       // Notify user about wallet top-up
       await this.notificationService.createNotification({
         userId: event.payload.userId,
         type: "WALLET_TOPUP",
         title: "Wallet Top-Up Successful",
-        // message: `Your wallet has been credited with ₦${event.payload.amount}.`,
-        message: `You requested to top up your wallet with ₦${event.payload.amount}.`,
+        message: `Your wallet has been credited with ₦${amount.toLocaleString()}.`,
         data: {
           amount: event.payload.amount,
-          transactionId: event.payload.transactionId,
+          // transactionId: event.payload.transactionId,
+          reference,
         },
       });
 
@@ -409,8 +413,25 @@ export class NotificationEventHandler {
         },
       });
 
+      await this.notificationService.createNotification({
+        userId: event.payload.artisanId,
+        type: "ORDER_REJECTED",
+        title: "Order Rejected",
+        message: `You have rejected the order from client ${event.payload.clientId}. Reason: ${event.payload.rejectionReason}.${
+          event.payload.rejectionNote
+            ? ` Note: ${event.payload.rejectionNote}`
+            : ""
+        }`,
+        data: {
+          orderId: event.payload.orderId,
+          clientId: event.payload.clientId,
+          rejectionReason: event.payload.rejectionReason,
+          rejectionNote: event.payload.rejectionNote,
+        },
+      });
+
       console.log(
-        `✅ Order rejected notification sent to client: ${event.payload.clientId}`,
+        `✅ Order rejected notification sent to client: ${event.payload.clientId} and artisan: ${event.payload.artisanId} for order: ${event.payload.orderId}`,
       );
     } catch (error) {
       console.error("Error handling OrderRejected event:", error);
@@ -558,7 +579,7 @@ export class NotificationEventHandler {
       console.error("Error handling OrderCancelled event:", error);
     }
   }
-  private async handleWalletWithdrawal(event: any): Promise<void> {
+  private async handleWalletWithdrawal2(event: any): Promise<void> {
     try {
       const { userId, amount, accountNumber } = event.payload;
 
@@ -579,6 +600,47 @@ export class NotificationEventHandler {
       );
     } catch (error) {
       console.error("Error handling WalletWithdrawal event:", error);
+    }
+  }
+  private async handleWalletWithdrawal(event: any): Promise<void> {
+    try {
+      const { userId, amount, accountNumber, status } = event.payload;
+      const isSuccess = status === "SUCCESS";
+
+      await this.notificationService.createNotification({
+        userId,
+        type: isSuccess ? "PAYMENT_RELEASED" : "PAYMENT_PROCESSED",
+        title: isSuccess ? "Withdrawal Successful" : "Withdrawal Failed",
+        message: isSuccess
+          ? `₦${amount.toLocaleString()} has been successfully sent to your account ending in ${accountNumber.slice(-4)}.`
+          : `Your withdrawal of ₦${amount.toLocaleString()} failed. Your funds have been refunded to your wallet.`,
+        data: {
+          amount,
+          accountNumber: accountNumber.slice(-4),
+          status,
+        },
+      });
+
+      console.log(`✅ Withdrawal notification sent to user: ${userId}`);
+    } catch (error) {
+      console.error("Error handling WalletWithdrawal event:", error);
+    }
+  }
+  private async handleWalletTopUpFailed(event: any): Promise<void> {
+    try {
+      const { userId, amount, reason } = event.payload;
+
+      await this.notificationService.createNotification({
+        userId,
+        type: "PAYMENT_PROCESSED",
+        title: "Wallet Top-Up Failed",
+        message: `Your wallet top-up of ₦${amount.toLocaleString()} failed. Reason: ${reason}. Please try again.`,
+        data: { amount, reason },
+      });
+
+      console.log(`✅ Failed top-up notification sent to user: ${userId}`);
+    } catch (error) {
+      console.error("Error handling WalletTopUpFailed event:", error);
     }
   }
 }
