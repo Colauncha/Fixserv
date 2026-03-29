@@ -353,6 +353,7 @@ export class AuthService implements IAuthService {
 
     return { user, BearerToken, isNewUser };
   }
+  */
 
   async handleGoogleCallback(
     code: string,
@@ -380,7 +381,6 @@ export class AuthService implements IAuthService {
       throw new BadRequestError("Failed to authenticate with Google");
     }
   }
-    */
 
   /**
    * Alternative: Get Google Auth URL for redirect flow
