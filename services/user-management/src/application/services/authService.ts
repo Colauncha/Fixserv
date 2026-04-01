@@ -27,7 +27,11 @@ import { Certificates } from "../../domain/value-objects/certificates";
 import { SkillSet } from "../../domain/value-objects/skillSet";
 import crypto from "crypto";
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const client = new OAuth2Client({
+  clientId: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  redirectUri: process.env.GOOGLE_REDIRECT_URI,
+});
 
 export class AuthService implements IAuthService {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
@@ -386,9 +390,12 @@ export class AuthService implements IAuthService {
    * Alternative: Get Google Auth URL for redirect flow
    */
   getGoogleAuthUrl(role?: "CLIENT" | "ARTISAN" | "ADMIN"): string {
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    console.log("Generating Google auth URL with redirect_uri:", redirectUri);
     const scopes = [
       "https://www.googleapis.com/auth/userinfo.email",
       "https://www.googleapis.com/auth/userinfo.profile",
+      "openid",
     ];
 
     const authUrl = client.generateAuthUrl({
@@ -396,9 +403,9 @@ export class AuthService implements IAuthService {
       scope: scopes,
       state: role, // Pass role in state parameter
       prompt: "consent",
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI, // Ensure this is set in your environment variables
+      redirect_uri: redirectUri,
     });
-
+    console.log("Generated auth URL:", authUrl);
     return authUrl;
   }
 

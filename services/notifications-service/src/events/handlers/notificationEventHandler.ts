@@ -498,7 +498,7 @@ export class NotificationEventHandler {
       } = event.payload;
 
       await this.notificationService.createNotification({
-        userId: event.payload.clientId,
+        userId: artisanId,
         type: "PAYMENT_RELEASED",
         title: "Payment Released",
         message: `₦${amount} has been released to your wallet for order ${orderId}.`,
@@ -528,6 +528,7 @@ export class NotificationEventHandler {
           serviceRequired,
         },
       });
+
       console.log(
         `✅ Payment released notification sent to client: ${event.payload.clientId} and artisan: ${event.payload.artisanId} for order: ${event.payload.orderId}`,
       );
