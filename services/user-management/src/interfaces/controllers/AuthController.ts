@@ -354,9 +354,39 @@ export class AuthController {
       const { user, BearerToken, isNewUser } =
         await this.authService.handleGoogleCallback(code, state as string);
 
-      // Redirect to frontend with token
-      const redirectUrl = `${process.env.FIXSERV_FRONTEND}/auth/callback?token=${BearerToken}&isNewUser=${isNewUser}`;
+      res.cookie("jwt", BearerToken, {
+        httpOnly: true,
+        secure: false, // Set to true in production
+        sameSite: "none",
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
 
+      const frontend = process.env.FIXSERV_FRONTEND;
+
+      let redirectUrl: string;
+      // Redirect to frontend with token
+      // const redirectUrl = `${process.env.FIXSERV_FRONTEND}/auth/callback?token=${BearerToken}&isNewUser=${isNewUser}`;
+
+      switch (user.role) {
+        case "CLIENT":
+          redirectUrl = isNewUser
+            ? `${frontend}/client/profile?token=${BearerToken}&isNewUser=true`
+            : `${frontend}/client?token=${BearerToken}`;
+          break;
+
+        case "ARTISAN":
+          redirectUrl = isNewUser
+            ? `${frontend}/artisan/profile?token=${BearerToken}&isNewUser=true`
+            : `${frontend}/artisan?token=${BearerToken}`;
+          break;
+
+        case "ADMIN":
+          redirectUrl = `${frontend}/admin?token=${BearerToken}`;
+          break;
+
+        default:
+          redirectUrl = `${frontend}/log-in?error=${encodeURIComponent("Unknown role")}`;
+      }
       res.redirect(redirectUrl);
     } catch (error: any) {
       console.error("Google callback error:", error);
