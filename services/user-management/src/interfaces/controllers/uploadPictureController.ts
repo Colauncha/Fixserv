@@ -10,6 +10,10 @@ import { AuthService } from "../../application/services/authService";
 
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
 import { EmailService } from "../../infrastructure/services/emailServiceImpls";
+import {
+  cleanupTempFile,
+  uploadToCloudinary,
+} from "../../config/cloudinaryUpload";
 
 const userRepository = new UserRepositoryImpl();
 const userService = new UserService(userRepository);
@@ -18,12 +22,13 @@ const emailService = new EmailService();
 
 const authService = new AuthService(userRepository, tokenService, emailService);
 
+/*
 export const uploadProfilePicture = async (req: Request, res: Response) => {
   const userId = req.params.id;
   const filePath = req.file?.path;
 
   if (!filePath) {
-    return res.status(400).send({ error: "No file uploaded" });
+    throw new BadRequestError("No file uploaded");
   }
   try {
     const result = await cloudinary.uploader.upload(filePath, {
@@ -56,7 +61,46 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
     return res.status(500).send({ error: "Failed to upload profile picture" });
   }
 };
+*/
+export const uploadProfilePicture = async (req: Request, res: Response) => {
+  const userId = req.params.id;
+  const filePath = req.file?.path;
 
+  if (!filePath) {
+    throw new BadRequestError("No file uploaded");
+  }
+
+  // Authorization check
+  if (req.currentUser!.id !== userId && req.currentUser!.role !== "ADMIN") {
+    cleanupTempFile(filePath);
+    throw new BadRequestError("You are not authorized to update this profile");
+  }
+
+  // Upload with compression
+  const imageUrl = await uploadToCloudinary(filePath, {
+    folder: "fixserv/profile_pictures",
+    resourceType: "image",
+    maxFileSizeMB: 5,
+    transformation: [
+      { width: 400, height: 400, crop: "fill", gravity: "face" }, // resize to 400x400
+      { quality: "auto:good" },
+      { fetch_format: "auto" },
+    ],
+  });
+
+  const updatedUser = await userService.updateProfilePicture(userId, imageUrl);
+  await authService.invalidateUserCache(userId);
+  const freshUser = await authService.findUserById(userId);
+
+  res.status(200).json({
+    success: true,
+    imageUrl,
+    message: "Profile picture uploaded successfully",
+    user: freshUser.toJSON(),
+  });
+};
+
+/*
 export const uploadProducts = async (req: Request, res: Response) => {
   const clientId = req.params.id;
   const currentUser = req.currentUser!.id;
@@ -116,3 +160,56 @@ export const uploadProducts = async (req: Request, res: Response) => {
 //await redis.set(`user:${user.id}`, JSON.stringify(user), {
 //  EX: 60 * 10, // Cache for 10 minutes
 //});
+*/
+
+export const uploadProducts = async (req: Request, res: Response) => {
+  const clientId = req.params.id;
+  const currentUser = req.currentUser!.id;
+
+  if (currentUser !== clientId) {
+    throw new BadRequestError("You are not authorized to upload products");
+  }
+
+  const { description, objectName } = req.body;
+  const file = req.file;
+
+  if (!file) {
+    throw new BadRequestError("Image file is required");
+  }
+
+  if (!description || !objectName) {
+    cleanupTempFile(file.path);
+    throw new BadRequestError("Description and object name are required");
+  }
+
+  // Upload with compression
+  const imageUrl = await uploadToCloudinary(file.path, {
+    folder: "fixserv/uploaded_products",
+    resourceType: "image",
+    maxFileSizeMB: 5,
+    transformation: [
+      { width: 800, height: 800, crop: "limit" }, // max 800x800, keep aspect ratio
+      { quality: "auto:good" },
+      { fetch_format: "auto" },
+    ],
+  });
+
+  const product = {
+    id: uuidv4(),
+    imageUrl,
+    description,
+    objectName,
+    uploadedAt: new Date(),
+  };
+
+  await userRepository.addUploadedProduct(clientId, product);
+  await authService.invalidateUserCache(clientId);
+  const freshUser = await authService.findUserById(clientId);
+
+  res.status(200).json({
+    success: true,
+    message: "Product uploaded successfully",
+    product,
+    user: freshUser.toJSON(),
+  });
+};

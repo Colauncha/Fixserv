@@ -107,7 +107,7 @@ export class AuthService implements IAuthService {
         return UserAggregate.fromJSON(JSON.parse(cachedUser));
       }
 
-      console.log(`Cache MISS for user:${id}`);
+      // console.log(`Cache MISS for user:${id}`);
       const user = await this.userRepository.findById(id);
       if (!user) {
         throw new BadRequestError("User with that Id not found");
@@ -134,11 +134,11 @@ export class AuthService implements IAuthService {
     try {
       const cachedUser = await redis.get(cacheKey);
       if (cachedUser) {
-        console.log(`Cache HIT for user with email:${email}`);
+        // console.log(`Cache HIT for user with email:${email}`);
         return UserAggregate.fromJSON(JSON.parse(cachedUser));
       }
 
-      console.log(`Cache MISS for user with email:${email}`);
+      // console.log(`Cache MISS for user with email:${email}`);
       const user = await this.userRepository.findByEmail(email);
       if (!user) {
         throw new BadRequestError("User with that email not found");
@@ -426,7 +426,7 @@ export class AuthService implements IAuthService {
       throw new Error("Not initialized");
     }
     await redis.del(cacheKey);
-    console.log(`Cache invalidated for email:${email}`);
+    // console.log(`Cache invalidated for email:${email}`);
   }
 
   async refreshUserCache(userId: string): Promise<UserAggregate> {

@@ -1,5 +1,6 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import "express-async-errors";
+import multer from "multer";
 import { userRouter } from "./routes/userRoutes";
 import { adminRouter } from "./routes/authRoutes";
 import cookieParser from "cookie-parser";
@@ -47,6 +48,38 @@ app.use("/api/certificate", certificateRouter);
 //  const endpoints = //expressListEndpoints(app);
 //  res.json({ endpoints });
 //});
+
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        errors: [
+          {
+            message:
+              "File is too large. Maximum size is 5MB for images and 10MB for PDFs",
+          },
+        ],
+      });
+    }
+    if (err.code === "LIMIT_FILE_COUNT") {
+      return res.status(400).json({
+        errors: [{ message: "Too many files. Maximum 5 files allowed" }],
+      });
+    }
+    return res.status(400).json({
+      errors: [{ message: err.message }],
+    });
+  }
+
+  // File type error from fileFilter
+  if (err.message?.includes("Only")) {
+    return res.status(400).json({
+      errors: [{ message: err.message }],
+    });
+  }
+
+  next(err);
+});
 
 app.all("*", async () => {
   throw new NotFoundError();
