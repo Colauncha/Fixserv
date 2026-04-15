@@ -205,6 +205,12 @@ export class AuthService implements IAuthService {
     emailVerified: boolean;
   }> {
     try {
+         if (!process.env.GOOGLE_CLIENT_ID) {
+      throw new Error("GOOGLE_CLIENT_ID not configured");
+    }
+    
+    console.log("Verifying token with client ID:", process.env.GOOGLE_CLIENT_ID);
+    
       const ticket = await client.verifyIdToken({
         idToken,
         audience: process.env.GOOGLE_CLIENT_ID, // ⭐ This must match your app's client ID
@@ -386,10 +392,22 @@ export class AuthService implements IAuthService {
     }
   }
 
+  // Add this temporary debug function
+private debugGoogleConfig() {
+  console.log("Google OAuth Configuration:", {
+    clientId: process.env.GOOGLE_CLIENT_ID ? "✓ Set" : "✗ MISSING",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ? "✓ Set" : "✗ MISSING",
+    redirectUri: process.env.GOOGLE_REDIRECT_URI,
+    frontend: process.env.FIXSERV_FRONTEND,
+    nodeEnv: process.env.NODE_ENV
+  });
+}
+
   /**
    * Alternative: Get Google Auth URL for redirect flow
    */
   getGoogleAuthUrl(role?: "CLIENT" | "ARTISAN" | "ADMIN"): string {
+    this.debugGoogleConfig()
     const redirectUri = process.env.GOOGLE_REDIRECT_URI;
     console.log("Generating Google auth URL with redirect_uri:", redirectUri);
     const scopes = [
