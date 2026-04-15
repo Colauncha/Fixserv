@@ -7,7 +7,10 @@ import {
   getPendingCertificates,
   getCertificateStats,
 } from "../../../interfaces/controllers/uploadCertificateController";
-import { upload } from "../../../interfaces/middlewares/multerMiddleware";
+import {
+  upload,
+  certificateUpload,
+} from "../../../interfaces/middlewares/multerMiddleware";
 import { AuthMiddleware, requireRole } from "@fixserv-colauncha/shared";
 
 const authMiddleware = new AuthMiddleware();
@@ -26,10 +29,12 @@ router.post(
   "/:id/upload-certificates",
   authMiddleware.protect,
   requireRole("ARTISAN", "ADMIN"),
-  upload.array("certificates", 5), // Accept up to 5 files
-  (req: Request, res: Response, next) => {
-    Promise.resolve(uploadCertificates(req, res)).catch(next);
-  },
+  // upload.array("certificates", 5), // Accept up to 5 files
+  // (req: Request, res: Response, next) => {
+  //   Promise.resolve(uploadCertificates(req, res)).catch(next);
+  // },
+  certificateUpload.array("certificates", 5), // Accept up to 5 files
+  uploadCertificates,
 );
 
 // Get artisan's certificates

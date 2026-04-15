@@ -9,6 +9,10 @@ import { AuthService } from "../../application/services/authService";
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
 import { EmailService } from "../../infrastructure/services/emailServiceImpls";
 import { CertificateType } from "../../domain/value-objects/certificate";
+import {
+  cleanupTempFile,
+  uploadToCloudinary,
+} from "../../config/cloudinaryUpload";
 
 const userRepository = new UserRepositoryImpl();
 const tokenService = new JwtTokenService();
@@ -19,6 +23,7 @@ const authService = new AuthService(userRepository, tokenService, emailService);
  * Upload multiple certificates for an artisan
  * POST /api/artisan/:id/upload-certificates
  */
+/*
 export const uploadCertificates = async (req: Request, res: Response) => {
   const artisanId = req.params.id;
   const currentUser = req.currentUser!;
@@ -138,6 +143,106 @@ export const uploadCertificates = async (req: Request, res: Response) => {
 
     throw new BadRequestError(error.message || "Failed to upload certificates");
   }
+};
+*/
+
+export const uploadCertificates = async (req: Request, res: Response) => {
+  const artisanId = req.params.id;
+  const currentUser = req.currentUser!;
+
+  if (currentUser.id !== artisanId && currentUser.role !== "ADMIN") {
+    throw new BadRequestError(
+      "You are not authorized to upload certificates for this artisan",
+    );
+  }
+
+  const user = await authService.findUserById(artisanId);
+  if (user.role !== "ARTISAN") {
+    throw new BadRequestError("Only artisans can upload certificates");
+  }
+
+  const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    throw new BadRequestError("At least one certificate file is required");
+  }
+
+  if (files.length > 5) {
+    // Clean up all files
+    files.forEach((f) => cleanupTempFile(f.path));
+    throw new BadRequestError("Maximum 5 certificates can be uploaded at once");
+  }
+
+  let names: string[] = [];
+  if (req.body.certificateNames) {
+    try {
+      names = JSON.parse(req.body.certificateNames);
+    } catch {
+      files.forEach((f) => cleanupTempFile(f.path));
+      throw new BadRequestError("Invalid certificate names format");
+    }
+  }
+
+  const uploadedCertificates = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const certificateName = names[i] || `Certificate ${i + 1}`;
+
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    const isPDF =
+      fileExtension === ".pdf" || file.mimetype === "application/pdf";
+    const isImage = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ].includes(file.mimetype);
+
+    if (!isPDF && !isImage) {
+      // Clean up remaining files
+      files.slice(i).forEach((f) => cleanupTempFile(f.path));
+      throw new BadRequestError(
+        "Only PDF and image files (JPG, PNG, WEBP) are allowed",
+      );
+    }
+
+    const fileUrl = await uploadToCloudinary(file.path, {
+      folder: "fixserv/artisan_certificates",
+      resourceType: isPDF ? "raw" : "image",
+      maxFileSizeMB: isPDF ? 10 : 5,
+      // Images get compressed, PDFs uploaded as-is
+      ...(!isPDF && {
+        transformation: [
+          { width: 1200, crop: "limit" },
+          { quality: "auto:good" },
+          { fetch_format: "auto" },
+        ],
+      }),
+    });
+
+    const certificate = {
+      id: uuidv4(),
+      name: certificateName,
+      fileUrl,
+      fileType: isPDF ? CertificateType.PDF : CertificateType.IMAGE,
+      uploadedAt: new Date(),
+      status: "PENDING",
+    };
+
+    await userRepository.addCertificate(artisanId, certificate);
+    uploadedCertificates.push(certificate);
+  }
+
+  await authService.invalidateUserCache(artisanId);
+  const freshUser = await authService.findUserById(artisanId);
+
+  res.status(200).json({
+    success: true,
+    message: `${uploadedCertificates.length} certificate(s) uploaded successfully and submitted for review`,
+    certificates: uploadedCertificates,
+    user: freshUser.toJSON(),
+  });
 };
 
 /**

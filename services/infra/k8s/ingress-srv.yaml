@@ -6,6 +6,10 @@ metadata:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m" # add this
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60" # add this
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60" # add this
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60" # add this
 spec:
   rules:
     - host: fixserv.dev

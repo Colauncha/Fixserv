@@ -345,7 +345,14 @@ export class AuthController {
    */
   async googleCallback(req: Request, res: Response): Promise<void> {
     try {
-      const { code, state } = req.query;
+      const { code, state ,error} = req.query;
+
+          // ✅ Check for Google OAuth errors
+    if (error) {
+      console.error("Google OAuth error:", error);
+      throw new BadRequestError(`Google auth error: ${error}`);
+    }
+
 
       if (!code || typeof code !== "string") {
         throw new BadRequestError("Missing authorization code");
@@ -356,7 +363,7 @@ export class AuthController {
 
       res.cookie("jwt", BearerToken, {
         httpOnly: true,
-        secure: false, // Set to true in production
+        secure: true, // Set to true in production
         sameSite: "none",
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });

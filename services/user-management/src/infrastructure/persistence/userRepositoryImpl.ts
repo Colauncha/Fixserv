@@ -413,7 +413,7 @@ export class UserRepositoryImpl implements IUserRepository {
         },
         { upsert: true },
       );
-      console.log(`✅ Auto-healed identity record for: ${normalizedEmail}`);
+      // console.log(`✅ Auto-healed identity record for: ${normalizedEmail}`);
     } catch (healError) {
       // Non-fatal — log and continue, user can still login
       console.error(
@@ -982,7 +982,7 @@ export class UserRepositoryImpl implements IUserRepository {
     // Save to database
     await this.save(updatedUser);
 
-    console.log(`Certificate added successfully for artisan ${artisanId}`);
+    // console.log(`Certificate added successfully for artisan ${artisanId}`);
   }
 
   /**
@@ -1011,7 +1011,7 @@ export class UserRepositoryImpl implements IUserRepository {
     // Save to database
     await this.save(updatedUser);
 
-    console.log(`Certificate removed successfully`);
+    // console.log(`Certificate removed successfully`);
   }
 
   /**
@@ -1058,7 +1058,7 @@ export class UserRepositoryImpl implements IUserRepository {
     // Save to database
     await this.save(updatedUser);
 
-    console.log(`Certificate status updated successfully to ${status}`);
+    // console.log(`Certificate status updated successfully to ${status}`);
   }
 
   /**
@@ -1070,9 +1070,9 @@ export class UserRepositoryImpl implements IUserRepository {
   ): Promise<{ artisans: UserAggregate[]; total: number }> {
     const skip = (page - 1) * limit;
 
-    console.log(
-      `Fetching artisans with pending certificates - page: ${page}, limit: ${limit}`,
-    );
+    // console.log(
+    // // `Fetching artisans with pending certificates - page: ${page}, limit: ${limit}`,
+    // );
 
     // Query for artisans with at least one pending certificate
     const query = {
@@ -1089,9 +1089,9 @@ export class UserRepositoryImpl implements IUserRepository {
       ArtisanModel.countDocuments(query),
     ]);
 
-    console.log(
-      `Found ${docs.length} artisans with pending certificates (total: ${total})`,
-    );
+    // console.log(
+    // // `Found ${docs.length} artisans with pending certificates (total: ${total})`,
+    // );
 
     const artisans = docs.map((doc) =>
       this.toDomain({ ...doc, role: "ARTISAN" }),
@@ -1121,7 +1121,7 @@ export class UserRepositoryImpl implements IUserRepository {
       .select("+password")
       .lean();
 
-    console.log(`Found ${artisans.length} artisans with pending certificates`);
+    // console.log(`Found ${artisans.length} artisans with pending certificates`);
 
     return artisans.map((artisan: any) => ({
       artisanId: artisan._id.toString(),
