@@ -805,7 +805,7 @@ export class UserRepositoryImpl implements IUserRepository {
       ArtisanModel.countDocuments(query),
     ]);
 
-    console.log(`Found ${docs.length} artisans (total: ${total})`);
+    // console.log(`Found ${docs.length} artisans (total: ${total})`);
 
     const artisans = docs.map((doc) =>
       this.toDomain({ ...doc, role: "ARTISAN" }),
