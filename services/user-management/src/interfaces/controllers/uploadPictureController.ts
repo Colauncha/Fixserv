@@ -62,6 +62,7 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
   }
 };
 */
+/* Latest
 export const uploadProfilePicture = async (req: Request, res: Response) => {
   const userId = req.params.id;
   const filePath = req.file?.path;
@@ -99,6 +100,7 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
     user: freshUser.toJSON(),
   });
 };
+*/
 
 /*
 export const uploadProducts = async (req: Request, res: Response) => {
@@ -162,6 +164,42 @@ export const uploadProducts = async (req: Request, res: Response) => {
 //});
 */
 
+export const uploadProfilePicture = async (req: Request, res: Response) => {
+  const userId = req.params.id;
+
+  if (!req.file) {
+    throw new BadRequestError("No file uploaded");
+  }
+
+  if (req.currentUser!.id !== userId && req.currentUser!.role !== "ADMIN") {
+    throw new BadRequestError("You are not authorized to update this profile");
+  }
+
+  // Pass the whole file object — no path needed
+  const imageUrl = await uploadToCloudinary(req.file, {
+    folder: "fixserv/profile_pictures",
+    resourceType: "image",
+    maxFileSizeMB: 5,
+    transformation: [
+      { width: 400, height: 400, crop: "fill", gravity: "face" },
+      { quality: "auto:good" },
+      { fetch_format: "auto" },
+    ],
+  });
+
+  // No fs.unlinkSync needed — nothing was written to disk
+  const updatedUser = await userService.updateProfilePicture(userId, imageUrl);
+  await authService.invalidateUserCache(userId);
+  const freshUser = await authService.findUserById(userId);
+
+  res.status(200).json({
+    success: true,
+    imageUrl,
+    message: "Profile picture uploaded successfully",
+    user: freshUser.toJSON(),
+  });
+};
+
 export const uploadProducts = async (req: Request, res: Response) => {
   const clientId = req.params.id;
   const currentUser = req.currentUser!.id;
@@ -183,7 +221,8 @@ export const uploadProducts = async (req: Request, res: Response) => {
   }
 
   // Upload with compression
-  const imageUrl = await uploadToCloudinary(file.path, {
+  // const imageUrl = await uploadToCloudinary(file.path, {
+  const imageUrl = await uploadToCloudinary(file, {
     folder: "fixserv/uploaded_products",
     resourceType: "image",
     maxFileSizeMB: 5,

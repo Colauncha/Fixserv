@@ -11,7 +11,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
   console.log(`✅ Created uploads directory: ${uploadDir}`);
 }
-
+/*
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -23,7 +23,8 @@ const storage = multer.diskStorage({
     cb(null, uniqueName);
   },
 });
-
+*/
+const storage = multer.memoryStorage();
 // For profile pictures and products — images only
 export const imageUpload = multer({
   storage,

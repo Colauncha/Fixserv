@@ -9,10 +9,13 @@ interface UploadOptions {
   maxFileSizeMB?: number;
 }
 
+/*
 export async function uploadToCloudinary(
-  filePath: string,
+  // filePath: string,
+  file: Express.Multer.File,
   options: UploadOptions,
 ): Promise<string> {
+  
   // Resolve to absolute path
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
@@ -26,6 +29,8 @@ export async function uploadToCloudinary(
     // Check file size before uploading
     const stats = fs.statSync(absolutePath);
     const fileSizeMB = stats.size / (1024 * 1024);
+    
+   
     const maxSize = options.maxFileSizeMB || 10;
 
     if (fileSizeMB > maxSize) {
@@ -59,7 +64,50 @@ export async function uploadToCloudinary(
     cleanupTempFile(absolutePath);
   }
 }
+*/
+export async function uploadToCloudinary(
+  file: Express.Multer.File, // the whole file object from multer
+  options: UploadOptions,
+): Promise<string> {
+  // Check size
+  const fileSizeMB = file.size / (1024 * 1024);
+  const maxSize = options.maxFileSizeMB || 10;
 
+  if (fileSizeMB > maxSize) {
+    throw new Error(
+      `File size ${fileSizeMB.toFixed(1)}MB exceeds maximum of ${maxSize}MB`,
+    );
+  }
+
+  const isPDF = options.resourceType === "raw";
+
+  // Upload buffer directly to Cloudinary using upload_stream
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: options.folder,
+        resource_type: options.resourceType || "image",
+        timeout: 60000,
+        ...(!isPDF && {
+          transformation: options.transformation || [
+            { quality: "auto:good" },
+            { fetch_format: "auto" },
+          ],
+        }),
+      },
+      (error, result) => {
+        if (error) {
+          reject(new Error(`Cloudinary upload failed: ${error.message}`));
+          return;
+        }
+        resolve(result!.secure_url);
+      },
+    );
+
+    // Pipe the buffer into the upload stream
+    uploadStream.end(file.buffer);
+  });
+}
 export function cleanupTempFile(filePath: string): void {
   try {
     // Handle both relative and absolute paths
