@@ -9,7 +9,7 @@ const uploadDir = path.join(process.cwd(), "uploads");
 // Create directory if it doesn't exist at runtime
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
-  console.log(`✅ Created uploads directory: ${uploadDir}`);
+  // console.log(`✅ Created uploads directory: ${uploadDir}`);
 }
 /*
 const storage = multer.diskStorage({

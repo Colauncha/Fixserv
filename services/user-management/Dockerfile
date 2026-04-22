@@ -81,7 +81,7 @@ COPY services ./services
 
 RUN cd services/user-management && pnpm install --shamefully-hoist
 
-RUN mkdir -p /app/services/user-management/uploads
+# RUN mkdir -p /app/services/user-management/uploads
 RUN cd services/user-management && pnpm run build
 
 # ---- STAGE 3: Runtime ----
@@ -91,7 +91,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/user-management/dist ./dist
 COPY --from=builder /app/services/user-management/package.json ./
-COPY --from=builder /app/services/user-management/uploads ./uploads
+# COPY --from=builder /app/services/user-management/uploads ./uploads
 ENV NODE_ENV=production
 CMD ["node", "dist/index.js"]
 
