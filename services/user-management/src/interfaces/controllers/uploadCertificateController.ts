@@ -146,6 +146,7 @@ export const uploadCertificates = async (req: Request, res: Response) => {
 };
 */
 
+/* latest
 export const uploadCertificates = async (req: Request, res: Response) => {
   const artisanId = req.params.id;
   const currentUser = req.currentUser!;
@@ -240,6 +241,86 @@ export const uploadCertificates = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: `${uploadedCertificates.length} certificate(s) uploaded successfully and submitted for review`,
+    certificates: uploadedCertificates,
+    user: freshUser.toJSON(),
+  });
+};
+*/
+
+export const uploadCertificates = async (req: Request, res: Response) => {
+  const artisanId = req.params.id;
+  const currentUser = req.currentUser!;
+
+  if (currentUser.id !== artisanId && currentUser.role !== "ADMIN") {
+    throw new BadRequestError(
+      "You are not authorized to upload certificates for this artisan",
+    );
+  }
+
+  const user = await authService.findUserById(artisanId);
+  if (user.role !== "ARTISAN") {
+    throw new BadRequestError("Only artisans can upload certificates");
+  }
+
+  const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    throw new BadRequestError("At least one certificate file is required");
+  }
+
+  if (files.length > 5) {
+    throw new BadRequestError("Maximum 5 certificates can be uploaded at once");
+  }
+
+  let names: string[] = [];
+  if (req.body.certificateNames) {
+    try {
+      names = JSON.parse(req.body.certificateNames);
+    } catch {
+      throw new BadRequestError("Invalid certificate names format");
+    }
+  }
+
+  const uploadedCertificates = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const certificateName = names[i] || `Certificate ${i + 1}`;
+    const isPDF = file.mimetype === "application/pdf";
+
+    const fileUrl = await uploadToCloudinary(file, {
+      folder: "fixserv/artisan_certificates",
+      resourceType: isPDF ? "raw" : "image",
+      maxFileSizeMB: isPDF ? 10 : 5,
+      ...(!isPDF && {
+        transformation: [
+          { width: 1200, crop: "limit" },
+          { quality: "auto:good" },
+          { fetch_format: "auto" },
+        ],
+      }),
+    });
+
+    // No fs.unlinkSync needed
+    const certificate = {
+      id: uuidv4(),
+      name: certificateName,
+      fileUrl,
+      fileType: isPDF ? CertificateType.PDF : CertificateType.IMAGE,
+      uploadedAt: new Date(),
+      status: "PENDING",
+    };
+
+    await userRepository.addCertificate(artisanId, certificate);
+    uploadedCertificates.push(certificate);
+  }
+
+  await authService.invalidateUserCache(artisanId);
+  const freshUser = await authService.findUserById(artisanId);
+
+  res.status(200).json({
+    success: true,
+    message: `${uploadedCertificates.length} certificate(s) uploaded successfully`,
     certificates: uploadedCertificates,
     user: freshUser.toJSON(),
   });
