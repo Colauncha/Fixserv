@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { redis, connectRedis } from "@fixserv-colauncha/shared";
+import { redis, connectRedis, RedisEventBus } from "@fixserv-colauncha/shared";
 import { AuthService } from "../../application/services/authService";
 import { BadRequestError, NotAuthorizeError } from "@fixserv-colauncha/shared";
 import { UserRepositoryImpl } from "../../infrastructure/persistence/userRepositoryImpl";
@@ -12,8 +12,10 @@ import { SkillSet } from "../../domain/value-objects/skillSet";
 import { refreshUserCache } from "../../infrastructure/utils/refreshUserCache";
 import { Categories } from "../../domain/value-objects/categories";
 import { Password } from "../../domain/value-objects/password";
+import { ArtisanUpdatedEvent } from "../../events/artisanUpdatedEvent";
 
 export class AuthController {
+  private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private userRepository = new UserRepositoryImpl();
 
   constructor(private authService: AuthService) {}
@@ -173,6 +175,29 @@ export class AuthController {
       // Invalidate cache after update
       await this.authService.invalidateUserCache(updatedUser.id);
       await this.authService.invalidateEmailCache(updatedUser.email);
+
+      if (updatedUser.role === "ARTISAN") {
+        try {
+          await this.eventBus.publish(
+            "artisan_events",
+            new ArtisanUpdatedEvent({
+              userId: updatedUser.id,
+              fullName: updatedUser.fullName,
+              businessName: updatedUser.businessName,
+              location: updatedUser.location,
+              skills: updatedUser.skills.skills,
+              categories: updatedUser.getCategoryNames(),
+            }),
+          );
+          console.log(`✅ ArtisanUpdatedEvent published for ${updatedUser.id}`);
+        } catch (eventError: any) {
+          // Non-fatal — profile is saved, event publishing failed
+          console.error(
+            "Failed to publish ArtisanUpdatedEvent:",
+            eventError.message,
+          );
+        }
+      }
 
       // Re-fetch from DB (this will also repopulate cache)
       const freshUser = await this.authService.findUserById(updatedUser.id);
@@ -345,14 +370,13 @@ export class AuthController {
    */
   async googleCallback(req: Request, res: Response): Promise<void> {
     try {
-      const { code, state ,error} = req.query;
+      const { code, state, error } = req.query;
 
-          // ✅ Check for Google OAuth errors
-    if (error) {
-      console.error("Google OAuth error:", error);
-      throw new BadRequestError(`Google auth error: ${error}`);
-    }
-
+      // ✅ Check for Google OAuth errors
+      if (error) {
+        console.error("Google OAuth error:", error);
+        throw new BadRequestError(`Google auth error: ${error}`);
+      }
 
       if (!code || typeof code !== "string") {
         throw new BadRequestError("Missing authorization code");

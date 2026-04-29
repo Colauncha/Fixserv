@@ -37,12 +37,14 @@ export class ServiceService {
   ): Promise<Service> {
     // const artisan = await this.artisanRepository.findById(artisanId);
     const artisan = await ArtisanClient.getArtisanById(artisanId);
+    console.log("artisan:", artisan);
     if (!artisan || artisan.role !== "ARTISAN") {
       throw new BadRequestError("Invalid artisan ID");
     }
     // Fetch artisan's skillSet
     const artisanSkillSet =
-      await this.artisanRepository.getArtisanSkillSet(artisanId);
+      // await this.artisanRepository.getArtisanSkillSet(artisanId);
+      SkillSet.create(artisan.skillSet);
     if (!artisanSkillSet) {
       throw new BadRequestError("Artisan skillSet not found");
     }
