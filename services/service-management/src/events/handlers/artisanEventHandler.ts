@@ -7,19 +7,35 @@ export class ArtisanEventsHandler {
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {
-    const sub = await this.eventBus.subscribe(
+    const artisanSub = await this.eventBus.subscribe(
       "artisan_events",
       async (event: any) => {
         console.log("Received artisan event:", event.eventName);
-        if (
-          event.eventName === "ArtisanCreated" ||
-          event.eventName === "ArtisanCreatedEvent"
-        ) {
-          this.handleArtisanCreated(event);
+        //  if (
+        //    event.eventName === "ArtisanCreated" ||
+        //    event.eventName === "ArtisanCreatedEvent"
+        //  ) {
+        //    this.handleArtisanCreated(event);
+        //  }
+        switch (event.eventName) {
+          case "ArtisanCreated":
+          case "ArtisanCreatedEvent":
+            await this.handleArtisanCreated(event);
+            break;
+          case "ArtisanUpdated":
+            await this.handleArtisanUpdated(event);
+            break;
+          //case "ArtisanRated":
+          //  await this.handleArtisanRated(event);
+          //  break;
+          default:
+            console.log(
+              `[service-management] Unhandled artisan event: ${event.eventName}`,
+            );
         }
       },
     );
-    this.subscriptions.push(sub);
+    this.subscriptions.push(artisanSub);
 
     // Also subscribe to user_events to catch artisan registrations
     const userSub = await this.eventBus.subscribe(
@@ -100,6 +116,34 @@ export class ArtisanEventsHandler {
       console.log(`✅ Artisan synced from user_events: ${userId}`);
     } catch (error: any) {
       console.error("Failed to handle UserCreated for artisan:", error.message);
+    }
+  }
+
+  private async handleArtisanUpdated(event: any) {
+    try {
+      const { userId, fullName, businessName, location, skills, categories } =
+        event.payload;
+
+      const updated = await ArtisanModel.findOneAndUpdate(
+        { userId },
+        {
+          $set: {
+            fullName,
+            businessName,
+            location,
+            skills, // this is what fixes the empty skillSet
+            categories,
+            updatedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true }, // upsert in case artisan wasn't synced before
+      );
+
+      console.log(`✅ Artisan updated in service-management DB: ${userId}`, {
+        skills: updated?.skills,
+      });
+    } catch (error: any) {
+      console.error("handleArtisanUpdated failed:", error.message);
     }
   }
 }
