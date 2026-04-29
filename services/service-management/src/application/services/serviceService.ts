@@ -26,7 +26,7 @@ export class ServiceService {
   private serviceRepoImpl = new ServiceRepositoryImpl();
   constructor(
     private serviceRepository: IServiceRepository,
-    // private artisanRepository: IArtisanRepository,
+    private artisanRepository: IArtisanRepository,
     private offeredServiceRepository: IOfferedServiceRepository,
   ) {}
 
