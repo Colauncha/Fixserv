@@ -14,6 +14,7 @@ import { ServiceRepositoryImpl } from "../../infrastructure/serviceRepositoryImp
 import { SkillSet } from "../../modules-from-other-services/domain/value-objects/skillSet";
 import { IOfferedServiceRepository } from "../../domain/repository/offeredServiceRepository";
 import { OfferedService } from "../../domain/entities/offeredService";
+import { ArtisanClient } from "../../infrastructure/reuseableWrapper/artisanClient";
 
 export class ServiceService {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
@@ -34,7 +35,8 @@ export class ServiceService {
     estimatedDuration: string,
     rating: number,
   ): Promise<Service> {
-    const artisan = await this.artisanRepository.findById(artisanId);
+    // const artisan = await this.artisanRepository.findById(artisanId);
+    const artisan = await ArtisanClient.getArtisanById(artisanId);
     if (!artisan || artisan.role !== "ARTISAN") {
       throw new BadRequestError("Invalid artisan ID");
     }
