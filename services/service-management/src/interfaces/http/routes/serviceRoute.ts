@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import axios from "axios";
 import { ServiceService } from "../../../application/services/serviceService";
-import { ArtisanRepositoryImpl } from "../../../infrastructure/artisanRepositoryImpl";
+//import { ArtisanRepositoryImpl } from "../../..///infrastructure/artisanRepositoryImpl";
 import { ServiceRepositoryImpl } from "../../../infrastructure/serviceRepositoryImpl";
 import { AuthMiddleware } from "@fixserv-colauncha/shared";
 import { requireRole } from "@fixserv-colauncha/shared";
@@ -10,14 +10,14 @@ import { OfferedServiceRepositoryImpl } from "../../../infrastructure/offeredSer
 
 const router = express.Router();
 
-const artisanRepository = new ArtisanRepositoryImpl();
+// const artisanRepository = new ArtisanRepositoryImpl();
 const serviceRepository = new ServiceRepositoryImpl();
 const offeredRepository = new OfferedServiceRepositoryImpl();
 const authenticate = new AuthMiddleware();
 
 const serviceService = new ServiceService(
   serviceRepository,
-  artisanRepository,
+  // artisanRepository,
   offeredRepository,
 );
 const serviceController = new ServiceController(serviceService);

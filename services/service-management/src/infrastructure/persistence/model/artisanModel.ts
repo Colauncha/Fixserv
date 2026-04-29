@@ -7,4 +7,4 @@ const artisanSchema = new mongoose.Schema({
   businessName: String,
 });
 
-export const ArtisanModel = mongoose.model("Artisan", artisanSchema);
+export const ArtisanModel = mongoose.model("ArtisanModel", artisanSchema);

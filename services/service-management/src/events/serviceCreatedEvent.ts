@@ -1,6 +1,6 @@
 import { BaseEvent } from "@fixserv-colauncha/shared";
 
-export class ServiceCreatedEvent extends BaseEvent {
+class ServiceCreatedEvent extends BaseEvent {
   eventName = "ServiceCreated";
   version = 1;
 
@@ -11,7 +11,7 @@ export class ServiceCreatedEvent extends BaseEvent {
       artisanId: string;
       serviceName: string;
       // createdAt: Date;
-    }
+    },
   ) {
     super(payload);
   }

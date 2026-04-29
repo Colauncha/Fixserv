@@ -1,3 +1,4 @@
+/*
 import { ArtisanModel } from "../modules-from-other-services/artisan";
 import { IArtisanRepository } from "../domain/repository/artisanRepository";
 import { Artisan } from "../modules-from-other-services/domain/entities/artisan";
@@ -37,3 +38,4 @@ export class ArtisanRepositoryImpl implements IArtisanRepository {
     );
   }
 }
+*/
