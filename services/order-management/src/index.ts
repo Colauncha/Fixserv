@@ -10,6 +10,7 @@ import {
   RedisEventBus,
 } from "@fixserv-colauncha/shared";
 import { OrderEventsHandler } from "./events/handlers/orderEventHandler";
+import { ServiceEventsHandler } from "./events/handlers/serviceEventHandler";
 
 if (!process.env.JWT_KEY) throw new Error("JWT_KEY must be defined");
 if (!process.env.MONGO_URI) throw new Error("MONGO_URI must be defined");
@@ -33,6 +34,9 @@ const start = async (): Promise<void> => {
       await eventBus.connect();
       const orderEventsHandler = new OrderEventsHandler(eventBus);
       await orderEventsHandler.setupSubscriptions();
+
+      const serviceEventsHandler = new ServiceEventsHandler(eventBus);
+      await serviceEventsHandler.setupSubscriptions();
       console.log("📡 Event handlers initialized");
     } catch (eventError: any) {
       console.error(

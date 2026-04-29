@@ -33,7 +33,7 @@ export class ArtisanRepositoryImpl implements IArtisanRepository {
       doc.location,
       doc.rating,
       doc.skillSet,
-      doc.businessHours
+      doc.businessHours,
     );
   }
 }

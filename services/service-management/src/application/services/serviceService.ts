@@ -7,7 +7,11 @@ import { v4 as uuidv4 } from "uuid";
 import { ServiceDetails } from "../../domain/value-objects/serviceDetails";
 
 import { RedisEventBus } from "@fixserv-colauncha/shared";
-import { ServiceCreatedEvent } from "../../events/serviceCreatedEvent";
+import {
+  ServiceCreatedEvent,
+  ServiceUpdatedEvent,
+  ServiceDeletedEvent,
+} from "../../events/serviceEvents";
 import { clearServiceCache } from "../../infrastructure/utils/redisUtils";
 import { serviceLoader } from "../../infrastructure/loaders/serviceLoader";
 import { ServiceRepositoryImpl } from "../../infrastructure/serviceRepositoryImpl";
@@ -58,17 +62,32 @@ export class ServiceService {
       artisanSkillSet,
     );
 
-    // // Publish event
-    const event = new ServiceCreatedEvent({
-      serviceId: service.id,
-      title: service.details.title,
-      artisanId: service.artisanId,
-      serviceName: service.details.title,
-    });
-
     await this.serviceRepository.save(service);
-    await this.eventBus.publish("service_events", event);
+    // // Publish event
 
+    try {
+      await this.eventBus.publish(
+        "service_events",
+        new ServiceCreatedEvent({
+          serviceId: service.id,
+          artisanId: service.artisanId,
+          title: service.details.title,
+          description: service.details.description,
+          bio: service.details.bio,
+          price: service.details.price,
+          estimatedDuration: service.details.estimatedDuration,
+          skillSet: service.skillSet.toArray(),
+          isActive: service.isActive,
+          rating: service.rating,
+        }),
+      );
+      console.log(`✅ ServiceCreatedEvent published: ${service.id}`);
+    } catch (eventError: any) {
+      console.error(
+        "Failed to publish ServiceCreatedEvent:",
+        eventError.message,
+      );
+    }
     //invalidate cache
     await clearServiceCache();
     return service;
@@ -139,6 +158,24 @@ export class ServiceService {
       throw new BadRequestError("Service not found after update");
     }
 
+    // Publish update event
+    try {
+      await this.eventBus.publish(
+        "service_events",
+        new ServiceUpdatedEvent({
+          serviceId,
+          artisanId: callerArtisanId,
+          ...updates,
+        }),
+      );
+      console.log(`✅ ServiceUpdatedEvent published: ${serviceId}`);
+    } catch (eventError: any) {
+      console.error(
+        "Failed to publish ServiceUpdatedEvent:",
+        eventError.message,
+      );
+    }
+
     // Prime DataLoader with fresh data so subsequent requests in same batch get correct data
     serviceLoader.prime(serviceId, freshService);
 
@@ -168,6 +205,22 @@ export class ServiceService {
     // Invalidate cache before deletion
     await clearServiceCache();
     await this.serviceRepository.deleteService(id);
+    // Publish delete event
+    try {
+      await this.eventBus.publish(
+        "service_events",
+        new ServiceDeletedEvent({
+          serviceId: id,
+          artisanId: callerArtisanId,
+        }),
+      );
+      console.log(`✅ ServiceDeletedEvent published: ${id}`);
+    } catch (eventError: any) {
+      console.error(
+        "Failed to publish ServiceDeletedEvent:",
+        eventError.message,
+      );
+    }
   }
 
   async getPaginatedServices(page: number, limit: number): Promise<Service[]> {
