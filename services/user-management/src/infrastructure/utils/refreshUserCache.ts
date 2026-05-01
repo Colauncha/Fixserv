@@ -1,5 +1,5 @@
 import { connectRedis, redis } from "@fixserv-colauncha/shared";
-import { UserAggregate } from "src/domain/aggregates/userAggregate";
+import { UserAggregate } from "../../domain/aggregates/userAggregate";
 
 export async function invalidateUserCache(userId: string): Promise<void> {
   const cacheKey = `user:${userId}`;

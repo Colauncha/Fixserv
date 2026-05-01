@@ -1,22 +1,18 @@
-import { RedisEventBus } from "@fixserv-colauncha/shared";
-import { EventAck } from "@fixserv-colauncha/shared";
-import { ArtisanModel } from "../../modules-from-other-services/artisan";
+import { RedisEventBus, EventAck } from "@fixserv-colauncha/shared";
+import { ArtisanModel } from "../../modules-from-user-management/artisanModel";
 
 export class ArtisanEventsHandler {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {
+    // Subscribe to artisan_events channel
     const artisanSub = await this.eventBus.subscribe(
       "artisan_events",
       async (event: any) => {
-        console.log("Received artisan event:", event.eventName);
-        //  if (
-        //    event.eventName === "ArtisanCreated" ||
-        //    event.eventName === "ArtisanCreatedEvent"
-        //  ) {
-        //    this.handleArtisanCreated(event);
-        //  }
+        console.log(
+          `[search-and-discovery] Received artisan_events: ${event.eventName}`,
+        );
         switch (event.eventName) {
           case "ArtisanCreated":
           case "ArtisanCreatedEvent":
@@ -30,7 +26,8 @@ export class ArtisanEventsHandler {
           //  break;
           default:
             console.log(
-              `[service-management] Unhandled artisan event: ${event.eventName}`,
+              `[service-management] Unhandled 
+        artisan event: ${event.eventName}`,
             );
         }
       },
@@ -42,7 +39,7 @@ export class ArtisanEventsHandler {
       "user_events",
       async (event: any) => {
         console.log(
-          `[service-management] Received user_events: ${event.eventName}`,
+          `[search-and-discovery] Received user_events: ${event.eventName}`,
         );
 
         if (
@@ -56,7 +53,7 @@ export class ArtisanEventsHandler {
     this.subscriptions.push(userSub);
 
     console.log(
-      "Service-Management: Subscribed to artisan_events and user_events",
+      "Search-And-Discovery: Subscribed to artisan_events and user_events",
     );
   }
 
@@ -67,40 +64,33 @@ export class ArtisanEventsHandler {
 
   private async handleArtisanCreated(event: any) {
     try {
-      console.log("New artisan created:", event);
-
       const { userId, fullName, skills, businessName, location, rating } =
         event.payload;
-      // 🔥 UPSERT (important to avoid duplicates)
+
       await ArtisanModel.findOneAndUpdate(
         { _id: userId },
-        {
-          fullName,
-          skillSet: skills,
-          businessName,
-          location,
-          rating,
-        },
+        { fullName, skillSet: skills, businessName, location, rating },
         { upsert: true, new: true },
       );
+
       console.log(`✅ Artisan synced to service-management DB: ${userId}`);
-      // Send ACK
-      const ack = new EventAck(event.id, "processed", "service-management");
-      await this.eventBus.publish("event_acks", ack);
-    } catch (error: any) {
-      const ack = new EventAck(
-        event.id,
-        "failed",
-        "service-management",
-        error.message,
+
+      await this.eventBus.publish(
+        "event_acks",
+        new EventAck(event.id, "processed", "service-management"),
       );
-      await this.eventBus.publish("event_acks", ack);
+    } catch (error: any) {
+      console.error("Failed to handle ArtisanCreated:", error.message);
+      await this.eventBus.publish(
+        "event_acks",
+        new EventAck(event.id, "failed", "service-management", error.message),
+      );
     }
   }
+
   private async handleUserCreatedForArtisan(event: any) {
     try {
-      const { userId, fullName, additionalData, location, rating } =
-        event.payload;
+      const { userId, fullName, additionalData } = event.payload;
 
       // Only process artisan registrations
       if (event.payload.role !== "ARTISAN") return;
@@ -111,8 +101,6 @@ export class ArtisanEventsHandler {
           fullName,
           skillSet: additionalData?.skills || [],
           businessName: additionalData?.businessName || "",
-          location: additionalData?.location || "",
-          rating: additionalData?.rating || 0,
         },
         { upsert: true, new: true },
       );
@@ -127,7 +115,6 @@ export class ArtisanEventsHandler {
     try {
       const { userId, fullName, businessName, location, skills, categories } =
         event.payload;
-
       const updated = await ArtisanModel.findOneAndUpdate(
         { _id: userId },
         {
@@ -142,8 +129,7 @@ export class ArtisanEventsHandler {
         },
         { upsert: true, new: true }, // upsert in case artisan wasn't synced before
       );
-
-      console.log(`✅ Artisan updated in service-management DB: ${userId}`, {
+      console.log(`✅ Artisan updated in search-and-discovery DB: ${userId}`, {
         skillSet: updated?.skillSet,
       });
     } catch (error: any) {

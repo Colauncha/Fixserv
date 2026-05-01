@@ -241,8 +241,9 @@ profiles:
           - ./services/infra/k8s/user-management-depl.yaml
           - ./services/infra/k8s/service-management-depl.yaml
           - ./services/infra/k8s/order-management-depl.yaml
-          - ./services/infra/k8s/wallet-service-depl.yaml
           - ./services/infra/k8s/notifications-service-depl.yaml
+          - ./services/infra/k8s/search-and-discovery-depl.yaml
+          - ./services/infra/k8s/wallet-service-depl.yaml
     build:
       local:
         push: false
@@ -280,6 +281,14 @@ profiles:
             manual:
               - src: "services/order-management/src/**/*.ts"
                 dest: /app/services/order-management/src
+        - image: docker.io/ogkpos/search-and-discovery
+          context: .
+          docker:
+            dockerfile: services/search-and-discovery/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/search-and-discovery/src/**/*.ts"
+                dest: /app/services/search-and-discovery/src
         - image: docker.io/ogkpos/wallet-service
           context: .
           docker:

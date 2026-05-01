@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
-import { WalletReferralFields } from "./referralModel";
+
 interface IWalletTransaction {
   orderId: string;
   userId: string;
@@ -84,12 +84,12 @@ const WithdrawalRequestSchema = new mongoose.Schema(
       { reference: 1 },
       { transferCode: 1 },
     ],
-  }
+  },
 );
 
 export const WithdrawalRequestModel = mongoose.model<IWithdrawalRequest>(
   "WithdrawalRequest",
-  WithdrawalRequestSchema
+  WithdrawalRequestSchema,
 );
 
 const WalletTransactionSchema = new mongoose.Schema<IWalletTransaction>(
@@ -103,12 +103,12 @@ const WalletTransactionSchema = new mongoose.Schema<IWalletTransaction>(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const WalletTransactionModel = mongoose.model<IWalletTransaction>(
   "WalletTransactionModel",
-  WalletTransactionSchema
+  WalletTransactionSchema,
 );
 
 const TransactionSchema = new mongoose.Schema(
@@ -167,7 +167,7 @@ const TransactionSchema = new mongoose.Schema(
       },
     },
   },
-  { _id: false, versionKey: false }
+  { _id: false, versionKey: false },
 );
 
 const WalletSchema = new mongoose.Schema(
@@ -226,7 +226,7 @@ const WalletSchema = new mongoose.Schema(
       hasReceivedVerificationBonus: { type: Boolean, default: false },
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 // Add instance methods for withdrawal limit checking
 WalletSchema.methods.canWithdraw = function (amount: number): {

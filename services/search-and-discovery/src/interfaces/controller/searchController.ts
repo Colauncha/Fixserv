@@ -5,7 +5,7 @@ export class SearchController {
   constructor(private searchService: SearchService) {}
   async search(req: Request, res: Response) {
     const {
-      keyword="",
+      keyword = "",
       location,
       category,
       minPrice,
@@ -29,7 +29,7 @@ export class SearchController {
       keyword as string,
       filters,
       Number(page),
-      Number(limit)
+      Number(limit),
     );
     res.json({ success: true, data: results });
   }
