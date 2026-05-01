@@ -5,6 +5,8 @@ const artisanSchema = new mongoose.Schema({
   fullName: String,
   skills: [String],
   businessName: String,
+  location: String,
+  rating: Number,
 });
 
-export const ArtisanModel = mongoose.model("Artisan", artisanSchema);
+const ArtisanModel = mongoose.model("Artisan", artisanSchema);

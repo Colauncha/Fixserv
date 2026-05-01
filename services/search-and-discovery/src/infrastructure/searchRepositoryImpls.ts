@@ -173,7 +173,7 @@ export class searchRepositoryImpls implements searchRepository {
     const skip = (page - 1) * limit;
 
     try {
-      console.log("Final query:", JSON.stringify(query, null, 2));
+      // console.log("Final query:", JSON.stringify(query, null, 2));
 
       const [data, total] = await Promise.all([
         ArtisanModel.find(query)

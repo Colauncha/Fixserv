@@ -41,7 +41,7 @@ export class ServiceService {
   ): Promise<Service> {
     // const artisan = await this.artisanRepository.findById(artisanId);
     const artisan = await ArtisanClient.getArtisanById(artisanId);
-    console.log("artisan:", artisan);
+
     if (!artisan || artisan.role !== "ARTISAN") {
       throw new BadRequestError("Invalid artisan ID");
     }

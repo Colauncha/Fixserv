@@ -10,7 +10,9 @@ export class ArtisanCreatedEvent extends BaseEvent {
       fullName: string;
       skills: string[];
       businessName: string;
-    }
+      location: string;
+      rating: number;
+    },
   ) {
     super(payload);
   }

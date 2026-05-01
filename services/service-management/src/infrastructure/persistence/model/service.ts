@@ -7,7 +7,7 @@ const ServiceSchema = new mongoose.Schema(
     artisanId: { type: String, ref: "ArtisanModel", required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    bio: { type: String, required: true },
+    bio: { type: String },
     price: { type: Number, min: 0, required: true },
     estimatedDuration: { type: String, required: true },
     isActive: { type: Boolean, default: true },
