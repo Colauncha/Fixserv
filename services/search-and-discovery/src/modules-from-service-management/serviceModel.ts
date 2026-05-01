@@ -7,13 +7,14 @@ const ServiceSchema = new mongoose.Schema(
     artisanId: { type: String, ref: "ArtisanModel", required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    bio: { type: String },
     price: { type: Number, min: 0, required: true },
     estimatedDuration: { type: String, required: true },
     isActive: { type: Boolean, default: true },
     rating: { type: Number, default: 0, min: 0, max: 5, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const ServiceModel = mongoose.model("ServiceModel", ServiceSchema);
+const ServiceModel = mongoose.model("Search_Services", ServiceSchema);
 export { ServiceModel };
