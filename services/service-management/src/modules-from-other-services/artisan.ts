@@ -50,6 +50,9 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
   },
 );
 
-const ArtisanModel = mongoose.model<IArtisan>("ArtisanModel", artisanSchema);
+const ArtisanModel = mongoose.model<IArtisan>(
+  "Service_Artisans",
+  artisanSchema,
+);
 
 export { ArtisanModel };
