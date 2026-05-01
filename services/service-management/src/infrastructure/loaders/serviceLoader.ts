@@ -17,7 +17,7 @@ const batchGetServices = async (ids: readonly string[]) => {
         new ServiceDetails(
           doc.title,
           doc.description,
-          doc.bio,
+          doc.bio || "Professional service",
           doc.price,
           doc.estimatedDuration,
         ),

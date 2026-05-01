@@ -2,7 +2,7 @@ import { BadRequestError } from "@fixserv-colauncha/shared";
 import {
   BusinessHoursSchedule,
   Day,
-} from "src/domain/value-objects/businessHours";
+} from "../../domain/value-objects/businessHours";
 
 export function validateUpdateRequest(role: string, updates: any) {
   // Common validations
@@ -26,7 +26,7 @@ export function validateUpdateRequest(role: string, updates: any) {
         updates.servicePreferences.forEach((pref: any) => {
           if (typeof pref !== "string") {
             throw new BadRequestError(
-              "Each service preference must be a string"
+              "Each service preference must be a string",
             );
           }
         });
@@ -81,7 +81,7 @@ function validateBusinessHours(businessHours: Partial<BusinessHoursSchedule>) {
     if (hours.open === "closed" || hours.close === "closed") {
       if (hours.open !== hours.close) {
         throw new BadRequestError(
-          `If ${day} is closed, both open and close must be "closed"`
+          `If ${day} is closed, both open and close must be "closed"`,
         );
       }
       continue;
@@ -91,7 +91,7 @@ function validateBusinessHours(businessHours: Partial<BusinessHoursSchedule>) {
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(hours.open) || !timeRegex.test(hours.close)) {
       throw new BadRequestError(
-        `Invalid time format for ${day}. Use HH:MM (24-hour format) or "closed"`
+        `Invalid time format for ${day}. Use HH:MM (24-hour format) or "closed"`,
       );
     }
 
@@ -101,7 +101,7 @@ function validateBusinessHours(businessHours: Partial<BusinessHoursSchedule>) {
 
     if (closeTime <= openTime) {
       throw new BadRequestError(
-        `Close time must be after open time for ${day}`
+        `Close time must be after open time for ${day}`,
       );
     }
   }
@@ -112,7 +112,7 @@ function validateDeliveryAddress(address: any) {
   const missing = required.filter((field) => !address[field]);
   if (missing.length > 0) {
     throw new BadRequestError(
-      `Missing delivery address fields: ${missing.join(", ")}`
+      `Missing delivery address fields: ${missing.join(", ")}`,
     );
   }
 }
