@@ -52,4 +52,4 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
 
 const ArtisanModel = mongoose.model<IArtisan>("ArtisanModel", artisanSchema);
 
-// export { ArtisanModel };
+export { ArtisanModel };
