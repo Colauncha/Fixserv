@@ -1,4 +1,3 @@
-// services/service-management/src/events/serviceEvents.ts
 import { BaseEvent } from "@fixserv-colauncha/shared";
 
 export class ServiceCreatedEvent extends BaseEvent {
