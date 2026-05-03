@@ -640,6 +640,7 @@ export class AuthService implements IAuthService {
             businessName: "",
             location: "",
             rating: 0,
+            categories: [],
           });
           eventsToPublish.push({
             channel: "artisan_events",

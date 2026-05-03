@@ -1,5 +1,5 @@
 import { RedisEventBus, EventAck } from "@fixserv-colauncha/shared";
-import { ArtisanModel } from "../../modules-from-user-management/artisanModel";
+import { ArtisanModel } from "../../infrastructure/persistence/models/artisan";
 
 export class ArtisanEventsHandler {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
@@ -26,8 +26,7 @@ export class ArtisanEventsHandler {
           //  break;
           default:
             console.log(
-              `[service-management] Unhandled 
-        artisan event: ${event.eventName}`,
+              `[service-management] Unhandled artisan event: ${event.eventName}`,
             );
         }
       },
@@ -64,12 +63,28 @@ export class ArtisanEventsHandler {
 
   private async handleArtisanCreated(event: any) {
     try {
-      const { userId, fullName, skills, businessName, location, rating } =
-        event.payload;
+      const {
+        userId,
+        fullName,
+        skills,
+        businessName,
+        location,
+        rating,
+        categories,
+      } = event.payload;
 
       await ArtisanModel.findOneAndUpdate(
-        { _id: userId },
-        { fullName, skillSet: skills, businessName, location, rating },
+        { userId },
+        {
+          userId,
+          fullName,
+          skillSet: skills,
+          businessName,
+          location,
+          rating,
+          categories,
+        },
+
         { upsert: true, new: true },
       );
 
@@ -96,8 +111,9 @@ export class ArtisanEventsHandler {
       if (event.payload.role !== "ARTISAN") return;
 
       await ArtisanModel.findOneAndUpdate(
-        { _id: userId },
+        { userId },
         {
+          userId,
           fullName,
           skillSet: additionalData?.skills || [],
           businessName: additionalData?.businessName || "",
@@ -116,7 +132,7 @@ export class ArtisanEventsHandler {
       const { userId, fullName, businessName, location, skills, categories } =
         event.payload;
       const updated = await ArtisanModel.findOneAndUpdate(
-        { _id: userId },
+        { userId },
         {
           $set: {
             fullName,

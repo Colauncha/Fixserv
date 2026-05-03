@@ -1,6 +1,6 @@
 import { RedisEventBus } from "@fixserv-colauncha/shared";
 import { EventAck } from "@fixserv-colauncha/shared";
-import { ArtisanModel } from "../../modules-from-other-services/artisan";
+import { ArtisanModel } from "../../infrastructure/persistence/model/artisanModel";
 
 export class ArtisanEventsHandler {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
@@ -69,17 +69,19 @@ export class ArtisanEventsHandler {
     try {
       console.log("New artisan created:", event);
 
-      const { userId, fullName, skills, businessName, location, rating } =
+      const { userId, fullName, skills, businessName, location, rating,categories } =
         event.payload;
       // 🔥 UPSERT (important to avoid duplicates)
       await ArtisanModel.findOneAndUpdate(
-        { _id: userId },
+        {  userId },
         {
+          userId,
           fullName,
           skillSet: skills,
           businessName,
           location,
           rating,
+          categories
         },
         { upsert: true, new: true },
       );
@@ -106,13 +108,15 @@ export class ArtisanEventsHandler {
       if (event.payload.role !== "ARTISAN") return;
 
       await ArtisanModel.findOneAndUpdate(
-        { _id: userId },
+        { userId },
         {
+          userId,
           fullName,
           skillSet: additionalData?.skills || [],
           businessName: additionalData?.businessName || "",
           location: additionalData?.location || "",
           rating: additionalData?.rating || 0,
+          categories: additionalData?.categories || [],
         },
         { upsert: true, new: true },
       );
@@ -129,7 +133,7 @@ export class ArtisanEventsHandler {
         event.payload;
 
       const updated = await ArtisanModel.findOneAndUpdate(
-        { _id: userId },
+        {  userId },
         {
           $set: {
             fullName,

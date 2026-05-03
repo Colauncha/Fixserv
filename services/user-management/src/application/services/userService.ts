@@ -363,6 +363,7 @@ export class UserService implements IUserService {
           businessName: "", //artisanData.businessName,
           location: "",
           rating: 0,
+          categories: [],
         });
         eventsToPublish.push(
           { channel: "user_events", event: artisanUserEvent },
@@ -689,6 +690,7 @@ export class UserService implements IUserService {
           businessName: "",
           location: "",
           rating: 0,
+          categories: [],
         });
 
         eventsToPublish.push(

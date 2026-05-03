@@ -1,4 +1,3 @@
-// services/user-management/src/events/artisanUpdatedEvent.ts
 import { BaseEvent } from "@fixserv-colauncha/shared";
 
 export class ArtisanUpdatedEvent extends BaseEvent {
@@ -45,6 +44,7 @@ export class ArtisanCreatedEvent extends BaseEvent {
       businessName: string;
       location: string;
       rating: number;
+      categories: string[];
     },
   ) {
     super(payload);

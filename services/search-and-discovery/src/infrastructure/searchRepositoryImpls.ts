@@ -4,7 +4,7 @@ import {
 } from "../domain/repositories/searchRepository";
 import { SearchFilter } from "../domain/value-ojects/searchFilter";
 import { ServiceModel } from "../modules-from-service-management/serviceModel";
-import { ArtisanModel } from "../modules-from-user-management/artisanModel";
+import { ArtisanModel } from "./persistence/models/artisan";
 import { redis, connectRedis } from "@fixserv-colauncha/shared";
 import { makeSearchKey } from "./utils/cacheKey";
 

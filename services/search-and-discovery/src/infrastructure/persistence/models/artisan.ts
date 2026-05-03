@@ -14,4 +14,4 @@ const artisanSchema = new mongoose.Schema({
   },
 });
 
-export const ArtisanModel = mongoose.model("Service_Artisans", artisanSchema);
+export const ArtisanModel = mongoose.model("Search_Artisans", artisanSchema);
