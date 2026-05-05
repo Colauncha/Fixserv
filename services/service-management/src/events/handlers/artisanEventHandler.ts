@@ -7,27 +7,11 @@ export class ArtisanEventsHandler {
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {
-    // Debug: log ALL events on all channels to see what's coming through
-    const debugSub = await this.eventBus.subscribe(
-      "artisan_events",
-      async (event: any) => {
-        console.log(
-          "🔍 RAW artisan_events received:",
-          JSON.stringify(event, null, 2),
-        );
-      },
-    );
-    this.subscriptions.push(debugSub);
     const artisanSub = await this.eventBus.subscribe(
       "artisan_events",
       async (event: any) => {
         console.log("Received artisan event:", event.eventName);
-        //  if (
-        //    event.eventName === "ArtisanCreated" ||
-        //    event.eventName === "ArtisanCreatedEvent"
-        //  ) {
-        //    this.handleArtisanCreated(event);
-        //  }
+
         switch (event.eventName) {
           case "ArtisanCreated":
           case "ArtisanCreatedEvent":
@@ -75,77 +59,7 @@ export class ArtisanEventsHandler {
     await Promise.all(this.subscriptions.map((sub) => sub.unsubscribe()));
     this.subscriptions = [];
   }
-  /*
-  private async handleArtisanCreated(event: any) {
-    try {
-      console.log("New artisan created:", event);
 
-      const {
-        userId,
-        fullName,
-        skills,
-        businessName,
-        location,
-        rating,
-        categories,
-      } = event.payload;
-      // 🔥 UPSERT (important to avoid duplicates)
-      await ArtisanModel.findOneAndUpdate(
-        { userId },
-        {
-          userId,
-          fullName,
-          skillSet: skills,
-          businessName,
-          location,
-          rating,
-          categories,
-        },
-        { upsert: true, new: true },
-      );
-      console.log(`✅ Artisan synced to service-management DB: ${userId}`);
-      // Send ACK
-      const ack = new EventAck(event.id, "processed", "service-management");
-      await this.eventBus.publish("event_acks", ack);
-    } catch (error: any) {
-      const ack = new EventAck(
-        event.id,
-        "failed",
-        "service-management",
-        error.message,
-      );
-      await this.eventBus.publish("event_acks", ack);
-    }
-  }
-  
-  private async handleUserCreatedForArtisan(event: any) {
-    try {
-      const { userId, fullName, additionalData, location, rating } =
-        event.payload;
-
-      // Only process artisan registrations
-      if (event.payload.role !== "ARTISAN") return;
-
-      await ArtisanModel.findOneAndUpdate(
-        { userId },
-        {
-          userId,
-          fullName,
-          skillSet: additionalData?.skills || [],
-          businessName: additionalData?.businessName || "",
-          location: additionalData?.location || "",
-          rating: additionalData?.rating || 0,
-          categories: additionalData?.categories || [],
-        },
-        { upsert: true, new: true },
-      );
-
-      console.log(`✅ Artisan synced from user_events: ${userId}`);
-    } catch (error: any) {
-      console.error("Failed to handle UserCreated for artisan:", error.message);
-    }
-  }
-*/
   private async handleArtisanUpdated(event: any) {
     try {
       const { userId, fullName, businessName, location, skills, categories } =
