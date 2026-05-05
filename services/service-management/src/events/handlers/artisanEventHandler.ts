@@ -7,6 +7,17 @@ export class ArtisanEventsHandler {
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   async setupSubscriptions() {
+    // Debug: log ALL events on all channels to see what's coming through
+    const debugSub = await this.eventBus.subscribe(
+      "artisan_events",
+      async (event: any) => {
+        console.log(
+          "🔍 RAW artisan_events received:",
+          JSON.stringify(event, null, 2),
+        );
+      },
+    );
+    this.subscriptions.push(debugSub);
     const artisanSub = await this.eventBus.subscribe(
       "artisan_events",
       async (event: any) => {
@@ -64,16 +75,23 @@ export class ArtisanEventsHandler {
     await Promise.all(this.subscriptions.map((sub) => sub.unsubscribe()));
     this.subscriptions = [];
   }
-
+  /*
   private async handleArtisanCreated(event: any) {
     try {
       console.log("New artisan created:", event);
 
-      const { userId, fullName, skills, businessName, location, rating,categories } =
-        event.payload;
+      const {
+        userId,
+        fullName,
+        skills,
+        businessName,
+        location,
+        rating,
+        categories,
+      } = event.payload;
       // 🔥 UPSERT (important to avoid duplicates)
       await ArtisanModel.findOneAndUpdate(
-        {  userId },
+        { userId },
         {
           userId,
           fullName,
@@ -81,7 +99,7 @@ export class ArtisanEventsHandler {
           businessName,
           location,
           rating,
-          categories
+          categories,
         },
         { upsert: true, new: true },
       );
@@ -99,6 +117,7 @@ export class ArtisanEventsHandler {
       await this.eventBus.publish("event_acks", ack);
     }
   }
+  
   private async handleUserCreatedForArtisan(event: any) {
     try {
       const { userId, fullName, additionalData, location, rating } =
@@ -126,14 +145,14 @@ export class ArtisanEventsHandler {
       console.error("Failed to handle UserCreated for artisan:", error.message);
     }
   }
-
+*/
   private async handleArtisanUpdated(event: any) {
     try {
       const { userId, fullName, businessName, location, skills, categories } =
         event.payload;
 
       const updated = await ArtisanModel.findOneAndUpdate(
-        {  userId },
+        { userId },
         {
           $set: {
             fullName,
@@ -152,6 +171,88 @@ export class ArtisanEventsHandler {
       });
     } catch (error: any) {
       console.error("handleArtisanUpdated failed:", error.message);
+    }
+  }
+
+  private async handleArtisanCreated(event: any) {
+    try {
+      console.log("ArtisanCreated event payload:", event.payload);
+
+      const {
+        userId,
+        fullName,
+        skills,
+        businessName,
+        location,
+        rating,
+        categories,
+      } = event.payload;
+
+      const result = await ArtisanModel.findOneAndUpdate(
+        { userId },
+        {
+          $set: {
+            userId,
+            fullName: fullName || "",
+            skillSet: skills || [], // payload has "skills", model has "skillSet"
+            businessName: businessName || "",
+            location: location || "",
+            rating: rating || 0,
+            categories: categories || [],
+          },
+        },
+        { upsert: true, new: true },
+      );
+
+      console.log(`✅ Artisan created in service-management DB: ${userId}`, {
+        skillSet: result?.skillSet,
+        categories: result?.categories,
+      });
+
+      await this.eventBus.publish(
+        "event_acks",
+        new EventAck(event.id, "processed", "service-management"),
+      );
+    } catch (error: any) {
+      console.error("handleArtisanCreated failed:", error.message);
+      await this.eventBus.publish(
+        "event_acks",
+        new EventAck(event.id, "failed", "service-management", error.message),
+      );
+    }
+  }
+
+  private async handleUserCreatedForArtisan(event: any) {
+    try {
+      if (event.payload.role !== "ARTISAN") return;
+
+      const { userId, fullName, additionalData } = event.payload;
+
+      console.log("UserCreated artisan payload:", {
+        userId,
+        fullName,
+        additionalData,
+      });
+
+      await ArtisanModel.findOneAndUpdate(
+        { userId },
+        {
+          $set: {
+            userId,
+            fullName: fullName || "",
+            skillSet: additionalData?.skills || [],
+            businessName: additionalData?.businessName || "",
+            location: additionalData?.location || "",
+            rating: 0,
+            categories: additionalData?.categories || [],
+          },
+        },
+        { upsert: true, new: true },
+      );
+
+      console.log(`✅ Artisan synced from UserCreatedEvent: ${userId}`);
+    } catch (error: any) {
+      console.error("handleUserCreatedForArtisan failed:", error.message);
     }
   }
 }
