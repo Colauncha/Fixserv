@@ -1,4 +1,4 @@
-import { ArtisanModel } from "../modules-from-other-services/artisan";
+import { ArtisanModel } from "./persistence/model/artisanModel";
 import { IArtisanRepository } from "../domain/repository/artisanRepository";
 import { Artisan } from "../modules-from-other-services/domain/entities/artisan";
 import { SkillSet } from "../modules-from-other-services/domain/value-objects/skillSet";
