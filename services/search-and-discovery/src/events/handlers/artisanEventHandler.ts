@@ -76,9 +76,10 @@ export class ArtisanEventsHandler {
       } = event.payload;
 
       const result = await ArtisanModel.findOneAndUpdate(
-        { userId },
+        { _id: userId },
         {
           $set: {
+            _id: userId,
             userId,
             fullName: fullName || "",
             skillSet: skills || [], // payload has "skills", model has "skillSet"
@@ -86,11 +87,29 @@ export class ArtisanEventsHandler {
             location: location || "",
             rating: rating || 0,
             categories: categories || [],
+            role: "ARTISAN",
           },
         },
         { upsert: true, new: true },
       );
 
+      /*
+      const result = await ArtisanModel.findOneAndUpdate(
+        { _id: userId }, // use userId as _id
+        {
+          _id: userId, // set _id to UUID
+          userId, // keep userId field too
+          fullName: fullName || "",
+          skillSet: skills || [],
+          businessName: businessName || "",
+          location: location || "",
+          rating: rating || 0,
+          categories: categories || [],
+          role: "ARTISAN",
+        },
+        { upsert: true, new: true },
+      );
+      */
       console.log(`✅ Artisan created in service-management DB: ${userId}`, {
         skillSet: result?.skillSet,
         categories: result?.categories,
@@ -148,7 +167,7 @@ export class ArtisanEventsHandler {
       const { userId, fullName, businessName, location, skills, categories } =
         event.payload;
       const updated = await ArtisanModel.findOneAndUpdate(
-        { userId },
+        { _id: userId },
         {
           $set: {
             fullName,
