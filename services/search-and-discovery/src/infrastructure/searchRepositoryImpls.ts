@@ -145,7 +145,9 @@ export class searchRepositoryImpls implements searchRepository {
 
           if (matchingServices.length > 0) {
             searchConditions.push({
-              _id: { $in: matchingServices.map((s) => s.artisanId) },
+              _id: {
+                $in: matchingServices.map((s) => s.artisanId),
+              },
             });
           }
         }
@@ -275,7 +277,10 @@ export class searchRepositoryImpls implements searchRepository {
 
         if (matchingArtisans.length > 0) {
           serviceSearchConditions.push({
-            artisanId: { $in: matchingArtisans.map((a) => a._id) },
+            artisanId: {
+              // $in: matchingArtisans.map((a) => a._id),
+              $in: matchingArtisans.map((a) => a._id.toString()),
+            },
           });
         }
       }

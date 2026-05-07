@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 const ServiceSchema = new mongoose.Schema(
   {
     _id: { type: String, required: true, default: uuidv4 },
-    artisanId: { type: String, ref: "ArtisanModel", required: true },
+    artisanId: { type: String, ref: "Search_Artisans", required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
     bio: { type: String },
