@@ -746,4 +746,18 @@ export class AuthService implements IAuthService {
       setTimeout(() => reject(new Error("Timeout reached")), ms),
     );
   }
+
+  async getDashboardUserStats(period: "today" | "week" | "month" = "today") {
+    const [totalUsers, activeArtisans, newSignups] = await Promise.all([
+      this.userRepository.getTotalUsers(),
+      this.userRepository.getActiveArtisans(),
+      this.userRepository.getNewSignups(period),
+    ]);
+
+    return {
+      totalUsers,
+      activeArtisans,
+      newSignups,
+    };
+  }
 }

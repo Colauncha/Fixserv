@@ -60,6 +60,13 @@ router.post(
   authController.login.bind(authController),
 );
 
+router.get(
+  "/dashboard/users",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  authController.getDashboardStats.bind(authController),
+);
+
 router.post(
   "/logout",
   authMiddleware.protect,

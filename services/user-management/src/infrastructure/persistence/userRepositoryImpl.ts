@@ -1132,4 +1132,130 @@ export class UserRepositoryImpl implements IUserRepository {
       ),
     }));
   }
+
+  async getTotalUsers(): Promise<{
+    clients: number;
+    artisans: number;
+    admins: number;
+    total: number;
+  }> {
+    const [clients, artisans, admins] = await Promise.all([
+      ClientModel.countDocuments(),
+      ArtisanModel.countDocuments(),
+      AdminModel.countDocuments(),
+    ]);
+
+    return {
+      clients,
+      artisans,
+      admins,
+      total: clients + artisans + admins,
+    };
+  }
+
+  async getActiveArtisans(): Promise<{
+    total: number;
+    verified: number;
+    withServices: number;
+  }> {
+    // Verified artisans = email verified
+    const [total, verified] = await Promise.all([
+      ArtisanModel.countDocuments(),
+      ArtisanModel.countDocuments({ isEmailVerified: true }),
+    ]);
+
+    return {
+      total,
+      verified,
+      withServices: 0, // will be populated by service-management via event sync
+    };
+  }
+
+  /*
+  async getNewSignups(period: "today" | "week" | "month" = "today"): Promise<{
+    clients: number;
+    artisans: number;
+    total: number;
+    period: string;
+  }> {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case "today":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case "week":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
+    const [clients, artisans] = await Promise.all([
+      ClientModel.countDocuments({ createdAt: { $gte: startDate } }),
+      ArtisanModel.countDocuments({ createdAt: { $gte: startDate } }),
+    ]);
+
+    return {
+      clients,
+      artisans,
+      total: clients + artisans,
+      period,
+    };
+  }
+    */
+  async getNewSignups(period: "today" | "week" | "month" = "today"): Promise<{
+    clients: number;
+    artisans: number;
+    total: number;
+    period: string;
+  }> {
+    const now = new Date();
+
+    let startDate: Date;
+
+    switch (period) {
+      case "today":
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        break;
+
+      case "week":
+        startDate = new Date();
+        startDate.setDate(now.getDate() - 7);
+        break;
+
+      case "month":
+        startDate = new Date();
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+
+      default:
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
+    }
+
+    const filter = {
+      createdAt: {
+        $gte: startDate,
+        $lte: now,
+      },
+    };
+
+    const [clients, artisans] = await Promise.all([
+      ClientModel.countDocuments(filter),
+      ArtisanModel.countDocuments(filter),
+    ]);
+
+    return {
+      clients,
+      artisans,
+      total: clients + artisans,
+      period,
+    };
+  }
 }

@@ -51,6 +51,7 @@ const adminSchema = new mongoose.Schema<IAdmin>(
     },
   },
   {
+    timestamps: true,
     toJSON: {
       transform(doc, ret: any) {
         ret.id = ret._id;

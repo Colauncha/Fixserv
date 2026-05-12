@@ -100,4 +100,20 @@ export interface IUserRepository {
       certificates: any[];
     }>
   >;
+  getTotalUsers(): Promise<{
+    clients: number;
+    artisans: number;
+    admins: number;
+  }>;
+  getActiveArtisans(): Promise<{
+    total: number;
+    verified: number;
+    withServices: number;
+  }>;
+  getNewSignups(period: "today" | "week" | "month"): Promise<{
+    clients: number;
+    artisans: number;
+    total: number;
+    period: string;
+  }>;
 }

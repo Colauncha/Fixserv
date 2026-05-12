@@ -360,6 +360,7 @@ export class searchRepositoryImpls implements searchRepository {
 }
 
 // Helper for "isAvailableNow"
+/*
 function appendAvailabilityQuery(q: any) {
   const now = new Date();
   const currentDay = now
@@ -397,6 +398,110 @@ function appendAvailabilityQuery(q: any) {
                 with: "",
               },
             },
+          },
+          currentTime,
+        ],
+      },
+    ],
+  };
+}
+*/
+function appendAvailabilityQuery(q: any) {
+  const now = new Date();
+  const currentDay = now
+    .toLocaleString("en-US", { weekday: "long" })
+    .toLowerCase();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentTime = currentHour * 100 + currentMinute;
+
+  // Only match artisans who are open today
+  q[`businessHours._schedule.${currentDay}.open`] = { $ne: "closed" };
+  q[`businessHours._schedule.${currentDay}.close`] = { $ne: "closed" };
+
+  // Use $split instead of $replaceAll to parse "HH:MM" time strings
+  // $split("09:00", ":") → ["09", "00"]
+  // then convert to number: 09 * 100 + 00 = 900
+  q.$expr = {
+    $and: [
+      // open time <= currentTime
+      {
+        $lte: [
+          {
+            $add: [
+              {
+                $multiply: [
+                  {
+                    $toInt: {
+                      $arrayElemAt: [
+                        {
+                          $split: [
+                            `$businessHours._schedule.${currentDay}.open`,
+                            ":",
+                          ],
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                  100,
+                ],
+              },
+              {
+                $toInt: {
+                  $arrayElemAt: [
+                    {
+                      $split: [
+                        `$businessHours._schedule.${currentDay}.open`,
+                        ":",
+                      ],
+                    },
+                    1,
+                  ],
+                },
+              },
+            ],
+          },
+          currentTime,
+        ],
+      },
+      // close time >= currentTime
+      {
+        $gte: [
+          {
+            $add: [
+              {
+                $multiply: [
+                  {
+                    $toInt: {
+                      $arrayElemAt: [
+                        {
+                          $split: [
+                            `$businessHours._schedule.${currentDay}.close`,
+                            ":",
+                          ],
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                  100,
+                ],
+              },
+              {
+                $toInt: {
+                  $arrayElemAt: [
+                    {
+                      $split: [
+                        `$businessHours._schedule.${currentDay}.close`,
+                        ":",
+                      ],
+                    },
+                    1,
+                  ],
+                },
+              },
+            ],
           },
           currentTime,
         ],

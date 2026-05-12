@@ -835,7 +835,7 @@ export class AuthController {
       //   </html>
       // `);
       res.redirect(
-        `${process.env.FIXSERV_FRONTEND}/auth/reset-password?token=${token}`,
+        `${process.env.FIXSERV_USER_PROD}/api/admin/reset-password?token=${token}`,
       );
     } catch (error: any) {
       console.error("Error showing reset form:", error);
@@ -885,5 +885,17 @@ export class AuthController {
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
     }
+  }
+  // In userController.ts or adminController.ts
+  async getDashboardStats(req: Request, res: Response): Promise<void> {
+    const period = (req.query.period as "today" | "week" | "month") || "today";
+
+    const stats = await this.authService.getDashboardUserStats(period);
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+      generatedAt: new Date().toISOString(),
+    });
   }
 }
