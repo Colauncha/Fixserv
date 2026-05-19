@@ -77,6 +77,9 @@ export class NotificationEventHandler {
           case "OrderCancelled":
             await this.handleOrderCancelled(evt);
             break;
+          case "DisputeResolved":
+            await this.handleDisputeResolved(evt);
+            break;
         }
       },
     );
@@ -642,6 +645,45 @@ export class NotificationEventHandler {
       console.log(`✅ Failed top-up notification sent to user: ${userId}`);
     } catch (error) {
       console.error("Error handling WalletTopUpFailed event:", error);
+    }
+  }
+
+  private async handleDisputeResolved(event: any): Promise<void> {
+    try {
+      const { orderId, clientId, artisanId, resolution, note } = event.payload;
+
+      const clientMessage =
+        resolution === "REFUND_CLIENT"
+          ? `Your dispute for order ${orderId} has been resolved. Your funds have been refunded to your wallet.`
+          : `Your dispute for order ${orderId} has been resolved. Payment has been released to the artisan.`;
+
+      const artisanMessage =
+        resolution === "RELEASE_TO_ARTISAN"
+          ? `The dispute for order ${orderId} has been resolved in your favour. Payment has been released to your wallet.`
+          : `The dispute for order ${orderId} has been resolved. Funds have been refunded to the client.`;
+
+      await Promise.all([
+        this.notificationService.createNotification({
+          userId: clientId,
+          type: "ORDER_ACCEPTED",
+          title: "Dispute Resolved",
+          message: clientMessage,
+          data: { orderId, resolution, note },
+        }),
+        this.notificationService.createNotification({
+          userId: artisanId,
+          type: "ORDER_ACCEPTED",
+          title: "Dispute Resolved",
+          message: artisanMessage,
+          data: { orderId, resolution, note },
+        }),
+      ]);
+
+      console.log(
+        `✅ Dispute resolution notifications sent for order: ${orderId}`,
+      );
+    } catch (error) {
+      console.error("Error handling DisputeResolved event:", error);
     }
   }
 }

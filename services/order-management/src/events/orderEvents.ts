@@ -215,3 +215,22 @@ export class OrderCancelledEvent extends BaseEvent {
     super(payload);
   }
 }
+
+export class DisputeResolvedEvent extends BaseEvent {
+  eventName = "DisputeResolved";
+  version = 1;
+
+  constructor(
+    public payload: {
+      orderId: string;
+      clientId: string;
+      artisanId: string;
+      resolution: "REFUND_CLIENT" | "RELEASE_TO_ARTISAN";
+      resolvedBy: string;
+      note: string;
+      resolvedAt: string;
+    },
+  ) {
+    super(payload);
+  }
+}

@@ -39,6 +39,7 @@ const OrderSchema = new mongoose.Schema(
         "CANCELLED",
         "REJECTED",
         "ACCEPTED",
+        "DISPUTED",
       ],
       default: "PENDING_ARTISAN_RESPONSE",
     },
@@ -129,6 +130,7 @@ const OrderSchema = new mongoose.Schema(
             "COMPLETED",
             "CANCELLED",
             "REJECTED",
+            "DISPUTED",
           ],
         },
         timestamp: {

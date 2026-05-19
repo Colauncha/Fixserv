@@ -9,7 +9,8 @@ export type OrderStatus =
   | "IN_PROGRESS"
   | "WORK_COMPLETED"
   | "COMPLETED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "DISPUTED";
 
 export type EscrowStatus = "NOT_PAID" | "IN_ESCROW" | "RELEASED" | "DISPUTED";
 

@@ -6,7 +6,7 @@ import transporter from "../../config/emailConfig";
 export class EmailService implements IEmailService {
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     // const resetUrl = `${process.env.BASE_URL}/api/admin/reset-password?token=${token}`;
-    const resetUrl = `${process.env.FIXSERV_FRONTEND}/auth/reset-password?token=${token}`;
+    const resetUrl = `${process.env.FIXSERV_FRONTEND}/reset-password?token=${token}`;
 
     console.log("from email service", resetUrl);
     try {
@@ -22,7 +22,7 @@ export class EmailService implements IEmailService {
             
             <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
             <p style="font-size: 16px; line-height: 1.6;">
-              You (or someone else) requested a password reset for your FixServ account.
+              You requested a password reset for your FixServ account.
             </p>
             
             <div style="text-align: center; margin: 40px 0;">
