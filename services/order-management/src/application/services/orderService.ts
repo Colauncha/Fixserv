@@ -20,6 +20,7 @@ import {
   WorkCompletedEvent,
   WorkStartedEvent,
   OrderCancelledEvent,
+  DisputeResolvedEvent,
 } from "../../events/orderEvents";
 import { WalletClient } from "../../infrastructure/reuseableWrapper/walletClient";
 import { redis } from "@fixserv-colauncha/shared";
@@ -689,4 +690,74 @@ export class OrderService {
   //async getOrderHistory(clientId: string): Promise<Order[]> {
   //  return this.orderRepository.findByClientId(clientId)
   //}
+
+  async getDashboardStats(period: "today" | "week" | "month" = "today") {
+    const [gmv, gmvAllTime, transactions, revenueBreakdown] = await Promise.all(
+      [
+        this.orderRepository.getGMV(period),
+        this.orderRepository.getGMV("all"),
+        this.orderRepository.getTransactionStats(period),
+        this.orderRepository.getRevenueBreakdown(),
+      ],
+    );
+
+    return {
+      gmv: {
+        thisPeriod: gmv,
+        allTime: gmvAllTime,
+      },
+      transactions,
+      revenueBreakdown,
+    };
+  }
+
+  async getDisputeStats() {
+    return this.orderRepository.getDisputeStats();
+  }
+
+  async resolveDispute(
+    orderId: string,
+    resolution: "REFUND_CLIENT" | "RELEASE_TO_ARTISAN",
+    adminId: string,
+    note?: string,
+  ): Promise<void> {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) throw new BadRequestError("Order not found");
+
+    if (order.status !== "DISPUTED") {
+      throw new BadRequestError("Order is not in disputed state");
+    }
+
+    await this.orderRepository.resolveDispute(
+      orderId,
+      resolution,
+      adminId,
+      note,
+    );
+
+    // Handle wallet based on resolution
+    if (resolution === "REFUND_CLIENT") {
+      await WalletClient.refundClient(orderId, order.clientId);
+      console.log(
+        `✅ Dispute resolved — refunded to client: ${order.clientId}`,
+      );
+    } else {
+      await WalletClient.releaseFundsToArtisan(orderId, order.artisanId);
+      console.log(
+        `✅ Dispute resolved — released to artisan: ${order.artisanId}`,
+      );
+    }
+
+    // Publish event so notifications service can notify both parties
+    const event = new DisputeResolvedEvent({
+      orderId,
+      clientId: order.clientId,
+      artisanId: order.artisanId,
+      resolution,
+      resolvedBy: adminId,
+      note: note || "",
+      resolvedAt: new Date().toISOString(),
+    });
+    await this.eventBus.publish("order_events", event);
+  }
 }

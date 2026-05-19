@@ -427,208 +427,7 @@ export class AuthController {
       res.redirect(errorUrl);
     }
   }
-  /*
-  async showResetPasswordForm(req: Request, res: Response): Promise<void> {
-    try {
-      const { token } = req.query;
 
-      console.log(token);
-      if (!token || typeof token !== "string") {
-        res.status(400).send(`
-          <html>
-            <head><title>Invalid Reset Link</title></head>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-              <div style="text-align: center;">
-                <h1 style="color: #dc3545;">FixServ</h1>
-                <h2 style="color: #dc3545;">Invalid Reset Link</h2>
-                <p>This password reset link is invalid or malformed.</p>
-                <a href="${
-                  process.env.BASE_URL || "http://localhost:3000"
-                }/forgot-password" 
-                   style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                  Request New Reset Link
-                </a>
-              </div>
-            </body>
-          </html>
-        `);
-      }
-
-      // Validate token without resetting password
-      const userId = this.authService.validatePasswordResetToken(token as any);
-      console.log("userId", userId);
-      if (!userId) {
-        res.status(400).send(`
-          <html>
-            <head><title>Expired Reset Link</title></head>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-              <div style="text-align: center;">
-                <h1 style="color: #dc3545;">FixServ</h1>
-                <h2 style="color: #dc3545;">Reset Link Expired</h2>
-                <p>This password reset link has expired or is invalid.</p>
-                <a href="${
-                  process.env.BASE_URL || "http://localhost:3000"
-                }/api/admin/forgot-password" 
-                   style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                  Request New Reset Link
-                </a>
-              </div>
-            </body>
-          </html>
-        `);
-      }
-
-      // Token is valid, show the password reset form
-      res.send(`
-        <html>
-          <head>
-            <title>Reset Your Password - FixServ</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-          </head>
-          <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
-            <div style="max-width: 500px; margin: 50px auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #dc3545; margin: 0;">FixServ</h1>
-                <h2 style="color: #333; margin: 10px 0;">Reset Your Password</h2>
-                <p style="color: #666;">Enter your new password below</p>
-              </div>
-
-              <form id="resetForm" style="width: 100%;">
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
-                    New Password
-                  </label>
-                  <input 
-                    type="password" 
-                    id="newPassword" 
-                    name="newPassword"
-                    required
-                    minlength="6"
-                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; box-sizing: border-box;"
-                    placeholder="Enter your new password"
-                  />
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">
-                    Confirm Password
-                  </label>
-                  <input 
-                    type="password" 
-                    id="confirmPassword" 
-                    name="confirmPassword"
-                    required
-                    minlength="6"
-                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; box-sizing: border-box;"
-                    placeholder="Confirm your new password"
-                  />
-                </div>
-
-                <button 
-                  type="submit"
-                  style="width: 100%; background-color: #dc3545; color: white; padding: 15px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;">
-                  Reset Password
-                </button>
-              </form>
-
-              <div id="message" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none;"></div>
-            </div>
-
-            <script>
-              document.getElementById('resetForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                const messageDiv = document.getElementById('message');
-                
-                // Reset message
-                messageDiv.style.display = 'none';
-                
-                // Validate passwords match
-                if (newPassword !== confirmPassword) {
-                  messageDiv.style.backgroundColor = '#f8d7da';
-                  messageDiv.style.color = '#721c24';
-                  messageDiv.style.border = '1px solid #f5c6cb';
-                  messageDiv.textContent = 'Passwords do not match';
-                  messageDiv.style.display = 'block';
-                  return;
-                }
-
-                // Validate password length
-                if (newPassword.length < 6) {
-                  messageDiv.style.backgroundColor = '#f8d7da';
-                  messageDiv.style.color = '#721c24';
-                  messageDiv.style.border = '1px solid #f5c6cb';
-                  messageDiv.textContent = 'Password must be at least 6 characters long';
-                  messageDiv.style.display = 'block';
-                  return;
-                }
-
-                try {
-                  const response = await fetch("${
-                    process.env.BASE_URL
-                  }/api/admin/reset-password?token=${token}", {
-                    method: 'PATCH',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ newPassword })
-                  });
-
-                  const data = await response.json();
-
-                  console.log('Reset password response:', data);
-
-                  if (response.ok) {
-                    messageDiv.style.backgroundColor = '#d4edda';
-                    messageDiv.style.color = '#155724';
-                    messageDiv.style.border = '1px solid #c3e6cb';
-                    messageDiv.innerHTML = 'Password reset successful! You can now <a href="${
-                      process.env.BASE_URL || "http://localhost:3000"
-                    }/api/admin/login">login with your new password</a>';
-                    messageDiv.style.display = 'block';
-                    
-                    // Hide form
-                    document.getElementById('resetForm').style.display = 'none';
-                  } else {
-                    throw new Error(data.message || 'Password reset failed');
-                  }
-                } catch (error) {
-                  messageDiv.style.backgroundColor = '#f8d7da';
-                  messageDiv.style.color = '#721c24';
-                  messageDiv.style.border = '1px solid #f5c6cb';
-                  messageDiv.textContent = error.message || 'An error occurred. Please try again.';
-                  messageDiv.style.display = 'block';
-                }
-              });
-            </script>
-          </body>
-        </html>
-      `);
-    } catch (error: any) {
-      console.error("Error showing reset form:", error);
-      res.status(500).send(`
-        <html>
-          <head><title>Error - FixServ</title></head>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-            <div style="text-align: center;">
-              <h1 style="color: #dc3545;">FixServ</h1>
-              <h2 style="color: #dc3545;">Something went wrong</h2>
-              <p>An error occurred while processing your request.</p>
-              <a href="${
-                process.env.BASE_URL || "http://localhost:3000"
-              }/forgot-password" 
-                 style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                Request New Reset Link
-              </a>
-            </div>
-          </body>
-        </html>
-      `);
-    }
-  }
-    */
   async showResetPasswordForm(req: Request, res: Response): Promise<void> {
     try {
       const { token } = req.query;
@@ -636,52 +435,52 @@ export class AuthController {
       console.log("Token received:", token);
 
       if (!token || typeof token !== "string") {
-        res.status(400).send(`
-          <html>
-            <head><title>Invalid Reset Link</title></head>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-              <div style="text-align: center;">
-                <h1 style="color: #dc3545;">FixServ</h1>
-                <h2 style="color: #dc3545;">Invalid Reset Link</h2>
-                <p>This password reset link is invalid or malformed.</p>
-                <a href="${
-                  process.env.BASE_URL || "http://localhost:3000"
-                }/forgot-password" 
-                   style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                  Request New Reset Link
-                </a>
-              </div>
-            </body>
-          </html>
-        `);
+        // res.status(400).send(`
+        //   <html>
+        //     <head><title>Invalid Reset Link</title></head>
+        //     <body style="font-family: Arial, sans-serif; max-width: //600px; margin: 50px auto; padding: 20px;">
+        //       <div style="text-align: center;">
+        //         <h1 style="color: #dc3545;">FixServ</h1>
+        //         <h2 style="color: #dc3545;">Invalid Reset Link</h2>
+        //         <p>This password reset link is invalid or malformed.</p>
+        //         <a href="${
+        //           process.env.BASE_URL || "http://localhost:3000"
+        //         }/forgot-password"
+        //            style="background-color: #dc3545; color: white; //padding: 10px 20px; text-decoration: none; //border-radius: 5px;">
+        //           Request New Reset Link
+        //         </a>
+        //       </div>
+        //     </body>
+        //   </html>
+        // `);
+        res.status(400).json({ message: "Invalid token" });
       }
 
       // Validate token without resetting password
       const userId = await this.authService.validatePasswordResetToken(
         token as any,
       );
-      console.log("Validated userId:", userId);
 
-      if (!userId) {
-        res.status(400).send(`
-          <html>
-            <head><title>Expired Reset Link</title></head>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-              <div style="text-align: center;">
-                <h1 style="color: #dc3545;">FixServ</h1>
-                <h2 style="color: #dc3545;">Reset Link Expired</h2>
-                <p>This password reset link has expired or is invalid.</p>
-                <a href="${
-                  process.env.BASE_URL || "http://localhost:3000"
-                }/api/admin/forgot-password" 
-                   style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                  Request New Reset Link
-                </a>
-              </div>
-            </body>
-          </html>
-        `);
-      }
+      // if (!userId) {
+      // res.status(400).send(`
+      // <html>
+      // <head><title>Expired Reset Link</title></head>
+      // // <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
+      // <div style="text-align: center;">
+      // <h1 style="color: #dc3545;">FixServ</h1>
+      // <h2 style="color: #dc3545;">Reset Link Expired</h2>
+      // // <p>This password reset link has expired or is invalid.</p>
+      // <a href="${
+      // process.env.BASE_URL || "http://localhost:3000"
+      // }/api/admin/forgot-password"
+      // // //  style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+      // Request New Reset Link
+      // </a>
+      // </div>
+      // </body>
+      // </html>
+      // `);
+      // }
 
       // Token is valid, show the password reset form
       // res.send(`
@@ -834,29 +633,36 @@ export class AuthController {
       //     </body>
       //   </html>
       // `);
-      res.redirect(
-        `${process.env.FIXSERV_FRONTEND}/auth/reset-password?token=${token}`,
-      );
+
+      if (!userId) {
+        res.status(400).json({ message: "Invalid or expired token" });
+        return;
+      }
+      // res.redirect(
+      //   `${process.env.FIXSERV_USER_PROD}/api/admin/reset-password?//token=${token}`,
+      // );
+      res.status(200).json({ valid: true });
     } catch (error: any) {
-      console.error("Error showing reset form:", error);
-      res.status(500).send(`
-        <html>
-          <head><title>Error - FixServ</title></head>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-            <div style="text-align: center;">
-              <h1 style="color: #dc3545;">FixServ</h1>
-              <h2 style="color: #dc3545;">Something went wrong</h2>
-              <p>An error occurred while processing your request.</p>
-              <a href="${
-                process.env.BASE_URL || "http://localhost:3000"
-              }/forgot-password" 
-                 style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                Request New Reset Link
-              </a>
-            </div>
-          </body>
-          </html>
-      `);
+      // console.error("Error showing reset form:", error);
+      res.status(500).json({ message: "Failed to validate reset token" });
+      // res.status(500).send(`
+      //   <html>
+      //     <head><title>Error - FixServ</title></head>
+      //     <body style="font-family: Arial, sans-serif; max-width: 600px; //margin: 50px auto; padding: 20px;">
+      //       <div style="text-align: center;">
+      //         <h1 style="color: #dc3545;">FixServ</h1>
+      //         <h2 style="color: #dc3545;">Something went wrong</h2>
+      //         <p>An error occurred while processing your request.</p>
+      //         <a href="${
+      //           process.env.BASE_URL || "http://localhost:3000"
+      //         }/forgot-password"
+      //            style="background-color: #dc3545; color: white; //padding: 10px 20px; text-decoration: none; //border-radius: 5px;">
+      //           Request New Reset Link
+      //         </a>
+      //       </div>
+      //     </body>
+      //     </html>
+      // `);
     }
   }
 
@@ -885,5 +691,17 @@ export class AuthController {
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
     }
+  }
+  // In userController.ts or adminController.ts
+  async getDashboardStats(req: Request, res: Response): Promise<void> {
+    const period = (req.query.period as "today" | "week" | "month") || "today";
+
+    const stats = await this.authService.getDashboardUserStats(period);
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+      generatedAt: new Date().toISOString(),
+    });
   }
 }

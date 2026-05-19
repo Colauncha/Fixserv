@@ -71,6 +71,7 @@ const clientSchema = new mongoose.Schema<IClient>(
   },
 
   {
+    timestamps: true,
     toJSON: {
       transform(doc, ret: any) {
         ret.id = ret._id;

@@ -406,4 +406,50 @@ export class OrderController {
       }
     }
   }
+
+  getDashboardStats = async (req: Request, res: Response): Promise<void> => {
+    const period = (req.query.period as "today" | "week" | "month") || "today";
+
+    const stats = await this.orderService.getDashboardStats(period);
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+      generatedAt: new Date().toISOString(),
+    });
+  };
+
+  getDisputeStats = async (req: Request, res: Response): Promise<void> => {
+    const stats = await this.orderService.getDisputeStats();
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+      generatedAt: new Date().toISOString(),
+    });
+  };
+
+  resolveDispute = async (req: Request, res: Response): Promise<void> => {
+    const { orderId } = req.params;
+    const { resolution, note } = req.body;
+    const adminId = req.currentUser!.id;
+
+    if (
+      !resolution ||
+      !["REFUND_CLIENT", "RELEASE_TO_ARTISAN"].includes(resolution)
+    ) {
+      throw new BadRequestError(
+        "resolution must be either REFUND_CLIENT or RELEASE_TO_ARTISAN",
+      );
+    }
+
+    await this.orderService.resolveDispute(orderId, resolution, adminId, note);
+
+    res.status(200).json({
+      success: true,
+      message: `Dispute resolved: ${resolution}`,
+      orderId,
+      resolution,
+    });
+  };
 }

@@ -178,4 +178,25 @@ router.patch(
   orderController.cancelOrder.bind(orderController),
 );
 
+router.get(
+  "/dashboard/stats",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  orderController.getDashboardStats.bind(orderController),
+);
+
+router.get(
+  "/dashboard/disputes",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  orderController.getDisputeStats.bind(orderController),
+);
+
+router.patch(
+  "/:orderId/resolve-dispute",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  orderController.resolveDispute.bind(orderController),
+);
+
 export { router as orderRouter };
