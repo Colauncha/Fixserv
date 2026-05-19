@@ -25,6 +25,12 @@ jobs:
           username: ${{ secrets.FIXSERV_AWS_USER }}
           key: ${{ secrets.FIXSERV_AWS_KEY }}
           script: |
+            # navigate to dev directory.
+            cd /var/www/fixserv/dev || exit 1
+            
+            # Stop dev container if active
+            docker-compose -f docker-compose.yaml down
+
             # Navigate to the project directory. This is a crucial first step.
             cd /var/www/fixserv/Fixserv || exit 1
 
