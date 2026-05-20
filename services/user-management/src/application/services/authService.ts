@@ -747,11 +747,15 @@ export class AuthService implements IAuthService {
     );
   }
 
-  async getDashboardUserStats(period: "today" | "week" | "month" = "today") {
+  async getDashboardUserStats(
+    period: "today" | "week" | "month" = "today",
+    page = 1,
+    limit = 20,
+  ) {
     const [totalUsers, activeArtisans, newSignups] = await Promise.all([
       this.userRepository.getTotalUsers(),
-      this.userRepository.getActiveArtisans(),
-      this.userRepository.getNewSignups(period),
+      this.userRepository.getActiveArtisans(page, limit),
+      this.userRepository.getNewSignups(period, page, limit),
     ]);
 
     return {
