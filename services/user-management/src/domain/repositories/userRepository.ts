@@ -104,16 +104,63 @@ export interface IUserRepository {
     clients: number;
     artisans: number;
     admins: number;
+    breakdown: {
+      verifiedClients: number;
+      verifiedArtisans: number;
+      unverifiedClients: number;
+      unverifiedArtisans: number;
+    };
   }>;
-  getActiveArtisans(): Promise<{
+  getActiveArtisans(
+    page?: number,
+    limit?: number,
+  ): Promise<{
     total: number;
     verified: number;
+    unverified: number;
     withServices: number;
+    artisans: {
+      id: string;
+      email: string;
+      fullName: string;
+      businessName: string;
+      location: string;
+      rating: number;
+      isEmailVerified: boolean;
+      createdAt: Date;
+      skillSet: string[];
+      categories: string[];
+    }[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
   }>;
-  getNewSignups(period: "today" | "week" | "month"): Promise<{
+  getNewSignups(
+    period: "today" | "week" | "month",
+    page?: number,
+    limit?: number,
+  ): Promise<{
     clients: number;
     artisans: number;
     total: number;
     period: string;
+    startDate: string;
+    endDate: string;
+    users: {
+      id: string;
+      email: string;
+      fullName: string;
+      role: string;
+      phoneNumber: string;
+      isEmailVerified: boolean;
+      createdAt: Date;
+    }[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
   }>;
 }

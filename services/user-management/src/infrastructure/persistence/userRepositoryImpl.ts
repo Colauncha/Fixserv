@@ -1138,40 +1138,207 @@ export class UserRepositoryImpl implements IUserRepository {
     artisans: number;
     admins: number;
     total: number;
+    breakdown: {
+      verifiedClients: number;
+      verifiedArtisans: number;
+      unverifiedClients: number;
+      unverifiedArtisans: number;
+    };
   }> {
-    const [clients, artisans, admins] = await Promise.all([
-      ClientModel.countDocuments(),
-      ArtisanModel.countDocuments(),
-      AdminModel.countDocuments(),
-    ]);
+    const [clients, artisans, admins,verifiedClients, verifiedArtisans ] =
+      await Promise.all([
+        ClientModel.countDocuments(),
+        ArtisanModel.countDocuments(),
+        AdminModel.countDocuments(),
+        ClientModel.countDocuments({ isEmailVerified: true }),
+        ArtisanModel.countDocuments({ isEmailVerified: true }),
+      ]);
 
     return {
       clients,
       artisans,
       admins,
       total: clients + artisans + admins,
+      breakdown: {
+        verifiedClients,
+        verifiedArtisans,
+        unverifiedClients: clients - verifiedClients,
+        unverifiedArtisans: artisans - verifiedArtisans,
+      },
     };
   }
 
-  async getActiveArtisans(): Promise<{
+  async getActiveArtisans(
+    page = 1,
+    limit = 20,
+  ): Promise<{
     total: number;
     verified: number;
+    unverified: number;
     withServices: number;
+    artisans: {
+      id: string;
+      email: string;
+      fullName: string;
+      businessName: string;
+      location: string;
+      rating: number;
+      isEmailVerified: boolean;
+      createdAt: Date;
+      skillSet: string[];
+      categories: string[];
+    }[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
   }> {
+    const skip = (page - 1) * limit;
     // Verified artisans = email verified
-    const [total, verified] = await Promise.all([
+    const [total, verified, artisans] = await Promise.all([
       ArtisanModel.countDocuments(),
       ArtisanModel.countDocuments({ isEmailVerified: true }),
+      ArtisanModel.find()
+        .select(
+          "_id email fullName businessName location rating isEmailVerified createdAt skillSet categories phoneNumber",
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
     ]);
 
     return {
       total,
       verified,
+      unverified: total - verified,
       withServices: 0, // will be populated by service-management via event sync
+      artisans: artisans.map((a: any) => ({
+        id: a._id,
+        email: a.email,
+        fullName: a.fullName,
+        phoneNumber: a.phoneNumber,
+        businessName: a.businessName || "",
+        location: a.location || "",
+        rating: a.rating || 0,
+        isEmailVerified: a.isEmailVerified,
+        createdAt: a.createdAt,
+        skillSet: a.skillSet || [],
+        categories: (a.categories || []).map((c: any) =>
+          typeof c === "string" ? c : c.name,
+        ),
+      })),
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
-  /*
+  async getNewSignups(
+    period: "today" | "week" | "month" = "today",
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    clients: number;
+    artisans: number;
+    total: number;
+    period: string;
+    startDate: string;
+    endDate: string;
+    users: {
+      id: string;
+      email: string;
+      fullName: string;
+      role: string;
+      phoneNumber: string;
+      isEmailVerified: boolean;
+      createdAt: Date;
+    }[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }> {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case "today":
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "week":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      default:
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+    }
+
+    const filter = { createdAt: { $gte: startDate, $lte: now } };
+    const skip = (page - 1) * limit;
+
+    const selectedFields =
+      "_id email fullName phoneNumber isEmailVerified createdAt";
+
+    const [clientCount, artisanCount, clients, artisans] = await Promise.all([
+      ClientModel.countDocuments(filter),
+      ArtisanModel.countDocuments(filter),
+      ClientModel.find(filter)
+        .select(selectedFields)
+        .sort({ createdAt: -1 })
+        .lean(),
+      ArtisanModel.find(filter)
+        .select(selectedFields)
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    // Merge clients and artisans, sort by createdAt desc, then paginate
+    const allUsers = [
+      ...clients.map((u: any) => ({ ...u, role: "CLIENT" })),
+      ...artisans.map((u: any) => ({ ...u, role: "ARTISAN" })),
+    ].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    const total = allUsers.length;
+    const paginated = allUsers.slice(skip, skip + limit);
+
+    return {
+      clients: clientCount,
+      artisans: artisanCount,
+      total,
+      period,
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+      users: paginated.map((u: any) => ({
+        id: u._id,
+        email: u.email,
+        fullName: u.fullName,
+        role: u.role,
+        phoneNumber: u.phoneNumber || "",
+        isEmailVerified: u.isEmailVerified,
+        createdAt: u.createdAt,
+      })),
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+}
+
+/*
   async getNewSignups(period: "today" | "week" | "month" = "today"): Promise<{
     clients: number;
     artisans: number;
@@ -1208,6 +1375,7 @@ export class UserRepositoryImpl implements IUserRepository {
     };
   }
     */
+/*
   async getNewSignups(period: "today" | "week" | "month" = "today"): Promise<{
     clients: number;
     artisans: number;
@@ -1259,3 +1427,4 @@ export class UserRepositoryImpl implements IUserRepository {
     };
   }
 }
+*/

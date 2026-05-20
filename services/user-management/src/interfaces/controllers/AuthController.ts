@@ -695,8 +695,14 @@ export class AuthController {
   // In userController.ts or adminController.ts
   async getDashboardStats(req: Request, res: Response): Promise<void> {
     const period = (req.query.period as "today" | "week" | "month") || "today";
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
 
-    const stats = await this.authService.getDashboardUserStats(period);
+    const stats = await this.authService.getDashboardUserStats(
+      period,
+      page,
+      limit,
+    );
 
     res.status(200).json({
       success: true,
