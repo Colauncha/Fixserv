@@ -58,6 +58,9 @@ export class AuthService implements IAuthService {
       throw new BadRequestError("No user with that email exists");
     }
 
+    foundUser.updateLastActiveAt();
+    await this.userRepository.save(foundUser);
+
     const passwordData = Password.fromHash(foundUser.password);
     const isMatch = await passwordData.compare(password);
 
@@ -763,5 +766,14 @@ export class AuthService implements IAuthService {
       activeArtisans,
       newSignups,
     };
+  }
+
+  async getManageUsers(
+    page = 1,
+    limit = 20,
+    role?: "CLIENT" | "ARTISAN",
+    search?: string,
+  ) {
+    return this.userRepository.getManageUsers(page, limit, role, search);
   }
 }

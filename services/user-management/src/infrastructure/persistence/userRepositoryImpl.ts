@@ -20,6 +20,7 @@ import {
 import { Categories } from "../../domain/value-objects/categories";
 import { Certificates } from "../../domain/value-objects/certificates";
 import { Certificate } from "../../domain/value-objects/certificate";
+import { OrderClient } from "../clients/orderClient";
 
 export class UserRepositoryImpl implements IUserRepository {
   /*
@@ -537,7 +538,8 @@ export class UserRepositoryImpl implements IUserRepository {
       emailVerifiedAt: user.isEmailVerified
         ? user._user.emailVerifiedAt || new Date()
         : null,
-      createdAt: new Date(),
+      lastActiveAt: user.lastActiveAt,
+      createdAt: user._user.createdAt || new Date(),
       updatedAt: new Date(),
     };
     if (user.role === "CLIENT") {
@@ -608,6 +610,7 @@ export class UserRepositoryImpl implements IUserRepository {
         isEmailVerified,
         emailVerificationToken,
         emailVerifiedAt,
+        data.lastActiveAt || null,
       );
     } else if (data.role === "ARTISAN") {
       const skills = Array.isArray(data.skillSet)
@@ -643,6 +646,7 @@ export class UserRepositoryImpl implements IUserRepository {
         isEmailVerified,
         emailVerificationToken,
         emailVerifiedAt,
+        data.lastActiveAt || null,
       );
     } else if (data.role === "ADMIN") {
       user = UserAggregate.createAdmin(
@@ -1145,7 +1149,7 @@ export class UserRepositoryImpl implements IUserRepository {
       unverifiedArtisans: number;
     };
   }> {
-    const [clients, artisans, admins,verifiedClients, verifiedArtisans ] =
+    const [clients, artisans, admins, verifiedClients, verifiedArtisans] =
       await Promise.all([
         ClientModel.countDocuments(),
         ArtisanModel.countDocuments(),
@@ -1336,8 +1340,154 @@ export class UserRepositoryImpl implements IUserRepository {
       },
     };
   }
-}
 
+  async getManageUsers(
+    page = 1,
+    limit = 20,
+    role?: "CLIENT" | "ARTISAN",
+    search?: string,
+  ): Promise<{
+    users: {
+      id: string;
+      fullName: string;
+      email: string;
+      role: string;
+      phoneNumber: string;
+      profilePicture: string | null;
+      isEmailVerified: boolean;
+      lastActiveAt: Date | null;
+      joinedAt: Date;
+      // enriched below
+      lifetimeSpend: number;
+      orderCount: number;
+      completedOrders: number;
+    }[];
+    total: number;
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }> {
+    const skip = (page - 1) * limit;
+
+    const buildFilter = (model: any) => {
+      const filter: any = {};
+      if (search) {
+        filter.$or = [
+          { fullName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ];
+      }
+      return filter;
+    };
+
+    const selectedFields =
+      "_id email fullName phoneNumber profilePicture isEmailVerified lastActiveAt createdAt";
+
+    let rawUsers: any[] = [];
+    let total = 0;
+
+    if (role === "CLIENT") {
+      const filter = buildFilter(ClientModel);
+      [rawUsers, total] = await Promise.all([
+        ClientModel.find(filter)
+          .select(selectedFields)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        ClientModel.countDocuments(filter),
+      ]);
+      rawUsers = rawUsers.map((u) => ({ ...u, role: "CLIENT" }));
+    } else if (role === "ARTISAN") {
+      const filter = buildFilter(ArtisanModel);
+      [rawUsers, total] = await Promise.all([
+        ArtisanModel.find(filter)
+          .select(selectedFields + " businessName location rating skillSet")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        ArtisanModel.countDocuments(filter),
+      ]);
+      rawUsers = rawUsers.map((u) => ({ ...u, role: "ARTISAN" }));
+    } else {
+      // Fetch both
+      const clientFilter = buildFilter(ClientModel);
+      const artisanFilter = buildFilter(ArtisanModel);
+
+      const [clients, artisans, clientCount, artisanCount] = await Promise.all([
+        ClientModel.find(clientFilter)
+          .select(selectedFields)
+          .sort({ createdAt: -1 })
+          .lean(),
+        ArtisanModel.find(artisanFilter)
+          .select(selectedFields + " businessName location rating skillSet")
+          .sort({ createdAt: -1 })
+          .lean(),
+        ClientModel.countDocuments(clientFilter),
+        ArtisanModel.countDocuments(artisanFilter),
+      ]);
+
+      total = clientCount + artisanCount;
+
+      rawUsers = [
+        ...clients.map((u) => ({ ...u, role: "CLIENT" })),
+        ...artisans.map((u) => ({ ...u, role: "ARTISAN" })),
+      ]
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        .slice(skip, skip + limit);
+    }
+
+    // Fetch lifetime spend for all users in one bulk call
+    const userIds = rawUsers.map((u) => u._id.toString());
+    const spendMap = await OrderClient.getBulkLifetimeSpend(userIds);
+
+    const users = rawUsers.map((u: any) => {
+      const spend = spendMap[u._id.toString()] || {
+        totalSpent: 0,
+        orderCount: 0,
+        completedOrders: 0,
+      };
+
+      return {
+        id: u._id.toString(),
+        fullName: u.fullName,
+        email: u.email,
+        role: u.role,
+        phoneNumber: u.phoneNumber || "",
+        profilePicture: u.profilePicture || null,
+        isEmailVerified: u.isEmailVerified,
+        lastActiveAt: u.lastActiveAt || null,
+        joinedAt: u.createdAt,
+        lifetimeSpend: spend.totalSpent,
+        orderCount: spend.orderCount,
+        completedOrders: spend.completedOrders,
+        // Artisan-specific fields
+        ...(u.role === "ARTISAN" && {
+          businessName: u.businessName || "",
+          location: u.location || "",
+          rating: u.rating || 0,
+          skillSet: u.skillSet || [],
+        }),
+      };
+    });
+
+    return {
+      users,
+      total,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+}
 /*
   async getNewSignups(period: "today" | "week" | "month" = "today"): Promise<{
     clients: number;

@@ -452,4 +452,73 @@ export class OrderController {
       resolution,
     });
   };
+
+  // In orderController.ts
+  getLifetimeSpend = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params;
+
+    const result = await OrderModel.aggregate([
+      { $match: { clientId: userId } },
+      {
+        $group: {
+          _id: null,
+          totalSpent: { $sum: "$price" },
+          orderCount: { $sum: 1 },
+          completedOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalSpent: result[0]?.totalSpent || 0,
+        orderCount: result[0]?.orderCount || 0,
+        completedOrders: result[0]?.completedOrders || 0,
+      },
+    });
+  };
+
+  getBulkLifetimeSpend = async (req: Request, res: Response): Promise<void> => {
+    const { userIds } = req.body;
+
+    if (!userIds || !Array.isArray(userIds)) {
+      throw new BadRequestError("userIds array is required");
+    }
+
+    const result = await OrderModel.aggregate([
+      { $match: { clientId: { $in: userIds } } },
+      {
+        $group: {
+          _id: "$clientId",
+          totalSpent: { $sum: "$price" },
+          orderCount: { $sum: 1 },
+          completedOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    // Build map keyed by userId
+    const spendMap = result.reduce((acc: any, item: any) => {
+      acc[item._id] = {
+        totalSpent: item.totalSpent,
+        orderCount: item.orderCount,
+        completedOrders: item.completedOrders,
+      };
+      return acc;
+    }, {});
+
+    // Fill in zeros for users with no orders
+    userIds.forEach((id: string) => {
+      if (!spendMap[id]) {
+        spendMap[id] = { totalSpent: 0, orderCount: 0, completedOrders: 0 };
+      }
+    });
+
+    res.status(200).json({ success: true, data: spendMap });
+  };
 }

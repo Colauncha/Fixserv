@@ -68,6 +68,10 @@ const clientSchema = new mongoose.Schema<IClient>(
       type: Date,
       default: null,
     },
+    lastActiveAt: {
+      type: Date,
+      default: null,
+    },
   },
 
   {

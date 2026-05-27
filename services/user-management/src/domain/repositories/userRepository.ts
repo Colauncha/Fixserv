@@ -163,4 +163,33 @@ export interface IUserRepository {
       totalPages: number;
     };
   }>;
+
+  getManageUsers(
+    page: number,
+    limit: number,
+    role?: "CLIENT" | "ARTISAN",
+    search?: string,
+  ): Promise<{
+    users: {
+      id: string;
+      fullName: string;
+      email: string;
+      role: string;
+      phoneNumber: string;
+      profilePicture: string | null;
+      isEmailVerified: boolean;
+      lastActiveAt: Date | null;
+      joinedAt: Date;
+      // enriched below
+      lifetimeSpend: number;
+      orderCount: number;
+      completedOrders: number;
+    }[];
+    total: number;
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }>;
 }

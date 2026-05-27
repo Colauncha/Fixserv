@@ -199,4 +199,15 @@ router.patch(
   orderController.resolveDispute.bind(orderController),
 );
 
+// In orderRoute.ts — internal routes, no auth needed (internal service only)
+router.get(
+  "/internal/lifetime-spend/:userId",
+  orderController.getLifetimeSpend.bind(orderController),
+);
+
+router.post(
+  "/internal/bulk-lifetime-spend",
+  orderController.getBulkLifetimeSpend.bind(orderController),
+);
+
 export { router as orderRouter };

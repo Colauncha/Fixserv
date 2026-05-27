@@ -124,6 +124,10 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
       type: Date,
       default: null,
     },
+    lastActiveAt: {
+      type: Date,
+      default: null,
+    },
   } as any,
   {
     timestamps: true,
