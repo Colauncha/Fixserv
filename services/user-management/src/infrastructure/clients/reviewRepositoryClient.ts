@@ -19,7 +19,7 @@ export class ReviewRepositoryClient {
         console.error(
           "⚠️ Axios response error:",
           error.response.status,
-          error.response.data
+          error.response.data,
         );
       } else {
         console.error("⚠️ Axios unknown error:", error);

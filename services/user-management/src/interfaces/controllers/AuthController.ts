@@ -710,4 +710,24 @@ export class AuthController {
       generatedAt: new Date().toISOString(),
     });
   }
+
+  async getManageUsers(req: Request, res: Response): Promise<void> {
+    const role = req.query.role as "CLIENT" | "ARTISAN" | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string | undefined;
+
+    const result = await this.authService.getManageUsers(
+      page,
+      limit,
+      role,
+      search,
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      generatedAt: new Date().toISOString(),
+    });
+  }
 }

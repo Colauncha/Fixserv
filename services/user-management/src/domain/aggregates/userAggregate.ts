@@ -33,6 +33,7 @@ export class UserAggregate {
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
+    lastActiveAt?: Date | null,
   ): UserAggregate {
     const client = new Client(
       id,
@@ -47,6 +48,7 @@ export class UserAggregate {
       isEmailVerified,
       emailVerificationToken,
       emailVerifiedAt,
+      lastActiveAt,
     );
     return new UserAggregate(client);
   }
@@ -68,6 +70,7 @@ export class UserAggregate {
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
+    lastActiveAt?: Date | null,
   ): UserAggregate {
     const artisan = new Artisan(
       id,
@@ -86,6 +89,7 @@ export class UserAggregate {
       isEmailVerified,
       emailVerificationToken,
       emailVerifiedAt,
+      lastActiveAt,
     );
     return new UserAggregate(artisan);
   }
@@ -244,6 +248,14 @@ export class UserAggregate {
     return this._user.isEmailVerified || false;
   }
 
+  get lastActiveAt(): Date | null | undefined {
+    return this._user.lastActiveAt;
+  }
+
+  updateLastActiveAt(): void {
+    this._user.lastActiveAt = new Date();
+  }
+
   setUploadedProducts(products: any[]): void {
     if (this._user.role !== "CLIENT") {
       throw new BadRequestError("Only clients can have uploaded products");
@@ -354,6 +366,7 @@ export class UserAggregate {
     const isEmailVerified = json.isEmailVerified || false;
     const emailVerificationToken = json.emailVerificationToken || undefined;
     const emailVerifiedAt = json.emailVerifiedAt || new Date();
+    const lastActiveAt = json.lastActiveAt || undefined;
 
     switch (role) {
       case "CLIENT":
@@ -375,6 +388,7 @@ export class UserAggregate {
           isEmailVerified,
           emailVerificationToken,
           emailVerifiedAt,
+          lastActiveAt,
         );
 
       case "ARTISAN":
@@ -406,6 +420,7 @@ export class UserAggregate {
           isEmailVerified,
           emailVerificationToken,
           emailVerifiedAt,
+          lastActiveAt,
         );
 
       case "ADMIN":
@@ -453,6 +468,7 @@ export class UserAggregate {
       isEmailVerified: this.isEmailVerified,
       emailVerificationToken: this.emailVerificationToken,
       emailVerifiedAt: this.emailVerifiedAt,
+      lastActiveAt: this.lastActiveAt,
       ...(this.isClient() && {
         deliveryAddress: this.deliveryAddress.toJSON(),
         servicePreferences: this.servicePreferences.toJSON(),

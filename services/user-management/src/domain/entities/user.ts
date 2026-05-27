@@ -16,8 +16,9 @@ export abstract class User {
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
+    public lastActiveAt?: Date | null,
     public createdAt: Date = new Date(),
-    public updatedAt: Date = new Date()
+    public updatedAt: Date = new Date(),
   ) {
     this.isEmailVerified = isEmailVerified || false;
     this.emailVerificationToken = emailVerificationToken;

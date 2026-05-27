@@ -17,7 +17,8 @@ export class Client extends User {
     public uploadedProducts: any[] = [], // Optional field for uploaded products
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
-    emailVerifiedAt?: Date | null
+    emailVerifiedAt?: Date | null,
+    lastActiveAt?: Date | null,
   ) {
     super(
       id,
@@ -29,7 +30,8 @@ export class Client extends User {
       profilePicture,
       isEmailVerified,
       emailVerificationToken,
-      emailVerifiedAt
+      emailVerifiedAt,
+      lastActiveAt,
     );
   }
 
@@ -47,7 +49,7 @@ export class Client extends User {
       //critical:preserve email verification state when creating new instances
       this.isEmailVerified,
       this.emailVerificationToken,
-      this.emailVerifiedAt
+      this.emailVerifiedAt,
     );
   }
 }

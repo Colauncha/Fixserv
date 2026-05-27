@@ -29,6 +29,7 @@ export class Artisan extends User {
     isEmailVerified?: boolean,
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
+    lastActiveAt?: Date | null,
   ) {
     super(
       id,
@@ -41,6 +42,7 @@ export class Artisan extends User {
       isEmailVerified,
       emailVerificationToken,
       emailVerifiedAt,
+      lastActiveAt,
     );
   }
   addSkill(newSkill: string): Artisan {

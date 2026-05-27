@@ -16,6 +16,7 @@ import { uploadRouter } from "./routes/uploadRoute";
 import { categoryRouter } from "./routes/categoryRoutes";
 import { certificateRouter } from "./routes/certificateRoute";
 import expressListEndpoints from "express-list-endpoints";
+import { trackActivity } from "../middlewares/trackActivity";
 
 const app = express();
 
@@ -48,6 +49,9 @@ app.use("/api/certificate", certificateRouter);
 //  const endpoints = //expressListEndpoints(app);
 //  res.json({ endpoints });
 //});
+
+// Track activity on all authenticated routes
+app.use(trackActivity);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
