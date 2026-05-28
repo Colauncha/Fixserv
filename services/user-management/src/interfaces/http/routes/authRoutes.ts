@@ -146,4 +146,8 @@ router.post(
   authController.verifyPassword.bind(authController),
 );
 
+router.post(
+  "/internal/bulk-user-details",
+  authController.getBulkUserDetails.bind(authController),
+);
 export { router as adminRouter };

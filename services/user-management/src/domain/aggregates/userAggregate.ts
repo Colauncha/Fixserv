@@ -123,7 +123,8 @@ export class UserAggregate {
 
   markEmailAsVerified(verifiedAt?: Date): void {
     this._user.isEmailVerified = true;
-    this._user.emailVerificationToken = this._user.emailVerificationToken;
+    // this._user.emailVerificationToken = this._user.emailVerificationToken;
+    this._user.emailVerificationToken = null;
     this._user.emailVerifiedAt = verifiedAt || new Date();
   }
 
@@ -271,7 +272,8 @@ export class UserAggregate {
   }
 
   updateRating(newRating: number) {
-    if (!newRating || typeof newRating !== "number") {
+    // if (!newRating || typeof newRating !== "number") {
+    if (newRating === undefined || typeof newRating !== "number") {
       throw new BadRequestError("Rating cannot be empty and must be a number");
     }
     return ((this._user as Artisan).rating = newRating);

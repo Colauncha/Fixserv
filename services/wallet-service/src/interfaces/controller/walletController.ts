@@ -1373,6 +1373,25 @@ export class WalletController {
       });
     }
   }
+
+  static async monitorTransactionsHandler(req: any, res: any) {
+    const { startDate, endDate, status, purpose, page, limit } = req.query;
+
+    const result = await WalletService.monitorTransactions({
+      startDate,
+      endDate,
+      status,
+      purpose,
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      generatedAt: new Date().toISOString(),
+    });
+  }
 }
 
 /////////////////////////////////////////////////////////////

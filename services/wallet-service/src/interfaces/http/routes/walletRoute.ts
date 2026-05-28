@@ -234,6 +234,13 @@ router.get(
   WalletController.getLockedFundsBreakdownHandler,
 );
 
+router.get(
+  "/admin/monitor-transactions",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  WalletController.monitorTransactionsHandler,
+);
+
 //router.get("/paystack/webhook/test", (req, res) => {
 //  console.log("🧪 Webhook test endpoint called");
 //  res.status(200).json({

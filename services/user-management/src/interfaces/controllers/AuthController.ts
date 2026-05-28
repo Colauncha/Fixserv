@@ -13,6 +13,8 @@ import { refreshUserCache } from "../../infrastructure/utils/refreshUserCache";
 import { Categories } from "../../domain/value-objects/categories";
 import { Password } from "../../domain/value-objects/password";
 import { ArtisanUpdatedEvent } from "../../events/artisanUpdatedEvent";
+import { ClientModel } from "../../infrastructure/persistence/models/client";
+import { ArtisanModel } from "../../infrastructure/persistence/models/artisan";
 
 export class AuthController {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
@@ -729,5 +731,63 @@ export class AuthController {
       data: result,
       generatedAt: new Date().toISOString(),
     });
+  }
+
+  async getBulkUserDetails(req: Request, res: Response): Promise<void> {
+    const { userIds } = req.body;
+
+    console.log("Searching for userIds:", userIds);
+
+    const [clients, artisans] = await Promise.all([
+      ClientModel.find({ _id: { $in: userIds } })
+        .select("_id fullName email phoneNumber")
+        .lean(),
+      ArtisanModel.find({ _id: { $in: userIds } })
+        .select("_id fullName email businessName phoneNumber")
+        .lean(),
+      //AdminModel.find({ _id: { $in: userIds } })
+      //  .select("_id fullName email")
+      //  .lean(),
+    ]);
+
+    //console.log(
+    //  `Found: ${clients.length} clients, ${artisans.length} artisans, 0 //admins`,
+    //);
+
+    const userMap: Record<string, any> = {};
+
+    clients.forEach((u: any) => {
+      userMap[u._id.toString()] = {
+        id: u._id.toString(),
+        fullName: u.fullName,
+        email: u.email,
+        phoneNumber: u.phoneNumber,
+        role: "CLIENT",
+      };
+    });
+
+    artisans.forEach((u: any) => {
+      userMap[u._id.toString()] = {
+        id: u._id.toString(),
+        fullName: u.fullName,
+        email: u.email,
+        phoneNumber: u.phoneNumber,
+        businessName: u.businessName,
+        role: "ARTISAN",
+      };
+    });
+
+    // admins.forEach((u: any) => {
+    //   userMap[u._id.toString()] = {
+    //     id: u._id.toString(),
+    //     fullName: u.fullName,
+    //     email: u.email,
+    //     role: "ADMIN",
+    //   };
+    // });
+
+    // console.log("Returning userMap keys:", Object.keys(userMap));
+
+    res.status(200).json({ success: true, data: userMap });
   }
 }

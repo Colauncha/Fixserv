@@ -9,6 +9,7 @@ import {
   WithdrawalRequestModel,
 } from "../../infrastructure/persistence/models/walletModel";
 import { UserManagementClient } from "../../infrastructure/reuseableWrapper/userManagementClient";
+import { OrderClient } from "../../infrastructure/reuseableWrapper/orderManagementClient";
 import {
   WalletTopUpEvent,
   WalletWithdrawalEvent,
@@ -1480,6 +1481,224 @@ export class WalletService {
       // available: wallet.balance - totalLocked,
       available: wallet.balance,
       availableAfterDifference: wallet.balance - totalLocked,
+    };
+  }
+
+  static async monitorTransactions(filters: {
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+    purpose?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<any> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    const skip = (page - 1) * limit;
+    const PLATFORM_FEE = 2000;
+
+    const transactionMatch: any = {};
+
+    if (filters.status) {
+      transactionMatch["transactions.status"] = filters.status;
+    }
+    if (filters.purpose) {
+      transactionMatch["transactions.purpose"] = filters.purpose;
+    }
+    if (filters.startDate || filters.endDate) {
+      transactionMatch["transactions.createdAt"] = {};
+      if (filters.startDate) {
+        transactionMatch["transactions.createdAt"].$gte = new Date(
+          filters.startDate,
+        );
+      }
+      if (filters.endDate) {
+        transactionMatch["transactions.createdAt"].$lte = new Date(
+          filters.endDate,
+        );
+      }
+    }
+
+    const pipeline: any[] = [
+      { $unwind: "$transactions" },
+      ...(Object.keys(transactionMatch).length > 0
+        ? [{ $match: transactionMatch }]
+        : []),
+      { $sort: { "transactions.createdAt": -1 } },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 0,
+                walletUserId: "$userId",
+                walletRole: "$role",
+                transactionId: "$transactions.id",
+                type: "$transactions.type",
+                purpose: "$transactions.purpose",
+                amount: "$transactions.amount",
+                reference: "$transactions.reference",
+                description: "$transactions.description",
+                status: "$transactions.status",
+                createdAt: "$transactions.createdAt",
+              },
+            },
+          ],
+          totals: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                totalAmount: { $sum: "$transactions.amount" },
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    const [result] = await WalletModel.aggregate(pipeline);
+    const rawTransactions = result.data || [];
+    const total = result.totals[0]?.total || 0;
+    const totalAmount = result.totals[0]?.totalAmount || 0;
+
+    // Step 1: Collect order IDs (exclude withdrawal and manual references)
+    const orderIds = [
+      ...new Set(
+        rawTransactions
+          .map((t: any) => t.reference)
+          .filter(
+            (ref: string) =>
+              ref &&
+              !ref.startsWith("WD_") &&
+              !ref.startsWith("MANUAL_LOCK") &&
+              !ref.startsWith("MANUAL_UNLOCK"),
+          ),
+      ),
+    ] as string[];
+
+    // Step 2: Fetch orders first
+    const orderMap =
+      orderIds.length > 0
+        ? await OrderClient.getBulkOrderDetails(orderIds)
+        : {};
+
+    // console.log("orderMap:", orderMap);
+
+    // Step 3: Collect ALL user IDs from both wallet owners AND order participants
+    const walletOwnerIds = rawTransactions.map((t: any) => t.walletUserId);
+
+    const orderParticipantIds = Object.values(orderMap).flatMap((o: any) =>
+      [o.clientId, o.artisanId].filter(Boolean),
+    );
+
+    // Merge all IDs and deduplicate
+    const allUserIds = [
+      ...new Set([...walletOwnerIds, ...orderParticipantIds]),
+    ] as string[];
+
+    // console.log("Fetching users for IDs:", allUserIds);
+
+    // Step 4: Fetch ALL users in one single call
+    const userMap =
+      allUserIds.length > 0
+        ? await UserManagementClient.getBulkUserDetails(allUserIds)
+        : {};
+
+    // console.log("userMap:", userMap);
+
+    // Step 5: Build enriched transactions
+    const transactions = rawTransactions.map((t: any) => {
+      const order = orderMap[t.reference] || null;
+      const walletUser = userMap[t.walletUserId] || null;
+      const client = order?.clientId ? userMap[order.clientId] || null : null;
+      const artisan = order?.artisanId
+        ? userMap[order.artisanId] || null
+        : null;
+
+      const isCompletedOrderTx =
+        t.purpose === "PAYMENT_COMPLETED" || t.purpose === "PAYMENT_RECEIVED";
+
+      //console.log(
+      //  "order:",
+      //  order,
+      //  "wallet:",
+      //  walletUser,
+      //  "client:",
+      //  client,
+      //  "artisan:",
+      //  artisan,
+      //);
+
+      return {
+        transactionId: t.transactionId || t.reference,
+        type: t.type,
+        purpose: t.purpose,
+        amount: t.amount,
+        fee: isCompletedOrderTx ? PLATFORM_FEE : 0,
+        status: t.status,
+        date: t.createdAt,
+        description: t.description || "",
+        reference: t.reference,
+
+        walletOwner: walletUser
+          ? {
+              id: t.walletUserId,
+              fullName: walletUser.fullName,
+              email: walletUser.email,
+              role: t.walletRole,
+            }
+          : {
+              id: t.walletUserId,
+              fullName: "Unknown",
+              email: "",
+              role: t.walletRole,
+            },
+
+        order: order
+          ? {
+              orderId: t.reference,
+              item: order.item,
+              orderStatus: order.status,
+              orderAmount: order.price,
+            }
+          : null,
+
+        client: client
+          ? {
+              id: order?.clientId,
+              fullName: client.fullName,
+              email: client.email,
+            }
+          : null,
+
+        artisan: artisan
+          ? {
+              id: order?.artisanId,
+              fullName: artisan.fullName,
+              email: artisan.email,
+              businessName: artisan.businessName,
+            }
+          : null,
+      };
+    });
+
+    const completedCount = transactions.filter(
+      (t: any) => t.purpose === "PAYMENT_COMPLETED",
+    ).length;
+
+    return {
+      transactions,
+      total,
+      totalAmount,
+      totalFees: completedCount * PLATFORM_FEE,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

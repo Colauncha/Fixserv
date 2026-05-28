@@ -210,4 +210,9 @@ router.post(
   orderController.getBulkLifetimeSpend.bind(orderController),
 );
 
+router.post(
+  "/internal/bulk-order-details",
+  orderController.getBulkOrderDetails.bind(orderController),
+);
+
 export { router as orderRouter };
