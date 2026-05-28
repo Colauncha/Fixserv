@@ -29,4 +29,30 @@ export class UserManagementClient {
       throw new BadRequestError("Unable to verify password. Please try again.");
     }
   }
+
+  static async getBulkUserDetails(
+    userIds: string[],
+  ): Promise<
+    Record<
+      string,
+      { fullName: string; email: string; role: string; businessName?: string }
+    >
+  > {
+    try {
+      const uniqueIds = [...new Set(userIds)]; // deduplicate
+      const response = await axios.post(
+        `${this.baseUrl}/internal/bulk-user-details`,
+        { userIds: uniqueIds },
+        {
+          timeout: 10000,
+          headers: { "X-Internal-Service": "true" },
+        },
+      );
+      console.log("user", response.data.data);
+      return response.data.data || {};
+    } catch (error: any) {
+      console.error("Failed to fetch bulk user details:", error.message);
+      return {};
+    }
+  }
 }

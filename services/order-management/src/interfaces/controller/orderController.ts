@@ -521,4 +521,22 @@ export class OrderController {
 
     res.status(200).json({ success: true, data: spendMap });
   };
+
+  getBulkOrderDetails = async (req: Request, res: Response): Promise<void> => {
+    const { orderIds } = req.body;
+
+    if (!orderIds || !Array.isArray(orderIds)) {
+      throw new BadRequestError("orderIds array is required");
+    }
+
+    const orders = await OrderModel.find({
+      _id: { $in: orderIds },
+    })
+      .select(
+        "_id clientId artisanId serviceId price status uploadedProducts createdAt",
+      )
+      .lean();
+
+    res.status(200).json({ success: true, data: orders });
+  };
 }
