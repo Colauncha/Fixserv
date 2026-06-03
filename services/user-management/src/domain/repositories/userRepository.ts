@@ -114,6 +114,7 @@ export interface IUserRepository {
   getActiveArtisans(
     page?: number,
     limit?: number,
+    search?: string,
   ): Promise<{
     total: number;
     verified: number;
@@ -137,6 +138,39 @@ export interface IUserRepository {
       totalPages: number;
     };
   }>;
+
+  getActiveClients(
+    page?: number,
+    limit?: number,
+    search?: string,
+  ): Promise<{
+    total: number;
+    verified: number;
+    unverified: number;
+    clients: {
+      id: string;
+      email: string;
+      fullName: string;
+      phoneNumber: string;
+      profilePicture: string | null;
+      isEmailVerified: boolean;
+      createdAt: Date;
+      lastActiveAt: Date | null;
+      deliveryAddress: {
+        city: string;
+        state: string;
+        country: string;
+      };
+      servicePreferences: string[];
+      uploadedProductsCount: number;
+    }[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }>;
+
   getNewSignups(
     period: "today" | "week" | "month",
     page?: number,

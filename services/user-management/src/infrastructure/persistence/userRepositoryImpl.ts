@@ -1175,6 +1175,7 @@ export class UserRepositoryImpl implements IUserRepository {
   async getActiveArtisans(
     page = 1,
     limit = 20,
+    search?: string,
   ): Promise<{
     total: number;
     verified: number;
@@ -1199,6 +1200,16 @@ export class UserRepositoryImpl implements IUserRepository {
     };
   }> {
     const skip = (page - 1) * limit;
+
+    const filter: any = {};
+    if (search) {
+      filter.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { businessName: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+      ];
+    }
     // Verified artisans = email verified
     const [total, verified, artisans] = await Promise.all([
       ArtisanModel.countDocuments(),
@@ -1232,6 +1243,91 @@ export class UserRepositoryImpl implements IUserRepository {
         categories: (a.categories || []).map((c: any) =>
           typeof c === "string" ? c : c.name,
         ),
+      })),
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getActiveClients(
+    page = 1,
+    limit = 20,
+    search?: string,
+  ): Promise<{
+    total: number;
+    verified: number;
+    unverified: number;
+    clients: {
+      id: string;
+      email: string;
+      fullName: string;
+      phoneNumber: string;
+      profilePicture: string | null;
+      isEmailVerified: boolean;
+      createdAt: Date;
+      lastActiveAt: Date | null;
+      deliveryAddress: {
+        city: string;
+        state: string;
+        country: string;
+      };
+      servicePreferences: string[];
+      uploadedProductsCount: number;
+    }[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }> {
+    const skip = (page - 1) * limit;
+
+    const filter: any = {};
+    if (search) {
+      filter.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [total, verified, clients] = await Promise.all([
+      ClientModel.countDocuments(filter),
+      ClientModel.countDocuments({ ...filter, isEmailVerified: true }),
+      ClientModel.find(filter)
+        .select(
+          "_id email fullName phoneNumber profilePicture isEmailVerified createdAt lastActiveAt deliveryAddress servicePreferences uploadedProducts",
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    return {
+      total,
+      verified,
+      unverified: total - verified,
+      clients: clients.map((c: any) => ({
+        id: c._id.toString(),
+        email: c.email,
+        fullName: c.fullName,
+        phoneNumber: c.phoneNumber || "",
+        profilePicture: c.profilePicture || null,
+        isEmailVerified: c.isEmailVerified,
+        createdAt: c.createdAt,
+        lastActiveAt: c.lastActiveAt || null,
+        deliveryAddress: {
+          city: c.deliveryAddress?.city || "",
+          state: c.deliveryAddress?.state || "",
+          country: c.deliveryAddress?.country || "",
+        },
+        servicePreferences: Array.isArray(c.servicePreferences)
+          ? c.servicePreferences
+          : [],
+        uploadedProductsCount: (c.uploadedProducts || []).length,
       })),
       pagination: {
         page,

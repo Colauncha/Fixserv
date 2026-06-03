@@ -7,6 +7,7 @@ import { OrderAggregate } from "../../domain/aggregates/orderAggregate";
 import {
   getClientById,
   getServiceById,
+  getUserById,
 } from "../../infrastructure/reuseableWrapper/getUserProfile";
 import { EscrowService } from "./escrowService";
 import {
@@ -759,5 +760,51 @@ export class OrderService {
       resolvedAt: new Date().toISOString(),
     });
     await this.eventBus.publish("order_events", event);
+  }
+
+  async getTopArtisans(limit = 10) {
+    const artisans = await this.orderRepository.getTopArtisansBySales(limit);
+
+    return Promise.all(
+      artisans.map(async (artisan) => {
+        const artisanInfo = await getUserById(artisan.artisanId);
+        console.log("artisan:", artisanInfo);
+        const validServiceIds = (artisan.services || []).filter(
+          (id: string) => id && id !== "undefined",
+        );
+
+        const serviceNames = await Promise.all(
+          validServiceIds.map(async (serviceId: string) => {
+            try {
+              const service = await getServiceById(serviceId);
+
+              return {
+                name: service?.details?.title || "Unknown Service",
+                price: service?.details?.price || 0,
+              };
+            } catch {
+              return "Unknown Service";
+            }
+          }),
+        );
+
+        console.log("serviceNames:", serviceNames);
+
+        return {
+          artisanId: artisan.artisanId,
+          fullName: artisanInfo?.user?.fullName || artisanInfo?.fullName,
+
+          rating: artisanInfo?.user?.rating || artisanInfo?.rating || 0,
+
+          services: serviceNames,
+
+          totalOrders: artisan.totalOrders,
+
+          totalSales: artisan.totalSales,
+
+          averageOrderValue: artisan.averageOrderValue,
+        };
+      }),
+    );
   }
 }

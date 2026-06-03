@@ -694,16 +694,18 @@ export class AuthController {
       res.status(500).json({ success: false, message: error.message });
     }
   }
-  // In userController.ts or adminController.ts
+
   async getDashboardStats(req: Request, res: Response): Promise<void> {
     const period = (req.query.period as "today" | "week" | "month") || "today";
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string | undefined;
 
     const stats = await this.authService.getDashboardUserStats(
       period,
       page,
       limit,
+      search,
     );
 
     res.status(200).json({

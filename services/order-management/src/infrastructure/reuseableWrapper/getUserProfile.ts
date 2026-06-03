@@ -1,270 +1,6 @@
 import { BadRequestError } from "@fixserv-colauncha/shared";
 import { axiosClient } from "../clients/axiosClient";
 
-/*
-export async function getServiceById(serviceId: string) {
-  try {
-    const response = await axiosClient({
-      method: "get",
-      url: `${process.env.SERVICE_MANAGEMENT_URL}/${serviceId}`,
-    });
-
-    return response.data;
-  } catch (error: any) {
-    console.error(`❌ Failed to fetch service ${serviceId}:`, {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-      url: error.config?.url,
-    });
-    // throw new BadRequestError("Unable to fetch service details");
-  }
-}
-
-export async function getClientById(clientId: string) {
-  try {
-    const response = await axiosClient({
-      method: "get",
-      url: `${process.env.USER_MANAGEMENT_URL}/user/${clientId}`,
-    });
-
-    return response.data;
-  } catch (err) {
-    console.error("Failed to fetch Client from user-management:", err);
-    throw new BadRequestError("Unable to fetch Client details");
-  }
-}
-export async function getOfferedServiceById(id: string) {
-  try {
-    const response = await axiosClient({
-      method: "get",
-      url: `${process.env.BASESERVICE_MANAGEMENT_URL}/getOffered/${id}`,
-    });
-    return response.data;
-  } catch (error) {
-    console.error(
-      "Failed to fetch OfferedService from service-management:",
-      error
-    );
-    throw new BadRequestError("Unable to fetch OfferedService details");
-  }
-}
-*/
-
-/*
-import { safeAxiosCall } from "../clients/axiosClient";
-
-export async function getServiceById(serviceId: string) {
-  try {
-    console.log(`🔍 Fetching service by ID: ${serviceId}`);
-
-    const result = await safeAxiosCall({
-      method: "get",
-      url: `${process.env.SERVICE_MANAGEMENT_URL}/${serviceId}`,
-    });
-
-    if (result.success) {
-      console.log(`✅ Successfully fetched service: ${serviceId}`);
-      return result.data;
-    }
-
-    // Handle different error scenarios without crashing
-    const error: any = result.error;
-
-    if (error.status === 404) {
-      console.warn(`⚠️ Service ${serviceId} not found`);
-      throw new BadRequestError(`Service with ID ${serviceId} not found`);
-    }
-
-    if (error.status === 429) {
-      console.warn(`⚠️ Rate limited when fetching service ${serviceId}`);
-      throw new BadRequestError(
-        "Service management is currently busy. Please try again in a few moments."
-      );
-    }
-
-    if (error.status >= 500) {
-      console.warn(`⚠️ Service management server error for ${serviceId}`);
-      throw new BadRequestError(
-        "Service management is temporarily unavailable. Please try again later."
-      );
-    }
-
-    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
-      console.warn(`⚠️ Timeout when fetching service ${serviceId}`);
-      throw new BadRequestError(
-        "Request to service management timed out. Please try again."
-      );
-    }
-
-    if (error.code === "ENOTFOUND" || error.code === "ECONNRESET") {
-      console.warn(`⚠️ Network error when fetching service ${serviceId}`);
-      throw new BadRequestError(
-        "Unable to connect to service management. Please check your configuration."
-      );
-    }
-
-    // Generic fallback
-    console.warn(`⚠️ Unknown error when fetching service ${serviceId}:`, error);
-    throw new BadRequestError(
-      "Unable to fetch service details. Please try again later."
-    );
-  } catch (error: any) {
-    // This catch block handles any unexpected errors to prevent service crash
-    if (error instanceof BadRequestError) {
-      throw error; // Re-throw our managed errors
-    }
-
-    console.error(
-      `❌ Unexpected error fetching service ${serviceId} (service continues):`,
-      error
-    );
-    throw new BadRequestError(
-      "An unexpected error occurred. Please try again later."
-    );
-  }
-}
-
-export async function getClientById(clientId: string) {
-  try {
-    console.log(`🔍 Fetching client by ID: ${clientId}`);
-
-    const result = await safeAxiosCall({
-      method: "get",
-      url: `${process.env.USER_MANAGEMENT_URL}/user/${clientId}`,
-    });
-
-    if (result.success) {
-      console.log(`✅ Successfully fetched client: ${clientId}`);
-      return result.data;
-    }
-
-    const error: any = result.error;
-
-    if (error.status === 404) {
-      console.warn(`⚠️ Client ${clientId} not found`);
-      throw new BadRequestError(`Client with ID ${clientId} not found`);
-    }
-
-    if (error.status === 429) {
-      console.warn(`⚠️ Rate limited when fetching client ${clientId}`);
-      throw new BadRequestError(
-        "User management is currently busy. Please try again in a few moments."
-      );
-    }
-
-    if (error.status >= 500) {
-      console.warn(`⚠️ User management server error for ${clientId}`);
-      throw new BadRequestError(
-        "User management is temporarily unavailable. Please try again later."
-      );
-    }
-
-    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
-      console.warn(`⚠️ Timeout when fetching client ${clientId}`);
-      throw new BadRequestError(
-        "Request to user management timed out. Please try again."
-      );
-    }
-
-    if (error.code === "ENOTFOUND" || error.code === "ECONNRESET") {
-      console.warn(`⚠️ Network error when fetching client ${clientId}`);
-      throw new BadRequestError(
-        "Unable to connect to user management. Please check your configuration."
-      );
-    }
-
-    console.warn(`⚠️ Unknown error when fetching client ${clientId}:`, error);
-    throw new BadRequestError(
-      "Unable to fetch client details. Please try again later."
-    );
-  } catch (error: any) {
-    if (error instanceof BadRequestError) {
-      throw error;
-    }
-
-    console.error(
-      `❌ Unexpected error fetching client ${clientId} (service continues):`,
-      error
-    );
-    throw new BadRequestError(
-      "An unexpected error occurred. Please try again later."
-    );
-  }
-}
-
-export async function getOfferedServiceById(id: string) {
-  try {
-    console.log(`🔍 Fetching offered service by ID: ${id}`);
-
-    const result = await safeAxiosCall({
-      method: "get",
-      url: `${process.env.BASESERVICE_MANAGEMENT_URL}/getOffered/${id}`,
-    });
-
-    if (result.success) {
-      console.log(`✅ Successfully fetched offered service: ${id}`);
-      return result.data;
-    }
-
-    const error: any = result.error;
-
-    if (error.status === 404) {
-      console.warn(`⚠️ Offered service ${id} not found`);
-      throw new BadRequestError(`Offered service with ID ${id} not found`);
-    }
-
-    if (error.status === 429) {
-      console.warn(`⚠️ Rate limited when fetching offered service ${id}`);
-      throw new BadRequestError(
-        "Base service management is currently busy. Please try again in a few moments."
-      );
-    }
-
-    if (error.status >= 500) {
-      console.warn(`⚠️ Base service management server error for ${id}`);
-      throw new BadRequestError(
-        "Base service management is temporarily unavailable. Please try again later."
-      );
-    }
-
-    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
-      console.warn(`⚠️ Timeout when fetching offered service ${id}`);
-      throw new BadRequestError(
-        "Request to base service management timed out. Please try again."
-      );
-    }
-
-    if (error.code === "ENOTFOUND" || error.code === "ECONNRESET") {
-      console.warn(`⚠️ Network error when fetching offered service ${id}`);
-      throw new BadRequestError(
-        "Unable to connect to base service management. Please check your configuration."
-      );
-    }
-
-    console.warn(
-      `⚠️ Unknown error when fetching offered service ${id}:`,
-      error
-    );
-    throw new BadRequestError(
-      "Unable to fetch offered service details. Please try again later."
-    );
-  } catch (error: any) {
-    if (error instanceof BadRequestError) {
-      throw error;
-    }
-
-    console.error(
-      `❌ Unexpected error fetching offered service ${id} (service continues):`,
-      error
-    );
-    throw new BadRequestError(
-      "An unexpected error occurred. Please try again later."
-    );
-  }
-}
-*/
 import { safeAxiosCall } from "../clients/axiosClient";
 // import { isDBReady, waitForConnection } from "@fixserv-colauncha/shared";
 
@@ -306,11 +42,11 @@ export const makeServiceCall = async (
   config: any,
   serviceName: string,
   resourceId?: string,
-  requiresDB = false
+  requiresDB = false,
 ): Promise<any> => {
   try {
     console.log(
-      `🔍 Fetching ${serviceName}${resourceId ? ` for ID: ${resourceId}` : ""}`
+      `🔍 Fetching ${serviceName}${resourceId ? ` for ID: ${resourceId}` : ""}`,
     );
 
     // Check database connection if required
@@ -333,7 +69,7 @@ export const makeServiceCall = async (
       console.log(
         `✅ Successfully fetched ${serviceName}${
           resourceId ? ` for ID: ${resourceId}` : ""
-        } (${result.duration}ms)`
+        } (${result.duration}ms)`,
       );
       return result.data;
     }
@@ -364,11 +100,11 @@ export const makeServiceCall = async (
       {
         message: error.message,
         stack: error.stack?.split("\n")[0], // Only log first line of stack
-      }
+      },
     );
 
     throw new BadRequestError(
-      "An unexpected error occurred. Please try again later."
+      "An unexpected error occurred. Please try again later.",
     );
   }
 };
@@ -380,7 +116,7 @@ export async function getServiceById(serviceId: string) {
       url: `${process.env.SERVICE_MANAGEMENT_URL}/${serviceId}`,
     },
     "Service",
-    serviceId
+    serviceId,
   );
 }
 
@@ -391,7 +127,18 @@ export async function getClientById(clientId: string) {
       url: `${process.env.USER_MANAGEMENT_URL}/user/${clientId}`,
     },
     "Client",
-    clientId
+    clientId,
+  );
+}
+
+export async function getUserById(userId: string) {
+  return makeServiceCall(
+    {
+      method: "get",
+      url: `${process.env.USER_MANAGEMENT_URL}/user/${userId}`,
+    },
+    "User",
+    userId,
   );
 }
 
@@ -402,7 +149,7 @@ export async function getOfferedServiceById(id: string) {
       url: `${process.env.BASESERVICE_MANAGEMENT_URL}/getOffered/${id}`,
     },
     "Offered Service",
-    id
+    id,
   );
 }
 
@@ -416,13 +163,13 @@ export class WalletClient {
       },
       "Wallet Transaction History",
       clientId,
-      true // Requires database connection
+      true, // Requires database connection
     );
   }
 
   static async createWallet(
     clientId: string,
-    initialBalance = 0
+    initialBalance = 0,
   ): Promise<any> {
     return makeServiceCall(
       {
@@ -432,7 +179,7 @@ export class WalletClient {
       },
       "Wallet Creation",
       clientId,
-      true
+      true,
     );
   }
 
@@ -444,7 +191,7 @@ export class WalletClient {
       },
       "Wallet Balance",
       clientId,
-      true
+      true,
     );
   }
 }
@@ -502,7 +249,7 @@ export async function checkServicesHealth(): Promise<any> {
     services: results.map((result) =>
       result.status === "fulfilled"
         ? result.value
-        : { status: "error", message: "Health check failed" }
+        : { status: "error", message: "Health check failed" },
     ),
   };
 }
