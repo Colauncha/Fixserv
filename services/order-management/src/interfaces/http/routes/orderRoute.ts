@@ -199,6 +199,13 @@ router.patch(
   orderController.resolveDispute.bind(orderController),
 );
 
+router.get(
+  "/dashboard/top-artisans",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  orderController.getTopArtisans.bind(orderController),
+);
+
 // In orderRoute.ts — internal routes, no auth needed (internal service only)
 router.get(
   "/internal/lifetime-spend/:userId",

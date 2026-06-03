@@ -420,4 +420,65 @@ export class orderRepositoryImpls implements OrderRepository {
 
     return this.toDomain(updated);
   }
+
+  async getTopArtisansBySales(limit = 10): Promise<
+    Array<{
+      artisanId: string;
+      totalOrders: number;
+      totalSales: number;
+      averageOrderValue: number;
+      services: string[];
+    }>
+  > {
+    const result = await OrderModel.aggregate([
+      {
+        $match: {
+          status: "COMPLETED",
+          escrowStatus: "RELEASED",
+          serviceId: { $ne: null },
+          artisanId: { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$artisanId",
+
+          totalOrders: {
+            $sum: 1,
+          },
+
+          totalSales: {
+            $sum: "$price",
+          },
+
+          averageOrderValue: {
+            $avg: "$price",
+          },
+
+          //serviceId: {
+          //  $first: "$serviceId",
+          //},
+          services: {
+            $addToSet: "$serviceId",
+          },
+        },
+      },
+      {
+        $sort: {
+          totalOrders: -1,
+        },
+      },
+      {
+        $limit: limit,
+      },
+    ]);
+
+    return result.map((item) => ({
+      artisanId: item._id,
+      totalOrders: item.totalOrders,
+      totalSales: item.totalSales,
+      averageOrderValue: Math.round(item.averageOrderValue),
+      services: item.services,
+    }));
+  }
 }

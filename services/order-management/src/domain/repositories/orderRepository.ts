@@ -45,4 +45,14 @@ export interface OrderRepository {
     resolved: number;
     disputedOrders: any[];
   }>;
+
+  getTopArtisansBySales(limit?: number): Promise<
+    Array<{
+      artisanId: string;
+      totalOrders: number;
+      totalSales: number;
+      averageOrderValue: number;
+      services: string[];
+    }>
+  >;
 }

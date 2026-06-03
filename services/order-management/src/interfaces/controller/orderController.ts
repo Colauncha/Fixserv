@@ -4,6 +4,7 @@ import { OrderService } from "../../application/services/orderService";
 import { BadRequestError } from "@fixserv-colauncha/shared";
 import { PaystackClient } from "../../infrastructure/reuseableWrapper/paystackClient";
 import { OrderModel } from "../../infrastructure/persistence/models/orderModel";
+
 // Change this import to import the enum/object, not just the type
 import { RejectionReason } from "../../domain/entities/order";
 
@@ -539,4 +540,20 @@ export class OrderController {
 
     res.status(200).json({ success: true, data: orders });
   };
+
+  async getTopArtisans(req: Request, res: Response) {
+    try {
+      const limit = Number(req.query.limit) || 10;
+
+      const result = await this.orderService.getTopArtisans(limit);
+
+      res.status(200).json({
+        success: true,
+        count: result.length,
+        data: result,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
 }

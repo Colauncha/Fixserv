@@ -754,17 +754,21 @@ export class AuthService implements IAuthService {
     period: "today" | "week" | "month" = "today",
     page = 1,
     limit = 20,
+    search?: string,
   ) {
-    const [totalUsers, activeArtisans, newSignups] = await Promise.all([
-      this.userRepository.getTotalUsers(),
-      this.userRepository.getActiveArtisans(page, limit),
-      this.userRepository.getNewSignups(period, page, limit),
-    ]);
+    const [totalUsers, activeArtisans, newSignups, activeClients] =
+      await Promise.all([
+        this.userRepository.getTotalUsers(),
+        this.userRepository.getActiveArtisans(page, limit, search),
+        this.userRepository.getNewSignups(period, page, limit),
+        this.userRepository.getActiveClients(page, limit, search),
+      ]);
 
     return {
       totalUsers,
       activeArtisans,
       newSignups,
+      activeClients,
     };
   }
 
