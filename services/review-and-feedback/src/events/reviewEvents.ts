@@ -12,7 +12,7 @@ export class ReviewCreatedEvent extends BaseEvent {
       clientId: string;
       artisanRating: number;
       serviceRating: number;
-      comment: string;
+      comment?: string;
       orderId?: string;
       // status: "pending" | "processing" | "published" | "flagged";
     },
