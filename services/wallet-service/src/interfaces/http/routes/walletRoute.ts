@@ -143,7 +143,11 @@ router.post("/lock-funds", WalletController.lockFundsForOrderHandler);
 
 router.post("/release-funds", WalletController.releaseFundsToArtisanHandler);
 
-router.post("/refund-funds", WalletController.refundFundsToClientHandler);
+router.post(
+  "/refund-funds",
+  authMiddleware.protect,
+  WalletController.refundFundsToClientHandler,
+);
 
 router.get("/top-up/verify/:reference", async (req: Request, res: Response) => {
   console.log(

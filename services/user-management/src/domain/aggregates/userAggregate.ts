@@ -34,6 +34,7 @@ export class UserAggregate {
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
     lastActiveAt?: Date | null,
+    hasCompletedProfile?: boolean,
   ): UserAggregate {
     const client = new Client(
       id,
@@ -49,6 +50,7 @@ export class UserAggregate {
       emailVerificationToken,
       emailVerifiedAt,
       lastActiveAt,
+      hasCompletedProfile,
     );
     return new UserAggregate(client);
   }
@@ -71,6 +73,7 @@ export class UserAggregate {
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
     lastActiveAt?: Date | null,
+    hasCompletedProfile?: boolean,
   ): UserAggregate {
     const artisan = new Artisan(
       id,
@@ -90,6 +93,7 @@ export class UserAggregate {
       emailVerificationToken,
       emailVerifiedAt,
       lastActiveAt,
+      hasCompletedProfile,
     );
     return new UserAggregate(artisan);
   }
@@ -253,6 +257,26 @@ export class UserAggregate {
     return this._user.lastActiveAt;
   }
 
+  get hasCompletedProfile(): boolean {
+    return this._user.hasCompletedProfile ?? false;
+  }
+
+  get isVerifiedArtisan(): boolean {
+    if (this._user.role !== "ARTISAN") {
+      throw new BadRequestError("Only artisans have verification status");
+    }
+    return this.getApprovedCertificateCount() > 0;
+  }
+  markProfileAsComplete(): void {
+    if (this._user.hasCompletedProfile) return;
+
+    if (!this.isProfileComplete()) {
+      throw new BadRequestError("Profile is not complete yet");
+    }
+    this._user.hasCompletedProfile = true;
+    this._user.updatedAt = new Date();
+  }
+
   updateLastActiveAt(): void {
     this._user.lastActiveAt = new Date();
   }
@@ -340,6 +364,10 @@ export class UserAggregate {
   }
 
   isProfileComplete(): boolean {
+    const hasProfilePicture = !!this._user.profilePicture;
+    const hasPhoneNumber =
+      !!this._user.phoneNumber && this._user.phoneNumber.trim() !== "";
+    /*
     if (this.role == "CLIENT") {
       return (
         this.deliveryAddress?.city !== "" &&
@@ -356,6 +384,31 @@ export class UserAggregate {
         this.skills.skills.length > 0
       );
     }
+      */
+    if (this.role === "CLIENT") {
+      return (
+        hasProfilePicture &&
+        hasPhoneNumber &&
+        !!this.deliveryAddress?.city &&
+        !!this.deliveryAddress?.country &&
+        !!this.deliveryAddress?.postalCode &&
+        !!this.deliveryAddress?.state &&
+        !!this.deliveryAddress?.street
+      );
+    }
+
+    if (this.role === "ARTISAN") {
+      return (
+        hasProfilePicture &&
+        hasPhoneNumber &&
+        !!this.businessName &&
+        this.businessName.trim() !== "" &&
+        !!this.location &&
+        this.location.trim() !== "" &&
+        this.skills.skills.length > 0
+      );
+    }
+
     return true;
   }
 
@@ -369,6 +422,7 @@ export class UserAggregate {
     const emailVerificationToken = json.emailVerificationToken || undefined;
     const emailVerifiedAt = json.emailVerifiedAt || new Date();
     const lastActiveAt = json.lastActiveAt || undefined;
+    const hasCompletedProfile = json.hasCompletedProfile || false;
 
     switch (role) {
       case "CLIENT":
@@ -391,6 +445,7 @@ export class UserAggregate {
           emailVerificationToken,
           emailVerifiedAt,
           lastActiveAt,
+          hasCompletedProfile,
         );
 
       case "ARTISAN":
@@ -423,6 +478,7 @@ export class UserAggregate {
           emailVerificationToken,
           emailVerifiedAt,
           lastActiveAt,
+          hasCompletedProfile,
         );
 
       case "ADMIN":
@@ -471,6 +527,7 @@ export class UserAggregate {
       emailVerificationToken: this.emailVerificationToken,
       emailVerifiedAt: this.emailVerifiedAt,
       lastActiveAt: this.lastActiveAt,
+      hasCompletedProfile: this.hasCompletedProfile,
       ...(this.isClient() && {
         deliveryAddress: this.deliveryAddress.toJSON(),
         servicePreferences: this.servicePreferences.toJSON(),
@@ -485,6 +542,7 @@ export class UserAggregate {
         businessHours: this.businessHours.toJSON(),
         categories: this.getCategoryNames(),
         certificates: this.getCertificates().map((cert) => cert.toJSON()),
+        isVerifiedArtisan: this.isVerifiedArtisan,
       }),
       ...(this.isAdmin() && {
         permissions: this.permissions,

@@ -1,4 +1,3 @@
-// infrastructure/persistence/models/referralModels.ts
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 
@@ -35,6 +34,9 @@ const FixpointsTransactionSchema = new mongoose.Schema<IFixpointsTransaction>(
         "REDEMPTION",
         "ADMIN_ADJUSTMENT",
         "BONUS",
+        "PROFILE_COMPLETION_BONUS",
+        "FIRST_BOOKING_BONUS",
+        "FIRST_FEEDBACK_BONUS",
       ],
     },
     createdAt: { type: Date, default: Date.now },
@@ -45,7 +47,7 @@ const FixpointsTransactionSchema = new mongoose.Schema<IFixpointsTransaction>(
       redemptionReference: { type: String },
     },
   },
-  { _id: false, versionKey: false }
+  { _id: false, versionKey: false },
 );
 
 // Fixpoints Balance Interface
@@ -98,7 +100,7 @@ const FixpointsBalanceSchema = new mongoose.Schema<IFixpointsBalance>(
     },
     transactions: [FixpointsTransactionSchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Add instance methods
@@ -123,7 +125,7 @@ FixpointsBalanceSchema.statics.findByUserId = function (userId: string) {
 
 export const FixpointsBalanceModel = mongoose.model<IFixpointsBalance>(
   "FixpointsBalance",
-  FixpointsBalanceSchema
+  FixpointsBalanceSchema,
 );
 
 // Referral Code Interface
@@ -160,13 +162,13 @@ const ReferralCodeSchema = new mongoose.Schema<IReferralCode>(
     maxUsage: { type: Number }, // Optional limit
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Add methods to generate referral code
 ReferralCodeSchema.statics.generateCode = function (
   userId: string,
-  userType: "CLIENT" | "ARTISAN"
+  userType: "CLIENT" | "ARTISAN",
 ): string {
   const userIdLast4 = userId.slice(-4);
   const random4 = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -182,7 +184,7 @@ ReferralCodeSchema.methods.incrementUsage = function () {
 
 export const ReferralCodeModel = mongoose.model<IReferralCode>(
   "ReferralCode",
-  ReferralCodeSchema
+  ReferralCodeSchema,
 );
 
 // Referral Reward Interface
@@ -215,7 +217,7 @@ const ReferralRewardSchema = new mongoose.Schema<IReferralReward>(
     reason: { type: String },
     awardedAt: { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Add compound indexes for better query performance
@@ -226,7 +228,7 @@ ReferralRewardSchema.index({ referralCode: 1, status: 1 });
 // Prevent duplicate rewards for the same referral
 ReferralRewardSchema.index(
   { referrerId: 1, referredUserId: 1 },
-  { unique: true }
+  { unique: true },
 );
 
 ReferralRewardSchema.methods.award = function () {
@@ -240,7 +242,7 @@ ReferralRewardSchema.methods.award = function () {
 
 export const ReferralRewardModel = mongoose.model<IReferralReward>(
   "ReferralReward",
-  ReferralRewardSchema
+  ReferralRewardSchema,
 );
 
 // Update the existing Wallet model to include referral integration

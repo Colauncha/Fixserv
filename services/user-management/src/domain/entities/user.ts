@@ -17,6 +17,7 @@ export abstract class User {
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
     public lastActiveAt?: Date | null,
+    public hasCompletedProfile?: boolean,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
   ) {

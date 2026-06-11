@@ -64,6 +64,7 @@ const NotificationSchema = new Schema<INotificationDocument>(
         "PAYMENT_RELEASED",
         "ORDER_CANCELLED",
         "WALLET_WITHDRAWAL",
+        "FIXPOINTS_AWARDED",
       ],
       index: true,
     },

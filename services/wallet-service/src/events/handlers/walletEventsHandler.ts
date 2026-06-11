@@ -29,6 +29,10 @@ export class WalletEventsHandler {
           case "ArtisanVerifiedEvent":
             await this.handleArtisanVerified(event);
             break;
+
+          case "ProfileCompletedEvent":
+            await this.handleProfileCompleted(event);
+            break;
           default:
             console.log("Unknown event type:", event.eventName);
         }
@@ -50,11 +54,78 @@ export class WalletEventsHandler {
     );
     this.subscriptions.push(walletEventSubscription);
     console.log("Wallet-Service: Subscribed to wallet_events");
+
+    //order events |  // NEW: listen for first booking
+    const orderEventSub = await this.eventBus.subscribe(
+      "order_events",
+      async (event: any) => {
+        switch (event.eventName) {
+          case "OrderCreated": // fired when client confirms draft order
+            await this.handleFirstBookingBonus(event);
+            break;
+        }
+      },
+    );
+    this.subscriptions.push(orderEventSub);
+    console.log("Wallet-Service: Subscribed to order_events");
+
+    // ── review_events ───
+    // NEW: listen for first feedback
+    const reviewEventSub = await this.eventBus.subscribe(
+      "review_events",
+      async (event: any) => {
+        switch (event.eventName) {
+          case "ReviewCreated":
+            await this.handleFirstFeedbackBonus(event);
+            break;
+        }
+      },
+    );
+    this.subscriptions.push(reviewEventSub);
+    console.log("Wallet-Service: Subscribed to review_events");
   }
 
   async cleanup() {
     await Promise.all(this.subscriptions.map((sub) => sub.unsubscribe()));
     this.subscriptions = [];
+  }
+
+  private async handleUserCreatedEventRefactor(event: any) {
+    try {
+      const { userId, role, fullName, referralCode } = event.payload;
+      console.log(
+        `📨 UserCreated: ${userId} [${role}] referral: ${referralCode || "none"}`,
+      );
+
+      const existingWallet = await WalletModel.findOne({ userId });
+      if (existingWallet) {
+        console.log(`Wallet already exists for user ${userId}`);
+        await this.publishAck(event.id, "processed", "Wallet already exists");
+        return;
+      }
+
+      // Create wallet and setup referral system atomically
+      await ReferralService.createWalletWithReferral(
+        userId,
+        role,
+        referralCode,
+      );
+
+      console.log(
+        `✅ Wallet + referral setup complete for ${role} ${userId} (${fullName})`,
+      );
+      await this.publishAck(
+        event.id,
+        "processed",
+        "Wallet created successfully",
+      );
+    } catch (error: any) {
+      console.error(
+        `❌ Failed wallet setup for user ${event.payload?.userId}:`,
+        error,
+      );
+      await this.publishAck(event.id, "failed", error.message);
+    }
   }
 
   private async handleUserCreatedEvent(event: any) {
@@ -154,16 +225,103 @@ export class WalletEventsHandler {
   }
 
   private async handleArtisanVerified(event: any) {
-    const { userId } = event.data;
+    const { userId } = event.payload;
 
     try {
       // Award verification bonus
       await ReferralService.handleArtisanVerification(userId);
 
       console.log(`✅ Verification bonus awarded to artisan ${userId}`);
+      await this.publishAck(
+        event.id,
+        "processed",
+        "Verification bonus awarded",
+      );
     } catch (error) {
       console.error(
         `❌ Failed to award verification bonus to ${userId}:`,
+        error,
+      );
+    }
+  }
+
+  // ProfileCompleted → 100 fixpoints for both roles
+  private async handleProfileCompleted(event: any) {
+    try {
+      const { userId, userType } = event.payload;
+      console.log(`📨 ProfileCompleted: ${userId} [${userType}]`);
+
+      const result = await ReferralService.handleProfileCompletion(
+        userId,
+        userType,
+      );
+
+      if (result.awarded) {
+        console.log(
+          `✅ Profile completion bonus awarded to ${userId}: ${result.points}pts`,
+        );
+      } else {
+        console.log(`ℹ️ Profile completion bonus already awarded to ${userId}`);
+      }
+      await this.publishAck(event.id, "processed");
+    } catch (error: any) {
+      console.error(
+        `❌ Profile completion bonus failed for ${event.payload?.userId}:`,
+        error,
+      );
+      await this.publishAck(event.id, "failed", error.message);
+    }
+  }
+
+  // NEW: OrderCreated → first booking bonus (CLIENT only)
+  private async handleFirstBookingBonus(event: any) {
+    try {
+      const { clientId } = event.payload;
+      if (!clientId) return;
+
+      console.log(
+        `📨 OrderCreated: checking first booking bonus for client ${clientId}`,
+      );
+
+      const result = await ReferralService.handleFirstBooking(clientId);
+
+      if (result.awarded) {
+        console.log(
+          `✅ First booking bonus awarded to client ${clientId}: ${result.points}pts`,
+        );
+      } else {
+        console.log(`ℹ️ First booking bonus already awarded to ${clientId}`);
+      }
+    } catch (error: any) {
+      // Don't fail order creation if bonus award fails
+      console.error(
+        `❌ First booking bonus failed for ${event.payload?.clientId}:`,
+        error,
+      );
+    }
+  }
+
+  private async handleFirstFeedbackBonus(event: any) {
+    try {
+      const { clientId } = event.payload;
+      if (!clientId) return;
+
+      console.log(
+        `📨 ReviewCreated: checking first feedback bonus for client ${clientId}`,
+      );
+
+      const result = await ReferralService.handleFirstFeedback(clientId);
+
+      if (result.awarded) {
+        console.log(
+          `✅ First feedback bonus awarded to client ${clientId}: ${result.points}pts`,
+        );
+      } else {
+        console.log(`ℹ️ First feedback bonus already awarded to ${clientId}`);
+      }
+    } catch (error: any) {
+      console.error(
+        `❌ First feedback bonus failed for ${event.payload?.clientId}:`,
         error,
       );
     }

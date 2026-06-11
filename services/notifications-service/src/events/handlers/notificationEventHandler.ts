@@ -117,6 +117,24 @@ export class NotificationEventHandler {
     );
     this.subscriptions.push(walletEventsSub);
     console.log("Notification service subscribed to all events");
+
+    const fixpointsEventsSub = await this.eventBus.subscribe(
+      "fixpoints_events",
+      async (evt: any) => {
+        switch (evt.eventName) {
+          case "FixpointsAwarded":
+            await this.handleFixpointsAwarded(evt);
+            break;
+          default:
+            console.log(
+              "Notification: Unknown fixpoints event:",
+              evt.eventName,
+            );
+        }
+      },
+    );
+    this.subscriptions.push(fixpointsEventsSub);
+    console.log("Notification-Service: Subscribed to fixpoints_events");
   }
 
   async cleanup(): Promise<void> {
@@ -685,5 +703,86 @@ export class NotificationEventHandler {
     } catch (error) {
       console.error("Error handling DisputeResolved event:", error);
     }
+  }
+
+  private async handleFixpointsAwarded(event: any): Promise<void> {
+    try {
+      const { userId, points, reason, title, message, totalPoints, metadata } =
+        event.payload;
+
+      // Map reason to a specific notification type and message
+      const notificationConfig = this.getFixpointsNotificationConfig(
+        reason,
+        points,
+        totalPoints,
+        metadata,
+      );
+
+      await this.notificationService.createNotification({
+        userId,
+        type: "FIXPOINTS_AWARDED",
+        title: notificationConfig.title,
+        message: notificationConfig.message,
+        data: {
+          points,
+          reason,
+          totalPoints,
+          ...metadata,
+        },
+      });
+
+      console.log(
+        `✅ Fixpoints notification sent to user ${userId} [${reason}]: +${points}pts`,
+      );
+    } catch (error) {
+      console.error("Error handling FixpointsAwarded event:", error);
+    }
+  }
+
+  private getFixpointsNotificationConfig(
+    reason: string,
+    points: number,
+    totalPoints: number,
+    metadata?: Record<string, any>,
+  ): { title: string; message: string } {
+    const remaining = Math.max(0, 1000 - totalPoints);
+    const progressNote =
+      totalPoints >= 1000
+        ? "You can now redeem your Fixpoints for cash!"
+        : `You need ${remaining} more points to redeem.`;
+
+    const configs: Record<string, { title: string; message: string }> = {
+      SIGNUP_BONUS: {
+        title: "Welcome Bonus! 🎉",
+        message: `You've earned ${points} Fixpoints for joining Fixserv! ${progressNote}`,
+      },
+      VERIFICATION_BONUS: {
+        title: "Verification Bonus! ✅",
+        message: `Your account is verified! You've earned ${points} Fixpoints. ${progressNote}`,
+      },
+      PROFILE_COMPLETION_BONUS: {
+        title: "Profile Complete! 🙌",
+        message: `Your profile is looking great! You've earned ${points} Fixpoints for completing it. ${progressNote}`,
+      },
+      FIRST_BOOKING_BONUS: {
+        title: "First Booking Bonus! 🛠️",
+        message: `You've earned ${points} Fixpoints for confirming your first repair booking! ${progressNote}`,
+      },
+      FIRST_FEEDBACK_BONUS: {
+        title: "Feedback Bonus! ⭐",
+        message: `Thanks for your review! You've earned ${points} Fixpoints for your first feedback. ${progressNote}`,
+      },
+      REFERRAL_REWARD: {
+        title: "Referral Bonus! 🎁",
+        message: `Someone signed up with your referral code! You've earned ${points} Fixpoints. ${progressNote}`,
+      },
+    };
+
+    return (
+      configs[reason] ?? {
+        title: "Fixpoints Earned!",
+        message: `You've earned ${points} Fixpoints. Total: ${totalPoints}pts. ${progressNote}`,
+      }
+    );
   }
 }

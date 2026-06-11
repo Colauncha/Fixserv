@@ -17,6 +17,7 @@ export class NotificationType {
     "PAYMENT_RELEASED",
     "ORDER_CANCELLED",
     "WALLET_WITHDRAWAL",
+    "FIXPOINTS_AWARDED",
   ] as const;
 
   constructor(private _value: string) {
@@ -46,4 +47,5 @@ export class NotificationType {
   static PAYMENT_RELEASED = new NotificationType("PAYMENT_RELEASED");
   static ORDER_CANCELLED = new NotificationType("ORDER_CANCELLED");
   static WALLET_WITHDRAWAL = new NotificationType("WALLET_WITHDRAWAL");
+  static FIXPOINTS_AWARDED = new NotificationType("FIXPOINTS_AWARDED");
 }

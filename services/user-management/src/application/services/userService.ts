@@ -596,7 +596,30 @@ export class UserService implements IUserService {
       throw new BadRequestError("User not found");
     }
 
+    const wasProfileComplete = user.hasCompletedProfile;
+
     user.updateProfilePicture(imageUrl);
+
+    // Check profile completion after picture update
+    if (!wasProfileComplete && user.isProfileComplete()) {
+      try {
+        user.markProfileAsComplete();
+        await this.eventBus.publish("user_events", {
+          eventName: "ProfileCompletedEvent",
+          payload: {
+            userId: user.id,
+            userType: user.role,
+            completedAt: new Date(),
+          },
+        });
+        console.log(
+          `📢 ProfileCompletedEvent emitted after picture upload for ${userId}`,
+        );
+      } catch (err) {
+        console.error("Failed to emit profile completion event:", err);
+      }
+    }
+
     await this.userRepository.save(user);
     return user;
   }
