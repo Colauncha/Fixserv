@@ -26,7 +26,7 @@ export class ReviewService {
     private ratingCalculator?: RatingCalculator,
 
     private userManagementClient?: UserManagementClient,
-    private serviceManagementClient?: ServiceManagementClient
+    private serviceManagementClient?: ServiceManagementClient,
   ) {}
 
   async submitReview(
@@ -36,7 +36,7 @@ export class ReviewService {
     serviceId: string,
     feedback: Feedback,
     artisanRating: Rating,
-    serviceRating: Rating
+    serviceRating: Rating,
   ): Promise<Review> {
     await this.validateReferences(artisanId, clientId, serviceId);
     const review = Review.create(
@@ -47,7 +47,7 @@ export class ReviewService {
       serviceId,
       feedback,
       artisanRating,
-      serviceRating
+      serviceRating,
     );
 
     await this.reviewRepository.save(review);
@@ -55,8 +55,8 @@ export class ReviewService {
     this.processingReviews.set(
       review.id,
       this.processReview(review).catch((err) =>
-        console.error(`Processing failed for review ${review.id}:`, err)
-      )
+        console.error(`Processing failed for review ${review.id}:`, err),
+      ),
     );
 
     return review;
@@ -69,7 +69,7 @@ export class ReviewService {
       const ackPromise = this.waitForProcessingAck(
         review.id,
         ["user-management", "service-management"],
-        15000
+        15000,
       );
 
       await this.eventBus.publish(
@@ -82,7 +82,7 @@ export class ReviewService {
           artisanRating: review.artisanRating.value,
           serviceRating: review.serviceRating.value,
           // status: review.status,
-        })
+        }),
       );
       console.log(`Published ReviewCreatedEvent for ${review.id}`);
 
@@ -103,7 +103,7 @@ export class ReviewService {
             clientId: review.clientId,
             artisanRating: review.artisanRating.value,
             serviceRating: review.serviceRating.value,
-          })
+          }),
         );
       } else {
         review.markAsFailed(ackResult.error ?? "Processing failed");
@@ -121,7 +121,7 @@ export class ReviewService {
   private async waitForProcessingAck(
     reviewEventId: string,
     requiredServices: string[],
-    timeoutMs = 10000
+    timeoutMs = 10000,
   ): Promise<{ success: boolean; error?: string; service?: string }> {
     return new Promise(async (resolve) => {
       const receivedAcks: Record<string, { success: boolean; error?: string }> =
@@ -140,13 +140,13 @@ export class ReviewService {
           };
 
           const allResponded = requiredServices.every(
-            (svc) => receivedAcks[svc] !== undefined
+            (svc) => receivedAcks[svc] !== undefined,
           );
 
           if (allResponded) {
             subscription.unsubscribe();
             const allSuccessful = requiredServices.every(
-              (svc) => receivedAcks[svc].success
+              (svc) => receivedAcks[svc].success,
             );
 
             console.log("Receieved Ack:", ack);
@@ -168,7 +168,7 @@ export class ReviewService {
               service,
             });
           }
-        }
+        },
       );
       setTimeout(() => {
         subscription.unsubscribe();
@@ -185,7 +185,7 @@ export class ReviewService {
   private async validateReferences(
     artisanId: string,
     clientId: string,
-    serviceId: string
+    serviceId: string,
   ): Promise<void> {
     const [artisan, service] = await Promise.all([
       this.userManagementClient?.getArtisan(artisanId),
@@ -197,13 +197,13 @@ export class ReviewService {
   }
   async getArtisanAverageRating(artisanId: string) {
     return await this.ratingCalculator?.calculateAverageArtisanRating(
-      artisanId
+      artisanId,
     );
   }
 
   async getServiceAverageRating(serviceId: string) {
     return await this.ratingCalculator?.calculateAverageServiceRating(
-      serviceId
+      serviceId,
     );
   }
 
@@ -229,7 +229,7 @@ export class ReviewService {
           punctuality?: number;
         };
       };
-    }
+    },
   ): Promise<Review> {
     const review = await this.reviewRepository.findById(reviewId);
     if (!review) {
@@ -266,7 +266,7 @@ export class ReviewService {
       throw new BadRequestError(
         userRole === "ADMIN"
           ? "Admin override failed"
-          : "Only pending or flagged reviews can be deleted"
+          : "Only pending or flagged reviews can be deleted",
       );
     }
 
