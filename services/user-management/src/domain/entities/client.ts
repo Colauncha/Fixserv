@@ -19,6 +19,7 @@ export class Client extends User {
     emailVerificationToken?: string | null,
     emailVerifiedAt?: Date | null,
     lastActiveAt?: Date | null,
+    public hasCompletedProfile?: boolean,
   ) {
     super(
       id,
@@ -32,6 +33,7 @@ export class Client extends User {
       emailVerificationToken,
       emailVerifiedAt,
       lastActiveAt,
+      hasCompletedProfile,
     );
   }
 
@@ -50,6 +52,8 @@ export class Client extends User {
       this.isEmailVerified,
       this.emailVerificationToken,
       this.emailVerifiedAt,
+      this.lastActiveAt,
+      this.hasCompletedProfile,
     );
   }
 }

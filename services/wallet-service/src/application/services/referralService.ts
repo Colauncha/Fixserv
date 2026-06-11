@@ -1,7 +1,6 @@
-// application/services/referralService.ts
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
-import { BadRequestError } from "@fixserv-colauncha/shared";
+import { BadRequestError, RedisEventBus } from "@fixserv-colauncha/shared";
 import { WalletModel } from "../../infrastructure/persistence/models/walletModel";
 import {
   FixpointsBalanceModel,
@@ -12,7 +11,17 @@ import {
   IReferralReward,
 } from "../../infrastructure/persistence/models/referralModel";
 
+const FIXPOINTS_CONFIG = {
+  SIGNUP_BONUS: 200,
+  VERIFICATION_BONUS: 100,
+  REFERRAL_REWARD: 150,
+  PROFILE_COMPLETION_BONUS: 100,
+  FIRST_BOOKING_BONUS: 100,
+  FIRST_FEEDBACK_BONUS: 100,
+};
+
 export class ReferralService {
+  private static eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   /**
    * Create a new user with referral system integration
    * This should be called when a new user signs up
@@ -20,7 +29,7 @@ export class ReferralService {
   static async handleUserSignup(
     userId: string,
     userType: "CLIENT" | "ARTISAN",
-    referralCode?: string
+    referralCode?: string,
   ): Promise<{
     fixpointsBalance: IFixpointsBalance;
     referralCode: IReferralCode;
@@ -30,12 +39,12 @@ export class ReferralService {
     session.startTransaction();
 
     try {
-      console.log(
-        `Processing signup for user ${userId} with referral code: ${referralCode}`
-      );
+      // console.log(
+      // // `Processing signup for user ${userId} with referral code: ${referralCode}`,
+      // );
 
       // 1. Create fixpoints balance with signup bonus
-      let signupPoints = 200; // Base signup bonus
+      let signupPoints = FIXPOINTS_CONFIG.SIGNUP_BONUS; // Base signup bonus
       const signupTransactions = [
         {
           id: uuidv4(),
@@ -58,6 +67,7 @@ export class ReferralService {
 
       await fixpointsBalance.save({ session });
 
+      /*
       // 2. Generate unique referral code for this user
       const generatedCode = this.generateUniqueReferralCode(userId, userType);
       let isCodeUnique = false;
@@ -79,6 +89,20 @@ export class ReferralService {
       if (!isCodeUnique) {
         throw new BadRequestError("Failed to generate unique referral code");
       }
+      */
+      // Generate unique referral code
+      let finalCode = this.generateUniqueReferralCode(userId, userType);
+      let attempts = 0;
+      while (attempts < 5) {
+        const exists = await ReferralCodeModel.findOne({
+          code: finalCode,
+        }).session(session);
+        if (!exists) break;
+        finalCode = this.generateUniqueReferralCode(userId, userType);
+        attempts++;
+      }
+      if (attempts === 5)
+        throw new BadRequestError("Failed to generate unique referral code");
 
       const userReferralCode = new ReferralCodeModel({
         userId,
@@ -98,12 +122,12 @@ export class ReferralService {
             userId,
             userType,
             referralCode,
-            session
+            session,
           );
         } catch (referralError) {
           console.warn(
             "Failed to process referral reward, continuing with signup:",
-            referralError
+            referralError,
           );
           // Don't fail the entire signup if referral processing fails
         }
@@ -111,6 +135,16 @@ export class ReferralService {
 
       await session.commitTransaction();
       console.log(`User ${userId} signup processed successfully`);
+
+      // Notify new user about signup bonus
+      await this.emitFixpointsNotification({
+        userId,
+        points: signupPoints,
+        reason: "SIGNUP_BONUS",
+        message: `Welcome to Fixserv! You've earned ${signupPoints} Fixpoints for signing up.`,
+        title: "Signup Bonus Earned!",
+        totalPoints: fixpointsBalance.points,
+      });
 
       return {
         fixpointsBalance,
@@ -148,7 +182,7 @@ export class ReferralService {
 
       // Check if already awarded (look in transactions)
       const hasVerificationBonus = fixpointsBalance.transactions.some(
-        (tx) => tx.reason === "VERIFICATION_BONUS"
+        (tx) => tx.reason === "VERIFICATION_BONUS",
       );
 
       if (hasVerificationBonus) {
@@ -158,7 +192,7 @@ export class ReferralService {
       }
 
       // Award verification bonus
-      const verificationPoints = 100;
+      const verificationPoints = FIXPOINTS_CONFIG.VERIFICATION_BONUS;
       const verificationTransaction = {
         id: uuidv4(),
         userId,
@@ -176,8 +210,16 @@ export class ReferralService {
       await fixpointsBalance.save({ session });
       await session.commitTransaction();
 
+      await this.emitFixpointsNotification({
+        userId,
+        points: verificationPoints,
+        reason: "VERIFICATION_BONUS",
+        title: "Verification Bonus Earned!",
+        message: `Your account has been verified! You've earned ${verificationPoints} Fixpoints.`,
+        totalPoints: fixpointsBalance.points,
+      });
       console.log(
-        `Verification bonus of ${verificationPoints} points awarded to ${userId}`
+        `Verification bonus of ${verificationPoints} points awarded to ${userId}`,
       );
     } catch (error) {
       await session.abortTransaction();
@@ -195,7 +237,7 @@ export class ReferralService {
     referredUserId: string,
     referredUserType: "CLIENT" | "ARTISAN",
     referralCode: string,
-    session: mongoose.mongo.ClientSession
+    session: mongoose.mongo.ClientSession,
   ): Promise<IReferralReward> {
     console.log(`Processing referral reward for code: ${referralCode}`);
 
@@ -230,7 +272,7 @@ export class ReferralService {
       referrerId: referralCodeDoc.userId,
       referredUserId,
       referralCode,
-      pointsAwarded: 150, // Standard referral reward
+      pointsAwarded: FIXPOINTS_CONFIG.REFERRAL_REWARD, // Standard referral reward
       status: "PENDING",
     });
 
@@ -246,7 +288,7 @@ export class ReferralService {
         id: uuidv4(),
         userId: referralCodeDoc.userId,
         type: "CREDIT" as const,
-        points: 150,
+        points: FIXPOINTS_CONFIG.REFERRAL_REWARD,
         reason: "REFERRAL_REWARD",
         createdAt: new Date(),
         metadata: {
@@ -256,8 +298,8 @@ export class ReferralService {
         },
       };
 
-      referrerBalance.points += 150;
-      referrerBalance.totalEarned += 150;
+      referrerBalance.points += FIXPOINTS_CONFIG.REFERRAL_REWARD;
+      referrerBalance.totalEarned += FIXPOINTS_CONFIG.REFERRAL_REWARD;
       referrerBalance.transactions.push(referralTransaction);
       referrerBalance.updatedAt = new Date();
 
@@ -272,8 +314,22 @@ export class ReferralService {
       referralCodeDoc.usageCount += 1;
       await referralCodeDoc.save({ session });
 
+      // Notify referrer — runs after session commits in handleUserSignup
+      // We store for post-commit emission
+      setImmediate(async () => {
+        await this.emitFixpointsNotification({
+          userId: referralCodeDoc.userId,
+          points: FIXPOINTS_CONFIG.REFERRAL_REWARD,
+          reason: "REFERRAL_REWARD",
+          title: "Referral Bonus Earned! 🎁",
+          message: `Someone signed up using your referral code! You've earned ${FIXPOINTS_CONFIG.REFERRAL_REWARD} Fixpoints.`,
+          totalPoints: referrerBalance.points,
+          metadata: { referredUserId, referredUserType },
+        });
+      });
+
       console.log(
-        `Referral reward of 150 points awarded to ${referralCodeDoc.userId}`
+        `Referral reward of 150 points awarded to ${referralCodeDoc.userId}`,
       );
     }
 
@@ -285,7 +341,7 @@ export class ReferralService {
    */
   static async redeemFixpoints(
     userId: string,
-    points: number
+    points: number,
   ): Promise<{
     nairaAmount: number;
     newPointsBalance: number;
@@ -297,7 +353,7 @@ export class ReferralService {
 
     try {
       console.log(
-        `Processing fixpoints redemption: ${points} points for user ${userId}`
+        `Processing fixpoints redemption: ${points} points for user ${userId}`,
       );
 
       // Validate redemption amount
@@ -320,7 +376,7 @@ export class ReferralService {
 
       if (!fixpointsBalance.canRedeem(points)) {
         throw new BadRequestError(
-          "Insufficient fixpoints or below minimum redemption"
+          "Insufficient fixpoints or below minimum redemption",
         );
       }
 
@@ -383,7 +439,7 @@ export class ReferralService {
       await session.commitTransaction();
 
       console.log(
-        `Successfully redeemed ${points} fixpoints for ₦${nairaAmount}`
+        `Successfully redeemed ${points} fixpoints for ₦${nairaAmount}`,
       );
 
       return {
@@ -512,7 +568,7 @@ export class ReferralService {
   // Helper methods
   private static generateUniqueReferralCode(
     userId: string,
-    userType: "CLIENT" | "ARTISAN"
+    userType: "CLIENT" | "ARTISAN",
   ): string {
     const userIdLast4 = userId.slice(-4);
     const random4 = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -580,14 +636,14 @@ export class ReferralService {
   static async createWalletWithReferral(
     userId: string,
     userType: "CLIENT" | "ARTISAN",
-    referralCode?: string
+    referralCode?: string,
   ) {
     try {
       // 1. Process referral signup (creates fixpoints balance and handles referrals)
       const referralResult = await ReferralService.handleUserSignup(
         userId,
         userType,
-        referralCode
+        referralCode,
       );
 
       // 2. Create traditional wallet
@@ -633,6 +689,231 @@ export class ReferralService {
     } catch (error) {
       console.error("Error verifying artisan with bonus:", error);
       throw error;
+    }
+  }
+
+  // NEW: Profile Completion Bonus (CLIENT & ARTISAN)
+  static async handleProfileCompletion(
+    userId: string,
+    userType: "CLIENT" | "ARTISAN",
+  ): Promise<{ awarded: boolean; points: number; totalPoints: number }> {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const fixpointsBalance = await FixpointsBalanceModel.findOne({
+        userId,
+      }).session(session);
+      if (!fixpointsBalance)
+        throw new BadRequestError("Fixpoints balance not found");
+
+      // Idempotency check — only award once
+      const alreadyAwarded = fixpointsBalance.transactions.some(
+        (tx) => tx.reason === "PROFILE_COMPLETION_BONUS",
+      );
+      if (alreadyAwarded) {
+        await session.commitTransaction();
+        return {
+          awarded: false,
+          points: 0,
+          totalPoints: fixpointsBalance.points,
+        };
+      }
+
+      const points = FIXPOINTS_CONFIG.PROFILE_COMPLETION_BONUS;
+      fixpointsBalance.points += points;
+      fixpointsBalance.totalEarned += points;
+      fixpointsBalance.transactions.push({
+        id: uuidv4(),
+        userId,
+        type: "CREDIT",
+        points,
+        reason: "PROFILE_COMPLETION_BONUS",
+        createdAt: new Date(),
+      });
+      fixpointsBalance.updatedAt = new Date();
+      await fixpointsBalance.save({ session });
+      await session.commitTransaction();
+
+      // Emit fixpoints notification
+      await this.emitFixpointsNotification({
+        userId,
+        points,
+        reason: "PROFILE_COMPLETION_BONUS",
+        title: "Profile Complete! 🎉",
+        message: `Great job completing your profile! You've earned ${points} Fixpoints.`,
+        totalPoints: fixpointsBalance.points,
+      });
+
+      console.log(
+        `✅ Profile completion bonus of ${points} awarded to ${userId}`,
+      );
+      return { awarded: true, points, totalPoints: fixpointsBalance.points };
+    } catch (error) {
+      await session.abortTransaction();
+      console.error("Error in handleProfileCompletion:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  // NEW: First Booking Bonus (CLIENT only)
+  static async handleFirstBooking(
+    clientId: string,
+  ): Promise<{ awarded: boolean; points: number; totalPoints: number }> {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const fixpointsBalance = await FixpointsBalanceModel.findOne({
+        userId: clientId,
+        userType: "CLIENT",
+      }).session(session);
+
+      if (!fixpointsBalance)
+        throw new BadRequestError("Fixpoints balance not found");
+
+      // Idempotency check
+      const alreadyAwarded = fixpointsBalance.transactions.some(
+        (tx) => tx.reason === "FIRST_BOOKING_BONUS",
+      );
+      if (alreadyAwarded) {
+        await session.commitTransaction();
+        return {
+          awarded: false,
+          points: 0,
+          totalPoints: fixpointsBalance.points,
+        };
+      }
+
+      const points = FIXPOINTS_CONFIG.FIRST_BOOKING_BONUS;
+      fixpointsBalance.points += points;
+      fixpointsBalance.totalEarned += points;
+      fixpointsBalance.transactions.push({
+        id: uuidv4(),
+        userId: clientId,
+        type: "CREDIT",
+        points,
+        reason: "FIRST_BOOKING_BONUS",
+        createdAt: new Date(),
+      });
+      fixpointsBalance.updatedAt = new Date();
+      await fixpointsBalance.save({ session });
+      await session.commitTransaction();
+
+      await this.emitFixpointsNotification({
+        userId: clientId,
+        points,
+        reason: "FIRST_BOOKING_BONUS",
+        title: "First Booking Bonus! 🛠️",
+        message: `You've earned ${points} Fixpoints for confirming your first repair booking!`,
+        totalPoints: fixpointsBalance.points,
+      });
+
+      console.log(
+        `✅ First booking bonus of ${points} awarded to client ${clientId}`,
+      );
+      return { awarded: true, points, totalPoints: fixpointsBalance.points };
+    } catch (error) {
+      await session.abortTransaction();
+      console.error("Error in handleFirstBooking:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  // NEW: First Feedback Bonus (CLIENT only)
+  static async handleFirstFeedback(
+    clientId: string,
+  ): Promise<{ awarded: boolean; points: number; totalPoints: number }> {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const fixpointsBalance = await FixpointsBalanceModel.findOne({
+        userId: clientId,
+        userType: "CLIENT",
+      }).session(session);
+
+      if (!fixpointsBalance)
+        throw new BadRequestError("Fixpoints balance not found");
+
+      // Idempotency check
+      const alreadyAwarded = fixpointsBalance.transactions.some(
+        (tx) => tx.reason === "FIRST_FEEDBACK_BONUS",
+      );
+      if (alreadyAwarded) {
+        await session.commitTransaction();
+        return {
+          awarded: false,
+          points: 0,
+          totalPoints: fixpointsBalance.points,
+        };
+      }
+
+      const points = FIXPOINTS_CONFIG.FIRST_FEEDBACK_BONUS;
+      fixpointsBalance.points += points;
+      fixpointsBalance.totalEarned += points;
+      fixpointsBalance.transactions.push({
+        id: uuidv4(),
+        userId: clientId,
+        type: "CREDIT",
+        points,
+        reason: "FIRST_FEEDBACK_BONUS",
+        createdAt: new Date(),
+      });
+      fixpointsBalance.updatedAt = new Date();
+      await fixpointsBalance.save({ session });
+      await session.commitTransaction();
+
+      await this.emitFixpointsNotification({
+        userId: clientId,
+        points,
+        reason: "FIRST_FEEDBACK_BONUS",
+        title: "Feedback Bonus! ⭐",
+        message: `Thank you for your feedback! You've earned ${points} Fixpoints for your first review.`,
+        totalPoints: fixpointsBalance.points,
+      });
+
+      console.log(
+        `✅ First feedback bonus of ${points} awarded to client ${clientId}`,
+      );
+      return { awarded: true, points, totalPoints: fixpointsBalance.points };
+    } catch (error) {
+      await session.abortTransaction();
+      console.error("Error in handleFirstFeedback:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  // PRIVATE: Central notification emitter
+  private static async emitFixpointsNotification(payload: {
+    userId: string;
+    points: number;
+    reason: string;
+    title: string;
+    message: string;
+    totalPoints: number;
+    metadata?: Record<string, any>;
+  }) {
+    try {
+      await this.eventBus.publish("fixpoints_events", {
+        eventName: "FixpointsAwarded",
+        payload: {
+          ...payload,
+          timestamp: new Date(),
+        },
+      });
+      console.log(
+        `📢 FixpointsAwarded event emitted for user ${payload.userId} [${payload.reason}]`,
+      );
+    } catch (error) {
+      // Never let notification failure break core logic
+      console.error("Failed to emit fixpoints notification:", error);
     }
   }
 }

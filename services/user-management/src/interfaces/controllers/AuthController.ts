@@ -158,6 +158,8 @@ export class AuthController {
       const wasEmailVerified = existingUser.isEmailVerified;
       const verifiedAt = existingUser.emailVerifiedAt;
 
+      const wasProfileComplete = existingUser.hasCompletedProfile;
+
       // Apply updates
       const updatedUser = this.applyUpdates(existingUser, updates);
 
@@ -168,6 +170,33 @@ export class AuthController {
         updatedUser.markEmailAsVerified(verifiedAt ?? undefined);
       }
 
+      // ── NEW: Check if profile just became complete ──
+      // Only run if not already marked as complete
+      if (!wasProfileComplete && updatedUser.isProfileComplete()) {
+        try {
+          updatedUser.markProfileAsComplete();
+
+          // Emit event → wallet-service picks it up → awards 100 fixpoints
+          await this.eventBus.publish("user_events", {
+            eventName: "ProfileCompletedEvent",
+            payload: {
+              userId: updatedUser.id,
+              userType: updatedUser.role, // "CLIENT" or "ARTISAN"
+              completedAt: new Date(),
+            },
+          });
+
+          console.log(
+            `📢 ProfileCompletedEvent emitted for user ${updatedUser.id}`,
+          );
+        } catch (profileError: any) {
+          // Don't fail the update if event publishing fails
+          console.error(
+            "failed to emit ProfileCompletedEvent:",
+            profileError.message,
+          );
+        }
+      }
       // Save updated user
       await this.userRepository.save(updatedUser);
 
@@ -204,7 +233,6 @@ export class AuthController {
       // Re-fetch from DB (this will also repopulate cache)
       const freshUser = await this.authService.findUserById(updatedUser.id);
 
-      // res.status(200).json(updatedUser);
       res.status(200).json(freshUser);
     } catch (error: any) {
       res.status(error instanceof BadRequestError ? 400 : 500).json({
@@ -792,4 +820,36 @@ export class AuthController {
 
     res.status(200).json({ success: true, data: userMap });
   }
+
+  /*
+  // Call this logic AFTER successfully saving the updated user
+  async checkAndEmitProfileCompletion(user: UserAggregate) {
+    const isProfileComplete =
+      !!user.profilePicture &&
+      !!user.phoneNumber &&
+      (user.role === "CLIENT"
+        ? !!user.deliveryAddress?.city // client needs location
+        : !!user.businessName && !!user.location); // artisan needs business info
+
+    if (isProfileComplete) {
+      // Use a flag on the user to ensure we only emit this once
+      // Add `hasCompletedProfile: Boolean` to your user model
+      if (!user.hasCompletedProfile) {
+        user.markProfileAsComplete(); // add this method to UserAggregate
+        await userRepository.save(user);
+
+        await this.eventBus.publish("user_events", {
+          eventName: "ProfileCompletedEvent",
+          payload: {
+            userId: user.id,
+            userType: user.role, // "CLIENT" or "ARTISAN"
+            completedAt: new Date(),
+          },
+        });
+
+        console.log(`📢 ProfileCompletedEvent emitted for user ${user.id}`);
+      }
+    }
+  }
+  */
 }
