@@ -20,6 +20,11 @@ export class Client extends User {
     emailVerifiedAt?: Date | null,
     lastActiveAt?: Date | null,
     public hasCompletedProfile?: boolean,
+    isSuspended: boolean = false,
+    suspendedUntil?: Date | null,
+    suspensionReason?: string | null,
+    suspendedBy?: string | null,
+    suspendedAt?: Date | null,
   ) {
     super(
       id,
@@ -34,6 +39,11 @@ export class Client extends User {
       emailVerifiedAt,
       lastActiveAt,
       hasCompletedProfile,
+      isSuspended,
+      suspendedUntil,
+      suspensionReason,
+      suspendedBy,
+      suspendedAt,
     );
   }
 
@@ -54,6 +64,11 @@ export class Client extends User {
       this.emailVerifiedAt,
       this.lastActiveAt,
       this.hasCompletedProfile,
+      this.isSuspended,
+      this.suspendedUntil,
+      this.suspensionReason,
+      this.suspendedBy,
+      this.suspendedAt,
     );
   }
 }

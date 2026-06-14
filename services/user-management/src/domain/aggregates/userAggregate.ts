@@ -35,6 +35,11 @@ export class UserAggregate {
     emailVerifiedAt?: Date | null,
     lastActiveAt?: Date | null,
     hasCompletedProfile?: boolean,
+    isSuspended?: boolean,
+    suspendedUntil?: Date | null,
+    suspensionReason?: string | null,
+    suspendedBy?: string | null,
+    suspendedAt?: Date | null,
   ): UserAggregate {
     const client = new Client(
       id,
@@ -51,6 +56,11 @@ export class UserAggregate {
       emailVerifiedAt,
       lastActiveAt,
       hasCompletedProfile,
+      isSuspended,
+      suspendedUntil,
+      suspensionReason,
+      suspendedBy,
+      suspendedAt,
     );
     return new UserAggregate(client);
   }
@@ -74,6 +84,11 @@ export class UserAggregate {
     emailVerifiedAt?: Date | null,
     lastActiveAt?: Date | null,
     hasCompletedProfile?: boolean,
+    isSuspended?: boolean,
+    suspendedUntil?: Date | null,
+    suspensionReason?: string | null,
+    suspendedBy?: string | null,
+    suspendedAt?: Date | null,
   ): UserAggregate {
     const artisan = new Artisan(
       id,
@@ -94,6 +109,11 @@ export class UserAggregate {
       emailVerifiedAt,
       lastActiveAt,
       hasCompletedProfile,
+      isSuspended,
+      suspendedUntil,
+      suspensionReason,
+      suspendedBy,
+      suspendedAt,
     );
     return new UserAggregate(artisan);
   }
@@ -267,6 +287,41 @@ export class UserAggregate {
     }
     return this.getApprovedCertificateCount() > 0;
   }
+
+  get isSuspended(): boolean {
+    // Auto-lift if suspension period has passed
+    if (this._user.isSuspended && this._user.suspendedUntil) {
+      return new Date() < new Date(this._user.suspendedUntil);
+    }
+    return this._user.isSuspended ?? false;
+  }
+
+  get suspendedUntil(): Date | null | undefined {
+    return this._user.suspendedUntil;
+  }
+
+  get suspensionReason(): string | null | undefined {
+    return this._user.suspensionReason;
+  }
+
+  get suspendedBy(): string | null | undefined {
+    return this._user.suspendedBy;
+  }
+
+  get suspendedAt(): Date | null | undefined {
+    return this._user.suspendedAt;
+  }
+
+  checkAndUpdateExpiredSuspension(): boolean {
+    if (this._user.isSuspended && this._user.suspendedUntil) {
+      if (new Date() >= new Date(this._user.suspendedUntil)) {
+        this.unsuspend(); // Auto-lift expired suspension
+        return false; // Not suspended anymore
+      }
+      return true; // Still suspended
+    }
+    return this._user.isSuspended ?? false;
+  }
   markProfileAsComplete(): void {
     if (this._user.hasCompletedProfile) return;
 
@@ -412,6 +467,32 @@ export class UserAggregate {
     return true;
   }
 
+  suspend(reason: string, adminId: string, suspendedUntil?: Date): void {
+    if (!reason || reason.trim() === "") {
+      throw new BadRequestError("Suspension reason is required");
+    }
+
+    if (suspendedUntil && suspendedUntil <= new Date()) {
+      throw new BadRequestError("Suspension end date must be in the future");
+    }
+
+    this._user.isSuspended = true;
+    this._user.suspensionReason = reason;
+    this._user.suspendedBy = adminId;
+    this._user.suspendedAt = new Date();
+    this._user.suspendedUntil = suspendedUntil ?? null; // null = indefinite
+    this._user.updatedAt = new Date();
+  }
+
+  unsuspend(): void {
+    this._user.isSuspended = false;
+    this._user.suspensionReason = null;
+    this._user.suspendedBy = null;
+    this._user.suspendedAt = null;
+    this._user.suspendedUntil = null;
+    this._user.updatedAt = new Date();
+  }
+
   static fromJSON(json: any): UserAggregate {
     const { id, fullName, role } = json;
     const email = Email.fromJSON(json.email || "");
@@ -528,6 +609,10 @@ export class UserAggregate {
       emailVerifiedAt: this.emailVerifiedAt,
       lastActiveAt: this.lastActiveAt,
       hasCompletedProfile: this.hasCompletedProfile,
+      isSuspended: this.isSuspended,
+      suspendedUntil: this._user.suspendedUntil,
+      suspensionReason: this._user.suspensionReason,
+
       ...(this.isClient() && {
         deliveryAddress: this.deliveryAddress.toJSON(),
         servicePreferences: this.servicePreferences.toJSON(),

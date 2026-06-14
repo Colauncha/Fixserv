@@ -31,6 +31,11 @@ export class Artisan extends User {
     emailVerifiedAt?: Date | null,
     lastActiveAt?: Date | null,
     public hasCompletedProfile?: boolean,
+    public isSuspended: boolean = false,
+    public suspendedUntil?: Date | null,
+    public suspensionReason?: string | null,
+    public suspendedBy?: string | null,
+    public suspendedAt?: Date | null,
   ) {
     super(
       id,
@@ -45,6 +50,11 @@ export class Artisan extends User {
       emailVerifiedAt,
       lastActiveAt,
       hasCompletedProfile,
+      isSuspended,
+      suspendedUntil,
+      suspensionReason,
+      suspendedBy,
+      suspendedAt,
     );
   }
   addSkill(newSkill: string): Artisan {

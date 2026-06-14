@@ -539,6 +539,11 @@ export class UserRepositoryImpl implements IUserRepository {
         ? user._user.emailVerifiedAt || new Date()
         : null,
       lastActiveAt: user.lastActiveAt,
+      isSuspended: user.isSuspended,
+      suspendedUntil: user.suspendedUntil,
+      suspensionReason: user.suspensionReason,
+      suspendedBy: user.suspendedBy,
+      suspendedAt: user.suspendedAt,
       createdAt: user._user.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -578,6 +583,11 @@ export class UserRepositoryImpl implements IUserRepository {
     const isEmailVerified = data.isEmailVerified || false;
     const emailVerificationToken = data.emailVerificationToken || null;
     const emailVerifiedAt = data.emailVerifiedAt || null;
+    const isSuspended = data.isSuspended || false;
+    const suspendedUntil = data.suspendedUntil || null;
+    const suspensionReason = data.suspensionReason || null;
+    const suspendedBy = data.suspendedBy || null;
+    const suspendedAt = data.suspendedAt || null;
 
     //console.log(
     //  `Loading user ${data._id} - DB isEmailVerified: ${isEmailVerified}`
@@ -611,6 +621,12 @@ export class UserRepositoryImpl implements IUserRepository {
         emailVerificationToken,
         emailVerifiedAt,
         data.lastActiveAt || null,
+        data.hasCompletedProfile || false,
+        isSuspended,
+        suspendedUntil,
+        suspensionReason,
+        suspendedBy,
+        suspendedAt,
       );
     } else if (data.role === "ARTISAN") {
       const skills = Array.isArray(data.skillSet)
@@ -647,6 +663,12 @@ export class UserRepositoryImpl implements IUserRepository {
         emailVerificationToken,
         emailVerifiedAt,
         data.lastActiveAt || null,
+        data.hasCompletedProfile || false,
+        isSuspended,
+        suspendedUntil,
+        suspensionReason,
+        suspendedBy,
+        suspendedAt,
       );
     } else if (data.role === "ADMIN") {
       user = UserAggregate.createAdmin(
@@ -1188,7 +1210,8 @@ export class UserRepositoryImpl implements IUserRepository {
       businessName: string;
       location: string;
       rating: number;
-      isEmailVerified: boolean;
+      isVerifiedArtisan: boolean;
+      isSuspended: boolean;
       createdAt: Date;
       skillSet: string[];
       categories: string[];
@@ -1213,10 +1236,14 @@ export class UserRepositoryImpl implements IUserRepository {
     // Verified artisans = email verified
     const [total, verified, artisans] = await Promise.all([
       ArtisanModel.countDocuments(),
-      ArtisanModel.countDocuments({ isEmailVerified: true }),
-      ArtisanModel.find()
+
+      // ── FIXED: verified = has at least one APPROVED certificate ─
+      ArtisanModel.countDocuments({
+        "certificates.status": "APPROVED",
+      }),
+      ArtisanModel.find(filter)
         .select(
-          "_id email fullName businessName location rating isEmailVerified createdAt skillSet categories phoneNumber",
+          "_id email fullName businessName location rating certificates isSuspended createdAt skillSet categories phoneNumber",
         )
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -1237,7 +1264,10 @@ export class UserRepositoryImpl implements IUserRepository {
         businessName: a.businessName || "",
         location: a.location || "",
         rating: a.rating || 0,
-        isEmailVerified: a.isEmailVerified,
+        isVerifiedArtisan: (a.certificates || []).some(
+          (cert: any) => cert.status === "APPROVED",
+        ),
+        isSuspended: a.isSuspended || false,
         createdAt: a.createdAt,
         skillSet: a.skillSet || [],
         categories: (a.categories || []).map((c: any) =>
@@ -1582,6 +1612,41 @@ export class UserRepositoryImpl implements IUserRepository {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async findSuspendedUsers(
+    page = 1,
+    limit = 20,
+    role?: "CLIENT" | "ARTISAN",
+  ): Promise<{ users: UserAggregate[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const filter: any = { isSuspended: true };
+
+    const models =
+      role === "CLIENT"
+        ? [ClientModel]
+        : role === "ARTISAN"
+          ? [ArtisanModel]
+          : [ClientModel, ArtisanModel];
+
+    let allUsers: UserAggregate[] = [];
+    let total = 0;
+
+    for (const Model of models) {
+      const [count, docs] = await Promise.all([
+        Model.countDocuments(filter),
+        (Model as any)
+          .find(filter)
+          .sort({ suspendedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+      ]);
+      total += count;
+      allUsers = allUsers.concat(docs.map((doc: any) => this.toDomain(doc)));
+    }
+
+    return { users: allUsers, total };
   }
 }
 /*

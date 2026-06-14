@@ -68,6 +68,29 @@ export class AuthService implements IAuthService {
       throw new NotAuthorizeError();
     }
 
+    // 🔥 CHECK AND AUTO-LIFT EXPIRED SUSPENSIONS HERE 🔥
+    // This will unsuspend the user if their suspension period has passed
+    const isActuallySuspended = foundUser.checkAndUpdateExpiredSuspension();
+
+    // If auto-unsuspension happened, save the changes to database
+    if (!isActuallySuspended && foundUser.isSuspended === false) {
+      await this.userRepository.save(foundUser);
+    }
+
+    //check suspension
+    // if (foundUser.isSuspended) {
+    if (isActuallySuspended) {
+      const untilText = foundUser.suspendedUntil
+        ? `until ${foundUser.suspendedUntil.toLocaleDateString()}`
+        : "indefinitely";
+
+      throw new BadRequestError(
+        `Your account has been suspended ${untilText}. Reason: ${
+          foundUser.suspensionReason || "No reason provided"
+        }`,
+      );
+    }
+
     // Check if email is verified AFTER password validation
     if (!foundUser.isEmailVerified) {
       throw new BadRequestError("Email not verified");
@@ -779,5 +802,93 @@ export class AuthService implements IAuthService {
     search?: string,
   ) {
     return this.userRepository.getManageUsers(page, limit, role, search);
+  }
+
+  async suspendUser(
+    targetUserId: string,
+    adminId: string,
+    reason: string,
+    suspendedUntil?: Date, // optional — omit for indefinite
+  ): Promise<UserAggregate> {
+    const user = await this.userRepository.findById(targetUserId);
+    if (!user) throw new BadRequestError("User not found");
+
+    if (user.role === "ADMIN") {
+      throw new BadRequestError("Admin accounts cannot be suspended");
+    }
+
+    if (user.isSuspended) {
+      throw new BadRequestError("User is already suspended");
+    }
+
+    user.suspend(reason, adminId, suspendedUntil);
+    await this.userRepository.save(user);
+
+    // Invalidate cache so suspended status is immediately enforced
+    await this.invalidateUserCache(targetUserId);
+    await this.invalidateEmailCache(user.email);
+
+    // Emit event → notification-service notifies the user
+    try {
+      const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+      await eventBus.publish("user_events", {
+        eventName: "AccountSuspendedEvent",
+        payload: {
+          userId: targetUserId,
+          role: user.role,
+          reason,
+          suspendedUntil: suspendedUntil ?? null,
+          suspendedBy: adminId,
+          suspendedAt: new Date(),
+        },
+      });
+    } catch (eventError) {
+      console.error("Failed to emit AccountSuspendedEvent:", eventError);
+    }
+
+    return user;
+  }
+
+  async unsuspendUser(
+    targetUserId: string,
+    adminId: string,
+  ): Promise<UserAggregate> {
+    const user = await this.userRepository.findById(targetUserId);
+    if (!user) throw new BadRequestError("User not found");
+
+    if (!user.isSuspended) {
+      throw new BadRequestError("User is not currently suspended");
+    }
+
+    user.unsuspend();
+    await this.userRepository.save(user);
+
+    await this.invalidateUserCache(targetUserId);
+    await this.invalidateEmailCache(user.email);
+
+    try {
+      const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
+      await eventBus.publish("user_events", {
+        eventName: "AccountUnsuspendedEvent",
+        payload: {
+          userId: targetUserId,
+          role: user.role,
+          reinstatedBy: adminId,
+          reinstatedAt: new Date(),
+        },
+      });
+    } catch (eventError) {
+      console.error("Failed to emit AccountUnsuspendedEvent:", eventError);
+    }
+
+    return user;
+  }
+
+  async getSuspendedUsers(
+    page = 1,
+    limit = 20,
+    role?: "CLIENT" | "ARTISAN",
+  ): Promise<{ users: UserAggregate[]; total: number }> {
+    return this.userRepository.findSuspendedUsers(page, limit, role);
   }
 }

@@ -4,7 +4,7 @@ import cloudinary from "../../config/cloudinary";
 import fs from "fs";
 import path from "path";
 import { UserRepositoryImpl } from "../../infrastructure/persistence/userRepositoryImpl";
-import { BadRequestError } from "@fixserv-colauncha/shared";
+import { BadRequestError, RedisEventBus } from "@fixserv-colauncha/shared";
 import { AuthService } from "../../application/services/authService";
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
 import { EmailService } from "../../infrastructure/services/emailServiceImpls";
@@ -13,6 +13,8 @@ import {
   cleanupTempFile,
   uploadToCloudinary,
 } from "../../config/cloudinaryUpload";
+
+const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
 
 const userRepository = new UserRepositoryImpl();
 const tokenService = new JwtTokenService();
@@ -442,6 +444,62 @@ export const reviewCertificate = async (req: Request, res: Response) => {
     //   status,
     //   rejectionReason
     // );
+
+    // Find the reviewed certificate from the fresh user data
+    const reviewedCertificate = freshUser
+      .getCertificates()
+      .find((c) => c.id === certificateId);
+
+    // ── Emit event to notification-service ───
+    try {
+      if (status === "APPROVED") {
+        // 1. Notify artisan of approval
+        await eventBus.publish("user_events", {
+          eventName: "CertificateApprovedEvent",
+          payload: {
+            userId: artisanId,
+            certificateId,
+            certificateName: reviewedCertificate?.name ?? "Certificate",
+            approvedBy: adminId,
+            approvedAt: new Date(),
+          },
+        });
+
+        // 2. Also trigger artisan verification bonus in wallet-service
+        //    An artisan is "verified" the moment their FIRST certificate
+        //    is approved. The wallet-service handler guards against double-awarding.
+        await eventBus.publish("user_events", {
+          eventName: "ArtisanVerifiedEvent",
+          payload: {
+            userId: artisanId,
+            certificateId,
+            verifiedAt: new Date(),
+          },
+        });
+        console.log(
+          `📢 CertificateApprovedEvent + ArtisanVerifiedEvent emitted for artisan ${artisanId}`,
+        );
+      } else {
+        // Notify artisan of rejection
+        await eventBus.publish("user_events", {
+          eventName: "CertificateRejectedEvent",
+          payload: {
+            userId: artisanId,
+            certificateId,
+            certificateName: reviewedCertificate?.name ?? "Certificate",
+            rejectionReason,
+            rejectedBy: adminId,
+            rejectedAt: new Date(),
+          },
+        });
+        console.log(
+          `📢 CertificateRejectedEvent emitted for artisan ${artisanId}`,
+        );
+      }
+    } catch (eventError) {
+      // Never let event failure break the core review response
+      console.error("Failed to emit certificate review event:", eventError);
+    }
 
     res.status(200).json({
       success: true,

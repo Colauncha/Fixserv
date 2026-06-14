@@ -20,6 +20,18 @@ export class NotificationEventHandler {
           case "UserCreatedEvent":
             await this.handleUserCreated(evt);
             break;
+          case "CertificateApprovedEvent":
+            await this.handleCertificateApproved(evt);
+            break;
+          case "CertificateRejectedEvent":
+            await this.handleCertificateRejected(evt);
+            break;
+          case "AccountSuspendedEvent":
+            await this.handleAccountSuspended(evt);
+            break;
+          case "AccountUnsuspendedEvent":
+            await this.handleAccountUnsuspended(evt);
+            break;
         }
       },
     );
@@ -784,5 +796,107 @@ export class NotificationEventHandler {
         message: `You've earned ${points} Fixpoints. Total: ${totalPoints}pts. ${progressNote}`,
       }
     );
+  }
+
+  private async handleCertificateApproved(event: any): Promise<void> {
+    try {
+      const { userId, certificateName, approvedAt } = event.payload;
+
+      await this.notificationService.createNotification({
+        userId,
+        type: "CERTIFICATE_APPROVED",
+        title: "Certificate Approved! ✅",
+        message: `Great news! Your certificate "${certificateName}" has been approved. You are now a verified artisan on Fixserv.`,
+        data: {
+          certificateName,
+          approvedAt,
+          isNowVerified: true,
+        },
+      });
+
+      console.log(
+        `✅ Certificate approval notification sent to artisan ${userId}`,
+      );
+    } catch (error) {
+      console.error("Error handling CertificateApproved event:", error);
+    }
+  }
+
+  private async handleCertificateRejected(event: any): Promise<void> {
+    try {
+      const { userId, certificateName, rejectionReason, rejectedAt } =
+        event.payload;
+
+      await this.notificationService.createNotification({
+        userId,
+        type: "CERTIFICATE_REJECTED",
+        title: "Certificate Not Approved ❌",
+        message: `Your certificate "${certificateName}" was not approved. Reason: ${rejectionReason}. You can upload a new certificate and resubmit.`,
+        data: {
+          certificateName,
+          rejectionReason,
+          rejectedAt,
+          canResubmit: true,
+        },
+      });
+
+      console.log(
+        `✅ Certificate rejection notification sent to artisan ${userId}`,
+      );
+    } catch (error) {
+      console.error("Error handling CertificateRejected event:", error);
+    }
+  }
+
+  private async handleAccountSuspended(event: any): Promise<void> {
+    try {
+      const { userId, reason, suspendedUntil, suspendedBy } = event.payload;
+
+      const untilText = suspendedUntil
+        ? `until ${new Date(suspendedUntil).toLocaleDateString("en-NG", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}`
+        : "until further notice";
+
+      await this.notificationService.createNotification({
+        userId,
+        type: "ACCOUNT_SUSPENDED",
+        title: "Account Suspended",
+        message: `Your Fixserv account has been suspended ${untilText}. Reason: ${reason}. If you believe this is a mistake, please contact support.`,
+        data: {
+          reason,
+          suspendedUntil,
+          suspendedBy,
+          supportEmail: process.env.SUPPORT_EMAIL ?? "support@fixserv.com",
+        },
+      });
+
+      console.log(`✅ Suspension notification sent to user ${userId}`);
+    } catch (error) {
+      console.error("Error handling AccountSuspended event:", error);
+    }
+  }
+
+  private async handleAccountUnsuspended(event: any): Promise<void> {
+    try {
+      const { userId } = event.payload;
+
+      await this.notificationService.createNotification({
+        userId,
+        type: "ACCOUNT_UNSUSPENDED",
+        title: "Account Reinstated ✅",
+        message:
+          "Your Fixserv account has been reinstated. You can now access all features again. Welcome back!",
+        data: {
+          reinstatedAt: new Date(),
+        },
+      });
+
+      console.log(`✅ Reinstatement notification sent to user ${userId}`);
+    } catch (error) {
+      console.error("Error handling AccountUnsuspended event:", error);
+    }
   }
 }
