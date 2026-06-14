@@ -127,7 +127,8 @@ export interface IUserRepository {
       businessName: string;
       location: string;
       rating: number;
-      isEmailVerified: boolean;
+      isVerifiedArtisan: boolean;
+      isSuspended: boolean;
       createdAt: Date;
       skillSet: string[];
       categories: string[];
@@ -226,4 +227,10 @@ export interface IUserRepository {
       totalPages: number;
     };
   }>;
+
+  findSuspendedUsers(
+    page: number,
+    limit: number,
+    role?: "CLIENT" | "ARTISAN",
+  ): Promise<{ users: UserAggregate[]; total: number }>;
 }

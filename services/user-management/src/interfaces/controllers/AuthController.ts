@@ -821,6 +821,105 @@ export class AuthController {
     res.status(200).json({ success: true, data: userMap });
   }
 
+  async suspendUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const { reason, suspendedUntil } = req.body;
+      const adminId = req.currentUser!.id;
+
+      if (!reason || reason.trim() === "") {
+        throw new BadRequestError("Suspension reason is required");
+      }
+
+      // Parse optional suspension end date
+      let suspendUntilDate: Date | undefined;
+      if (suspendedUntil) {
+        suspendUntilDate = new Date(suspendedUntil);
+        if (isNaN(suspendUntilDate.getTime())) {
+          throw new BadRequestError("Invalid suspendedUntil date format");
+        }
+        if (suspendUntilDate <= new Date()) {
+          throw new BadRequestError("suspendedUntil must be a future date");
+        }
+      }
+
+      const user = await this.authService.suspendUser(
+        userId,
+        adminId,
+        reason,
+        suspendUntilDate,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: `${user.role} account suspended successfully`,
+        data: {
+          userId,
+          role: user.role,
+          isSuspended: true,
+          suspendedUntil: suspendUntilDate ?? null,
+          reason,
+        },
+      });
+    } catch (error: any) {
+      res.status(error instanceof BadRequestError ? 400 : 500).json({
+        success: false,
+        message: error.message || "Failed to suspend user",
+      });
+    }
+  }
+
+  async unsuspendUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const adminId = req.currentUser!.id;
+
+      const user = await this.authService.unsuspendUser(userId, adminId);
+
+      res.status(200).json({
+        success: true,
+        message: `${user.role} account reinstated successfully`,
+        data: {
+          userId,
+          role: user.role,
+          isSuspended: false,
+        },
+      });
+    } catch (error: any) {
+      res.status(error instanceof BadRequestError ? 400 : 500).json({
+        success: false,
+        message: error.message || "Failed to unsuspend user",
+      });
+    }
+  }
+
+  async getSuspendedUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const role = req.query.role as "CLIENT" | "ARTISAN" | undefined;
+
+      const { users, total } = await this.authService.getSuspendedUsers(
+        page,
+        limit,
+        role,
+      );
+
+      res.status(200).json({
+        success: true,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        users: users.map((u) => this.userRepository.toJSON(u)),
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to fetch suspended users",
+      });
+    }
+  }
+
   /*
   // Call this logic AFTER successfully saving the updated user
   async checkAndEmitProfileCompletion(user: UserAggregate) {

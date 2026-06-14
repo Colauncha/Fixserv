@@ -72,6 +72,27 @@ const clientSchema = new mongoose.Schema<IClient>(
       type: Date,
       default: null,
     },
+    isSuspended: {
+      type: Boolean,
+      default: false,
+      index: true, // index so admin can query all suspended accounts fast
+    },
+    suspendedUntil: {
+      type: Date,
+      default: null,
+    },
+    suspensionReason: {
+      type: String,
+      default: null,
+    },
+    suspendedBy: {
+      type: String, // admin userId
+      default: null,
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
   },
 
   {

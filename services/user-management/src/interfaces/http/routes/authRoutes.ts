@@ -10,6 +10,7 @@ import { ValidateRequest } from "@fixserv-colauncha/shared";
 import { body } from "express-validator";
 import { EmailService } from "../../../infrastructure/services/emailServiceImpls";
 import expressListEndpoints from "express-list-endpoints";
+import { checkSuspension } from "../../middlewares/checkSuspension";
 
 const router = express.Router();
 
@@ -150,4 +151,28 @@ router.post(
   "/internal/bulk-user-details",
   authController.getBulkUserDetails.bind(authController),
 );
+
+router.patch(
+  "/users/:userId/suspend",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  checkSuspension(authService),
+  authController.suspendUser.bind(authController),
+);
+
+router.patch(
+  "/users/:userId/unsuspend",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  checkSuspension(authService),
+  authController.unsuspendUser.bind(authController),
+);
+
+router.get(
+  "/users/suspended",
+  authMiddleware.protect,
+  requireRole("ADMIN"),
+  authController.getSuspendedUsers.bind(authController),
+);
+
 export { router as adminRouter };

@@ -18,6 +18,10 @@ export class NotificationType {
     "ORDER_CANCELLED",
     "WALLET_WITHDRAWAL",
     "FIXPOINTS_AWARDED",
+    "CERTIFICATE_APPROVED",
+    "CERTIFICATE_REJECTED",
+    "ACCOUNT_SUSPENDED",
+    "ACCOUNT_UNSUSPENDED",
   ] as const;
 
   constructor(private _value: string) {
@@ -48,4 +52,8 @@ export class NotificationType {
   static ORDER_CANCELLED = new NotificationType("ORDER_CANCELLED");
   static WALLET_WITHDRAWAL = new NotificationType("WALLET_WITHDRAWAL");
   static FIXPOINTS_AWARDED = new NotificationType("FIXPOINTS_AWARDED");
+  static CERTIFICATE_APPROVED = new NotificationType("CERTIFICATE_APPROVED");
+  static CERTIFICATE_REJECTED = new NotificationType("CERTIFICATE_REJECTED");
+  static ACCOUNT_SUSPENDED = new NotificationType("ACCOUNT_SUSPENDED");
+  static ACCOUNT_UNSUSPENDED = new NotificationType("ACCOUNT_UNSUSPENDED");
 }

@@ -18,12 +18,22 @@ export abstract class User {
     emailVerifiedAt?: Date | null,
     public lastActiveAt?: Date | null,
     public hasCompletedProfile?: boolean,
+    public isSuspended: boolean = false,
+    public suspendedUntil?: Date | null,
+    public suspensionReason?: string | null,
+    public suspendedBy?: string | null, // admin ID
+    public suspendedAt?: Date | null,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
   ) {
     this.isEmailVerified = isEmailVerified || false;
     this.emailVerificationToken = emailVerificationToken;
     this.emailVerifiedAt = emailVerifiedAt;
+    this.isSuspended = isSuspended;
+    this.suspendedUntil = suspendedUntil;
+    this.suspensionReason = suspensionReason;
+    this.suspendedBy = suspendedBy;
+    this.suspendedAt = suspendedAt;
   }
 
   async changePassword(oldPlainPassword: string, newPlainPassword: string) {
