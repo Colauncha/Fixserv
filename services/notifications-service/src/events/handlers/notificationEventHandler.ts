@@ -175,7 +175,7 @@ export class NotificationEventHandler {
     }
   }
 
-  private async handleReviewCreated(event: any): Promise<void> {
+  private async handleReviewCreated1(event: any): Promise<void> {
     try {
       await this.notificationService.createNotification({
         userId: event.payload.artisanId,
@@ -196,7 +196,36 @@ export class NotificationEventHandler {
     }
   }
 
-  private async handleReviewPublished(event: any): Promise<void> {
+  private async handleReviewCreated(event: any): Promise<void> {
+    try {
+      const { artisanId, clientId, artisanRating, comment, hasComment } =
+        event.payload;
+
+      // Notify artisan of the incoming review
+      await this.notificationService.createNotification({
+        userId: artisanId,
+        type: "REVIEW_CREATED",
+        title: "New Review Received ⭐",
+        message:
+          hasComment && comment
+            ? `A client rated you ${artisanRating}/5 and left a comment: "${comment.slice(0, 80)}${comment.length > 80 ? "..." : ""}"`
+            : `A client rated you ${artisanRating}/5 on a completed order.`,
+        data: {
+          reviewId: event.payload.reviewId,
+          clientId,
+          artisanRating,
+          serviceRating: event.payload.serviceRating,
+          hasComment,
+        },
+      });
+
+      console.log(`✅ Review notification sent to artisan ${artisanId}`);
+    } catch (error) {
+      console.error("Error handling ReviewCreated event:", error);
+    }
+  }
+
+  private async handleReviewPublished1(event: any): Promise<void> {
     try {
       await this.notificationService.createNotification({
         userId: event.payload.artisanId,
@@ -212,6 +241,34 @@ export class NotificationEventHandler {
 
       console.log(
         `Review published notification created for artisan: ${event.payload.artisanId}`,
+      );
+    } catch (error) {
+      console.error("Error handling ReviewPublished event:", error);
+    }
+  }
+
+  private async handleReviewPublished(event: any): Promise<void> {
+    try {
+      const { artisanId, artisanRating, hasComment, comment } = event.payload;
+
+      await this.notificationService.createNotification({
+        userId: artisanId,
+        type: "REVIEW_PUBLISHED",
+        title: "Review Published 📢",
+        message:
+          hasComment && comment
+            ? `A review with a ${artisanRating}/5 rating and comment is now live on your profile.`
+            : `A ${artisanRating}/5 rating is now live on your profile.`,
+        data: {
+          reviewId: event.payload.reviewId,
+          clientId: event.payload.clientId,
+          artisanRating,
+          hasComment,
+        },
+      });
+
+      console.log(
+        `✅ Review published notification sent to artisan ${artisanId}`,
       );
     } catch (error) {
       console.error("Error handling ReviewPublished event:", error);

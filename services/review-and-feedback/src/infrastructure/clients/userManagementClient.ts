@@ -4,10 +4,10 @@ export class UserManagementClient {
   constructor(private httpClient: AxiosInstance) {}
 
   async getArtisan(
-    artisanId: string
+    artisanId: string,
   ): Promise<{ exists: boolean; rating?: number }> {
     try {
-      const response = await this.httpClient.get(`/artisan/${artisanId}`);
+      const response = await this.httpClient.get(`/user/${artisanId}`);
       return {
         exists: true,
         rating: response.data.rating,
@@ -22,7 +22,7 @@ export class UserManagementClient {
 
   async updateArtisanRating(
     artisanId: string,
-    newRating: number
+    newRating: number,
   ): Promise<void> {
     try {
       await this.httpClient.patch(`/${artisanId}`, {

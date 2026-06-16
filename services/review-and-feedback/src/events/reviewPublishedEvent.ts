@@ -7,12 +7,15 @@ export class ReviewPublishedEvent extends BaseEvent {
   constructor(
     public payload: {
       reviewId: string;
+      orderId: string;
       artisanId: string;
       serviceId: string;
       clientId: string;
       artisanRating: number;
       serviceRating: number;
-    }
+      hasComment: boolean;
+      comment?: string;
+    },
   ) {
     super(payload);
   }
