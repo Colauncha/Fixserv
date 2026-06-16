@@ -17,6 +17,7 @@ import {
 } from "../../events/reviewEvents";
 import { ReviewPublishedEvent } from "../../events/reviewPublishedEvent";
 import { clearPublishedCache } from "../../infrastructure/utils/clearPublishedCache";
+import { OrderManagementClient } from "../../infrastructure/clients/orderManagementClient";
 
 export class ReviewService {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
@@ -27,6 +28,7 @@ export class ReviewService {
 
     private userManagementClient?: UserManagementClient,
     private serviceManagementClient?: ServiceManagementClient,
+    private orderManagementClient?: OrderManagementClient,
   ) {}
 
   async submitReview(
@@ -37,8 +39,15 @@ export class ReviewService {
     feedback: Feedback,
     artisanRating: Rating,
     serviceRating: Rating,
+    token: string,
   ): Promise<Review> {
-    await this.validateReferences(artisanId, clientId, serviceId);
+    await this.validateReferences(
+      orderId,
+      artisanId,
+      clientId,
+      serviceId,
+      token,
+    );
     const review = Review.create(
       uuidv4(),
       orderId,
@@ -66,6 +75,9 @@ export class ReviewService {
       review.markAsProcessing();
       await this.reviewRepository.save(review);
 
+      const hasComment =
+        !!review.feedback?.comment && review.feedback.comment.trim().length > 0;
+
       const ackPromise = this.waitForProcessingAck(
         review.id,
         ["user-management", "service-management"],
@@ -76,11 +88,14 @@ export class ReviewService {
         "review_events",
         new ReviewCreatedEvent({
           reviewId: review.id,
+          orderId: review.orderId,
           artisanId: review.artisanId,
           serviceId: review.serviceId,
           clientId: review.clientId,
           artisanRating: review.artisanRating.value,
           serviceRating: review.serviceRating.value,
+          hasComment,
+          comment: review.feedback?.comment,
           // status: review.status,
         }),
       );
@@ -98,11 +113,14 @@ export class ReviewService {
           "review_events",
           new ReviewPublishedEvent({
             reviewId: review.id,
+            orderId: review.orderId,
             artisanId: review.artisanId,
             serviceId: review.serviceId,
             clientId: review.clientId,
             artisanRating: review.artisanRating.value,
             serviceRating: review.serviceRating.value,
+            hasComment,
+            comment: review.feedback?.comment,
           }),
         );
       } else {
@@ -183,17 +201,29 @@ export class ReviewService {
   }
 
   private async validateReferences(
+    orderId: string,
     artisanId: string,
     clientId: string,
     serviceId: string,
+    token: string,
   ): Promise<void> {
-    const [artisan, service] = await Promise.all([
+    const [artisan, service, orderValidation] = await Promise.all([
       this.userManagementClient?.getArtisan(artisanId),
       this.serviceManagementClient?.getService(serviceId),
+      this.orderManagementClient?.validateOrderOwnership(
+        orderId,
+        clientId,
+        artisanId,
+        serviceId,
+        token,
+      ),
     ]);
 
     if (!artisan?.exists) throw new Error("Artisan does not exist");
     if (!service?.exists) throw new Error("Service does not exist");
+    if (orderValidation && !orderValidation.valid) {
+      throw new Error(orderValidation.reason ?? "Order validation failed");
+    }
   }
   async getArtisanAverageRating(artisanId: string) {
     return await this.ratingCalculator?.calculateAverageArtisanRating(

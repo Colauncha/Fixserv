@@ -405,6 +405,13 @@ export class ReviewController {
         serviceRating,
         ratingDimensions,
       } = req.body;
+      if (!orderId) {
+        return res.status(400).json({
+          success: false,
+          error: "orderId is required",
+        });
+      }
+      const token = req.headers.authorization || "";
       const review = await this.reviewService.submitReview(
         orderId,
         artisanId,
@@ -413,6 +420,7 @@ export class ReviewController {
         new Feedback(comment),
         new Rating(artisanRating, ratingDimensions),
         new Rating(serviceRating, ratingDimensions),
+        token,
       );
       res.status(201).json({ data: review.toDto() });
     } catch (error: any) {

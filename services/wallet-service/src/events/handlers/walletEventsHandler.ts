@@ -301,6 +301,7 @@ export class WalletEventsHandler {
     }
   }
 
+  /*
   private async handleFirstFeedbackBonus(event: any) {
     try {
       const { clientId } = event.payload;
@@ -312,6 +313,39 @@ export class WalletEventsHandler {
 
       const result = await ReferralService.handleFirstFeedback(clientId);
 
+      if (result.awarded) {
+        console.log(
+          `✅ First feedback bonus awarded to client ${clientId}: ${result.points}pts`,
+        );
+      } else {
+        console.log(`ℹ️ First feedback bonus already awarded to ${clientId}`);
+      }
+    } catch (error: any) {
+      console.error(
+        `❌ First feedback bonus failed for ${event.payload?.clientId}:`,
+        error,
+      );
+    }
+  }
+  */
+  private async handleFirstFeedbackBonus(event: any) {
+    try {
+      const { clientId, reviewId, orderId, hasComment } = event.payload;
+      if (!clientId) return;
+      console.log(
+        `📨 ReviewCreated: checking first feedback bonus for client ${clientId}`,
+      );
+      if (!hasComment) {
+        console.log(
+          `ℹ️ Review ${reviewId} has no comment, skipping first feedback bonus for client ${clientId}`,
+        );
+        return;
+      }
+      const result = await ReferralService.handleFirstFeedback(
+        clientId,
+        reviewId,
+        orderId,
+      );
       if (result.awarded) {
         console.log(
           `✅ First feedback bonus awarded to client ${clientId}: ${result.points}pts`,

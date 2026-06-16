@@ -1637,6 +1637,7 @@ export class UserRepositoryImpl implements IUserRepository {
         Model.countDocuments(filter),
         (Model as any)
           .find(filter)
+          .select("+password") // Include password for domain conversion
           .sort({ suspendedAt: -1 })
           .skip(skip)
           .limit(limit)

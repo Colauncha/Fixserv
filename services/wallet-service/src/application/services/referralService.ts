@@ -17,7 +17,7 @@ const FIXPOINTS_CONFIG = {
   REFERRAL_REWARD: 150,
   PROFILE_COMPLETION_BONUS: 100,
   FIRST_BOOKING_BONUS: 100,
-  FIRST_FEEDBACK_BONUS: 100,
+  FIRST_FEEDBACK_BONUS: 50,
 };
 
 export class ReferralService {
@@ -825,7 +825,7 @@ export class ReferralService {
   }
 
   // NEW: First Feedback Bonus (CLIENT only)
-  static async handleFirstFeedback(
+  static async handleFirstFeedback1(
     clientId: string,
   ): Promise<{ awarded: boolean; points: number; totalPoints: number }> {
     const session = await mongoose.startSession();
@@ -884,6 +884,83 @@ export class ReferralService {
     } catch (error) {
       await session.abortTransaction();
       console.error("Error in handleFirstFeedback:", error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  static async handleFirstFeedback(
+    clientId: string,
+    reviewId: string,
+    orderId: string,
+  ): Promise<{ awarded: boolean; points: number; totalPoints: number }> {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const fixpointsBalance = await FixpointsBalanceModel.findOne({
+        userId: clientId,
+        userType: "CLIENT",
+      }).session(session);
+
+      if (!fixpointsBalance)
+        throw new BadRequestError("Fixpoints balance not found");
+
+      // Idempotency guard — one award per reviewId
+      const alreadyAwarded = fixpointsBalance.transactions.some(
+        (tx) =>
+          // tx.reason === "FIRST_FEEDBACK_BONUS" &&
+          // tx.metadata?.reviewId === reviewId,
+          tx.reason === "FIRST_FEEDBACK_BONUS",
+      );
+
+      if (alreadyAwarded) {
+        await session.commitTransaction();
+        return {
+          awarded: false,
+          points: 0,
+          totalPoints: fixpointsBalance.points,
+        };
+      }
+
+      const points = FIXPOINTS_CONFIG.FIRST_FEEDBACK_BONUS;
+      fixpointsBalance.points += points;
+      fixpointsBalance.totalEarned += points;
+      fixpointsBalance.transactions.push({
+        id: uuidv4(),
+        userId: clientId,
+        type: "CREDIT",
+        points,
+        reason: "FIRST_FEEDBACK_BONUS",
+        createdAt: new Date(),
+        metadata: {
+          reviewId, // idempotency key — one award per review
+          orderId,
+        },
+      });
+      fixpointsBalance.updatedAt = new Date();
+      await fixpointsBalance.save({ session });
+      await session.commitTransaction();
+
+      // Emit notification
+      await this.emitFixpointsNotification({
+        userId: clientId,
+        points,
+        reason: "FIRST_FEEDBACK_BONUS",
+        title: "First Feedback Bonus! 🎉",
+        message: `You earned ${points} Fixpoints for your first review!`,
+        totalPoints: fixpointsBalance.points,
+        metadata: { reviewId, orderId },
+      });
+
+      console.log(
+        `✅ First feedback bonus of ${points}pts awarded to client ${clientId} for review ${reviewId}`,
+      );
+      return { awarded: true, points, totalPoints: fixpointsBalance.points };
+    } catch (error) {
+      await session.abortTransaction();
+      console.error("Error in handleCommentBonus:", error);
       throw error;
     } finally {
       session.endSession();

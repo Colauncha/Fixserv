@@ -217,7 +217,7 @@ profiles:
           - ./services/infra/k8s/ingress-srv.yaml
           - ./services/infra/k8s/review-and-feedback-depl.yaml
           - ./services/infra/k8s/search-and-discovery-depl.yaml
-          
+
     build:
       local:
         push: false
@@ -240,7 +240,6 @@ profiles:
               - src: "services/search-and-discovery/src/**/*.ts"
                 dest: /app/services/search-and-discovery/src
 
-
   - name: core
     deploy:
       kubectl:
@@ -255,6 +254,7 @@ profiles:
           - ./services/infra/k8s/notifications-service-depl.yaml
           - ./services/infra/k8s/search-and-discovery-depl.yaml
           - ./services/infra/k8s/wallet-service-depl.yaml
+          - ./services/infra/k8s/review-and-feedback-depl.yaml
     build:
       local:
         push: false
@@ -308,3 +308,11 @@ profiles:
             manual:
               - src: "services/wallet-service/src/**/*.ts"
                 dest: /app/services/wallet-service/src
+        - image: docker.io/ogkpos/review-and-feedback
+          context: .
+          docker:
+            dockerfile: services/review-and-feedback/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/review-and-feedback/src/**/*.ts"
+                dest: /app/services/review-and-feedback/src

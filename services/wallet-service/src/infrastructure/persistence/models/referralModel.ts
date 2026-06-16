@@ -14,6 +14,8 @@ export interface IFixpointsTransaction {
     referredUserType?: string;
     referralCode?: string;
     redemptionReference?: string;
+    reviewId?: string;
+    orderId?: string;
   };
 }
 
