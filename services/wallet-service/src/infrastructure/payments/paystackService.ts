@@ -50,6 +50,7 @@ export class PaystackService {
 */
 
 import axios from "axios";
+import { publishActivity, ACTIVITY_ACTIONS } from "@fixserv-colauncha/shared";
 
 export class PaystackService {
   private static readonly BASE_URL =

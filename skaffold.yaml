@@ -67,6 +67,14 @@ build:
         manual:
           - src: "services/notifications-service/src/**/*.ts"
             dest: /app/services/notifications-service/src
+    - image: docker.io/ogkpos/activity-service
+      context: .
+      docker:
+        dockerfile: services/activity-service/Dockerfile.dev
+      sync:
+        manual:
+          - src: "services/activity-service/src/**/*.ts"
+            dest: /app/services/activity-service/src
 
 profiles:
   - name: user-only
@@ -255,6 +263,7 @@ profiles:
           - ./services/infra/k8s/search-and-discovery-depl.yaml
           - ./services/infra/k8s/wallet-service-depl.yaml
           - ./services/infra/k8s/review-and-feedback-depl.yaml
+          - ./services/infra/k8s/activity-service-depl.yaml
     build:
       local:
         push: false
@@ -316,3 +325,11 @@ profiles:
             manual:
               - src: "services/review-and-feedback/src/**/*.ts"
                 dest: /app/services/review-and-feedback/src
+        - image: docker.io/ogkpos/activity-service
+          context: .
+          docker:
+            dockerfile: services/activity-service/Dockerfile.dev
+          sync:
+            manual:
+              - src: "services/activity-service/src/**/*.ts"
+                dest: /app/services/activity-service/src

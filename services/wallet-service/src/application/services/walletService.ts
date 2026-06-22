@@ -2,7 +2,12 @@ import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
 import { PaystackService } from "../../infrastructure/payments/paystackService";
-import { BadRequestError, RedisEventBus } from "@fixserv-colauncha/shared";
+import {
+  BadRequestError,
+  RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
+} from "@fixserv-colauncha/shared";
 import {
   WalletModel,
   WalletTransactionModel,
@@ -209,6 +214,13 @@ export class WalletService {
         }),
       );
       console.log(`✅ WalletTopUpEvent published for user ${user.id}`);
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.WALLET_TOPUP,
+        actorId: user.id,
+        actorRole: wallet.role,
+        service: "wallet-service",
+        metadata: { amount: amount / 100, reference },
+      });
     } catch (eventError: any) {
       // Non-fatal — wallet is credited, only notification fails
       console.error("Failed to publish WalletTopUpEvent:", eventError.message);
@@ -508,6 +520,16 @@ export class WalletService {
         `Successfully released ${amount} to artisan ${artisanId} for order ${orderId}`,
       );
 
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.PAYMENT_RELEASED,
+        actorId: artisanId,
+        actorRole: "ARTISAN",
+        targetId: orderId,
+        targetType: "ORDER",
+        service: "wallet-service",
+        metadata: { amount },
+      });
+
       // await lockedTx.save();
 
       // Credit artisan wallet
@@ -765,6 +787,14 @@ export class WalletService {
       await session.commitTransaction();
 
       console.log(`Withdrawal request created: ${reference}`);
+
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.WALLET_WITHDRAWAL,
+        actorId: userId,
+        actorRole: "ARTISAN", // only artisans withdraw
+        service: "wallet-service",
+        metadata: { amount, reference },
+      });
 
       return {
         message: "Withdrawal request created successfully",

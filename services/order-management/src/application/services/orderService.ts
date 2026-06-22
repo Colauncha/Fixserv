@@ -1,7 +1,12 @@
 import { Order, RejectionReason } from "../../domain/entities/order";
 import { OrderRepository } from "../../domain/repositories/orderRepository";
 
-import { BadRequestError, RedisEventBus } from "@fixserv-colauncha/shared";
+import {
+  BadRequestError,
+  RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
+} from "@fixserv-colauncha/shared";
 
 import { OrderAggregate } from "../../domain/aggregates/orderAggregate";
 import {
@@ -191,6 +196,16 @@ export class OrderService {
     });
     // await this.eventBus.publish("OrderPaymentReleased", event);
     await this.eventBus.publish("order_events", event);
+
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.ORDER_COMPLETED,
+      actorId: order.clientId,
+      actorRole: "CLIENT",
+      targetId: orderId,
+      targetType: "ORDER",
+      service: "order-service",
+      metadata: { artisanId: order.artisanId },
+    });
   }
 
   async markAsDisputed(orderId: string, disputeId: string): Promise<void> {
@@ -233,6 +248,19 @@ export class OrderService {
       estimatedCompletionDate: estimatedCompletionDate?.toISOString(),
     });
     await this.eventBus.publish("order_events", event);
+
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.ORDER_ACCEPTED,
+      actorId: artisanId,
+      actorRole: "ARTISAN",
+      targetId: orderId,
+      targetType: "ORDER",
+      service: "order-service",
+      metadata: {
+        clientId: order.clientId,
+        estimatedCompletionDate: estimatedCompletionDate?.toISOString(),
+      },
+    });
   }
 
   async rejectOrder(
@@ -269,6 +297,16 @@ export class OrderService {
       rejectionNote: note,
     });
     await this.eventBus.publish("order_events", event);
+
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.ORDER_REJECTED,
+      actorId: artisanId,
+      actorRole: "ARTISAN",
+      targetId: orderId,
+      targetType: "ORDER",
+      service: "order-service",
+      metadata: { clientId: order.clientId, rejectionReason: reason },
+    });
   }
 
   async startWork(orderId: string, artisanId: string): Promise<void> {
@@ -296,6 +334,16 @@ export class OrderService {
       serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
+
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.ARTISAN_WORK_STARTED,
+      actorId: artisanId,
+      actorRole: "ARTISAN",
+      targetId: orderId,
+      targetType: "ORDER",
+      service: "order-service",
+      metadata: { clientId: order.clientId },
+    });
   }
 
   async completeWork(orderId: string, artisanId: string): Promise<void> {
@@ -325,6 +373,16 @@ export class OrderService {
       serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
+
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.ARTISAN_WORK_COMPLETED,
+      actorId: artisanId,
+      actorRole: "ARTISAN",
+      targetId: orderId,
+      targetType: "ORDER",
+      service: "order-service",
+      metadata: { clientId: order.clientId },
+    });
   }
 
   async getArtisanOrders(artisanId: string, status?: string): Promise<Order[]> {
@@ -621,6 +679,20 @@ export class OrderService {
     });
     await this.eventBus.publish("order_events", artisanNotificationEvent);
 
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.ORDER_CREATED,
+      actorId: clientId,
+      actorRole: "CLIENT",
+      targetId: savedOrder.id,
+      targetType: "ORDER",
+      service: "order-service",
+      metadata: {
+        artisanId: service.artisanId,
+        serviceId: service.id,
+        price: service.details.price,
+      },
+    });
+
     return savedOrder;
   }
 
@@ -685,6 +757,15 @@ export class OrderService {
       serviceRequired: order.serviceRequired?.toString() || "",
     });
     await this.eventBus.publish("order_events", event);
+
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.ORDER_CANCELLED,
+      actorId: clientId, // or artisanId if artisan cancels
+      actorRole: "CLIENT",
+      targetId: orderId,
+      targetType: "ORDER",
+      service: "order-service",
+    });
   }
 
   //Request history(order history)

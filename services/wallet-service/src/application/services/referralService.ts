@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
-import { BadRequestError, RedisEventBus } from "@fixserv-colauncha/shared";
+import {
+  BadRequestError,
+  RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
+} from "@fixserv-colauncha/shared";
 import { WalletModel } from "../../infrastructure/persistence/models/walletModel";
 import {
   FixpointsBalanceModel,
@@ -310,6 +315,14 @@ export class ReferralService {
       referralReward.awardedAt = new Date();
       await referralReward.save({ session });
 
+      await publishActivity({
+  action: ACTIVITY_ACTIONS.FIXPOINTS_EARNED,
+  actorId: referralCodeDoc.userId,
+  actorRole: referrerBalance.userType,
+  service: "wallet-service",
+  metadata: { points: FIXPOINTS_CONFIG.REFERRAL_REWARD, reason: "REFERRAL_REWARD" },
+});
+
       // Increment usage count
       referralCodeDoc.usageCount += 1;
       await referralCodeDoc.save({ session });
@@ -441,6 +454,14 @@ export class ReferralService {
       console.log(
         `Successfully redeemed ${points} fixpoints for ₦${nairaAmount}`,
       );
+
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.FIXPOINTS_REDEEMED,
+        actorId: userId,
+        actorRole: fixpointsBalance.userType,
+        service: "wallet-service",
+        metadata: { points, nairaAmount, reference },
+      });
 
       return {
         nairaAmount,

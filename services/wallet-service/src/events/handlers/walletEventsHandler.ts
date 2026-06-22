@@ -2,6 +2,8 @@ import {
   BadRequestError,
   EventAck,
   RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
 } from "@fixserv-colauncha/shared";
 import { WalletModel } from "../../infrastructure/persistence/models/walletModel";
 import { ReferralService } from "../../application/services/referralService";
