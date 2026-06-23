@@ -106,6 +106,7 @@ export class OrderAggregate {
   canArtisanRespond(): boolean {
     return this.order.canArtisanRespond();
   }
+
   cancelOrder(cancelledBy: "CLIENT" | "ARTISAN"): void {
     this.order.cancelOrder(cancelledBy);
     this.order.updateEscrowStatus("NOT_PAID");

@@ -6,6 +6,7 @@ import {
   RedisEventBus,
   publishActivity,
   ACTIVITY_ACTIONS,
+  redis,
 } from "@fixserv-colauncha/shared";
 
 import { OrderAggregate } from "../../domain/aggregates/orderAggregate";
@@ -29,7 +30,6 @@ import {
   DisputeResolvedEvent,
 } from "../../events/orderEvents";
 import { WalletClient } from "../../infrastructure/reuseableWrapper/walletClient";
-import { redis } from "@fixserv-colauncha/shared";
 import { IServiceRepository } from "../../modules_from_other_services/domain/repository/serviceRepository";
 import { ServiceModel } from "../../modules_from_other_services/infrastructure/persistence/model/serviceModel";
 import { v4 as uuidv4 } from "uuid";
