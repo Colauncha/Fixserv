@@ -1,7 +1,12 @@
 import { BadRequestError } from "@fixserv-colauncha/shared";
 import { v4 as uuidv4 } from "uuid";
 
-import { RedisEventBus } from "@fixserv-colauncha/shared";
+import {
+  RedisEventBus,
+  EventAck,
+  publishActivity,
+  ACTIVITY_ACTIONS,
+} from "@fixserv-colauncha/shared";
 
 import { Review } from "../../domain/entities/review";
 import { ReviewRepository } from "../../domain/repository/reviewRepository";
@@ -10,7 +15,7 @@ import { Rating } from "../../domain/value-objects/rating";
 import { UserManagementClient } from "../../infrastructure/clients/userManagementClient";
 import { ServiceManagementClient } from "../../infrastructure/clients/serviceManagementClient";
 import { RatingCalculator } from "../../domain/services/ratingCalculator";
-import { EventAck } from "@fixserv-colauncha/shared";
+
 import {
   ReviewCreatedEvent,
   ReviewUpdatedEvent,
@@ -101,6 +106,22 @@ export class ReviewService {
       );
       console.log(`Published ReviewCreatedEvent for ${review.id}`);
 
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.REVIEW_SUBMITTED,
+        actorId: review.clientId,
+        actorRole: "CLIENT",
+        targetId: review.id,
+        targetType: "REVIEW",
+        service: "review-service",
+        metadata: {
+          orderId: review.orderId,
+          artisanId: review.artisanId,
+          serviceId: review.serviceId,
+          artisanRating: review.artisanRating,
+          hasComment,
+        },
+      });
+
       const ackResult = await ackPromise;
 
       if (ackResult.success) {
@@ -123,6 +144,19 @@ export class ReviewService {
             comment: review.feedback?.comment,
           }),
         );
+
+        await publishActivity({
+          action: ACTIVITY_ACTIONS.REVIEW_PUBLISHED,
+          actorId: review.clientId,
+          actorRole: "CLIENT",
+          targetId: review.id,
+          targetType: "REVIEW",
+          service: "review-service",
+          metadata: {
+            artisanId: review.artisanId,
+            serviceId: review.serviceId,
+          },
+        });
       } else {
         review.markAsFailed(ackResult.error ?? "Processing failed");
         await this.reviewRepository.save(review);

@@ -22,3 +22,4 @@ services/order-management
 services/wallet-service
 services/search-and-discovery
 services/review-and-feedback
+services/activity-service

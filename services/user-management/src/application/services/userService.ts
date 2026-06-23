@@ -12,8 +12,13 @@ import { TokenService } from "../../infrastructure/services/tokenService";
 import { IUserService } from "../../interfaces/IUserService";
 import { ArtisanCreatedEvent } from "../../events/artisanCreatedEvent";
 import { UserCreatedEvent } from "../../events/userCreatedEvent";
-import { RedisEventBus } from "@fixserv-colauncha/shared";
-import { EventAck } from "@fixserv-colauncha/shared";
+import {
+  RedisEventBus,
+  publishActivity,
+  EventAck,
+  ACTIVITY_ACTIONS,
+} from "@fixserv-colauncha/shared";
+
 import { EmailService } from "../../infrastructure/services/emailServiceImpls";
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
 import { Categories } from "../../domain/value-objects/categories";
@@ -401,6 +406,14 @@ export class UserService implements IUserService {
       // Save user with transaction
       await this.userRepository.save(user);
 
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.USER_REGISTERED,
+        actorId: user.id,
+        actorRole: user.role as any,
+        service: "user-management",
+        metadata: { email: user.email, fullName: user.fullName },
+      });
+
       // Generate and set verification token
       const verificationToken = this.tokenService.generateVerificationToken(
         user.id,
@@ -430,6 +443,7 @@ export class UserService implements IUserService {
             const ackPromise = this.setupEventAcknowledgment(event.id);
             this.pendingEvents.set(event.id, ackPromise);
           }
+
           await this.eventBus.publish(channel, event);
           // Wait for acknowledgment for critical events
           if (channel === "artisan_events") {
@@ -450,6 +464,15 @@ export class UserService implements IUserService {
               this.pendingEvents.delete(event.id);
             }
           }
+          //if (channel === "activity_events") {
+          //  await publishActivity({
+          //    action: ACTIVITY_ACTIONS.//USER_REGISTERED,
+          //    actorId: user.id,
+          //    actorRole: user.role as any,
+          //    service: "user-management",
+          //    metadata: { email: user.email, //fullName: user.fullName },
+          //  });
+          //}
         },
       );
       await Promise.all(publishPromises);

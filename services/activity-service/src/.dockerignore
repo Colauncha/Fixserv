@@ -6,14 +6,20 @@ dist
 .git
 *.md
 
+
+
+
+
+
+
 **/node_modules
 **/dist
 **/.git
 **/pnpm-lock.yaml
-services/service-management
-services/wallet-service
 services/user-management
-services/review-and-feedback
+services/service-management
+services/order-management
+services/wallet-service
 services/search-and-discovery
+services/review-and-feedback
 services/notifications-service
-services/activity-service

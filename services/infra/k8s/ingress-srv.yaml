@@ -148,3 +148,11 @@ spec:
                 name: notifications-service-srv
                 port:
                   number: 4006
+
+          - path: /api/activity/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: activity-service-srv
+                port:
+                  number: 4007

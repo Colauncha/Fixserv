@@ -16,7 +16,7 @@ import { uploadRouter } from "./routes/uploadRoute";
 import { categoryRouter } from "./routes/categoryRoutes";
 import { certificateRouter } from "./routes/certificateRoute";
 import expressListEndpoints from "express-list-endpoints";
-import { trackActivity } from "../middlewares/trackActivity";
+// import { trackActivity } from "../middlewares/trackActivity";
 
 const app = express();
 
@@ -38,6 +38,11 @@ app.use(mongoSanitize());
 
 app.use(morgan("dev"));
 
+// ── CRITICAL FIX: trackActivity must come BEFORE route definitions ────
+// It uses res.on("finish") so it still captures the response status code
+// even though it's registered before the routes handle the request.
+// app.use(trackActivity);
+
 app.use("/user", rootRouter);
 app.use("/api/users", userRouter);
 app.use("/api/admin", adminRouter);
@@ -49,9 +54,6 @@ app.use("/api/certificate", certificateRouter);
 //  const endpoints = //expressListEndpoints(app);
 //  res.json({ endpoints });
 //});
-
-// Track activity on all authenticated routes
-app.use(trackActivity);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {

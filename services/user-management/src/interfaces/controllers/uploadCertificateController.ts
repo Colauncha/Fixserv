@@ -4,7 +4,12 @@ import cloudinary from "../../config/cloudinary";
 import fs from "fs";
 import path from "path";
 import { UserRepositoryImpl } from "../../infrastructure/persistence/userRepositoryImpl";
-import { BadRequestError, RedisEventBus } from "@fixserv-colauncha/shared";
+import {
+  BadRequestError,
+  RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
+} from "@fixserv-colauncha/shared";
 import { AuthService } from "../../application/services/authService";
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
 import { EmailService } from "../../infrastructure/services/emailServiceImpls";
@@ -479,6 +484,19 @@ export const reviewCertificate = async (req: Request, res: Response) => {
         console.log(
           `📢 CertificateApprovedEvent + ArtisanVerifiedEvent emitted for artisan ${artisanId}`,
         );
+
+        await publishActivity({
+          action: ACTIVITY_ACTIONS.ARTISAN_CERTIFICATE_APPROVED,
+          actorId: adminId,
+          actorRole: "ADMIN",
+          targetId: artisanId,
+          targetType: "USER",
+          service: "user-management",
+          metadata: {
+            certificateId,
+            certificateName: reviewedCertificate?.name,
+          },
+        });
       } else {
         // Notify artisan of rejection
         await eventBus.publish("user_events", {
@@ -495,6 +513,16 @@ export const reviewCertificate = async (req: Request, res: Response) => {
         console.log(
           `📢 CertificateRejectedEvent emitted for artisan ${artisanId}`,
         );
+
+        await publishActivity({
+          action: ACTIVITY_ACTIONS.ARTISAN_CERTIFICATE_REJECTED,
+          actorId: adminId,
+          actorRole: "ADMIN",
+          targetId: artisanId,
+          targetType: "USER",
+          service: "user-management",
+          metadata: { certificateId, rejectionReason },
+        });
       }
     } catch (eventError) {
       // Never let event failure break the core review response

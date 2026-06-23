@@ -2,11 +2,15 @@ import { Artisan } from "../../modules-from-other-services/domain/entities/artis
 import { Service } from "../../domain/entities/service";
 import { IArtisanRepository } from "../../domain/repository/artisanRepository";
 import { IServiceRepository } from "../../domain/repository/serviceRepository";
-import { BadRequestError } from "@fixserv-colauncha/shared";
+import {
+  BadRequestError,
+  RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
+} from "@fixserv-colauncha/shared";
 import { v4 as uuidv4 } from "uuid";
 import { ServiceDetails } from "../../domain/value-objects/serviceDetails";
 
-import { RedisEventBus } from "@fixserv-colauncha/shared";
 import {
   ServiceCreatedEvent,
   ServiceUpdatedEvent,
@@ -82,6 +86,15 @@ export class ServiceService {
         }),
       );
       console.log(`✅ ServiceCreatedEvent published: ${service.id}`);
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.ARTISAN_SERVICE_CREATED,
+        actorId: artisanId,
+        actorRole: "ARTISAN",
+        targetId: service.id,
+        targetType: "SERVICE",
+        service: "service-management",
+        metadata: { serviceName: service.details.title },
+      });
     } catch (eventError: any) {
       console.error(
         "Failed to publish ServiceCreatedEvent:",
@@ -169,6 +182,15 @@ export class ServiceService {
         }),
       );
       console.log(`✅ ServiceUpdatedEvent published: ${serviceId}`);
+
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.ARTISAN_SERVICE_UPDATED,
+        actorId: callerArtisanId,
+        actorRole: "ARTISAN",
+        targetId: serviceId,
+        targetType: "SERVICE",
+        service: "service-management",
+      });
     } catch (eventError: any) {
       console.error(
         "Failed to publish ServiceUpdatedEvent:",

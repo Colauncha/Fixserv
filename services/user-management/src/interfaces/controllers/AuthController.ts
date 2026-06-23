@@ -1,7 +1,14 @@
 import { Request, Response } from "express";
-import { redis, connectRedis, RedisEventBus } from "@fixserv-colauncha/shared";
+import {
+  redis,
+  connectRedis,
+  RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
+  BadRequestError,
+  NotAuthorizeError,
+} from "@fixserv-colauncha/shared";
 import { AuthService } from "../../application/services/authService";
-import { BadRequestError, NotAuthorizeError } from "@fixserv-colauncha/shared";
 import { UserRepositoryImpl } from "../../infrastructure/persistence/userRepositoryImpl";
 import { validateUpdateRequest } from "../middlewares/validateUpdateRequest";
 import { UserAggregate } from "../../domain/aggregates/userAggregate";
@@ -189,6 +196,13 @@ export class AuthController {
           console.log(
             `📢 ProfileCompletedEvent emitted for user ${updatedUser.id}`,
           );
+
+          await publishActivity({
+            action: ACTIVITY_ACTIONS.USER_PROFILE_COMPLETED,
+            actorId: updatedUser.id,
+            actorRole: updatedUser.role as any,
+            service: "user-management",
+          });
         } catch (profileError: any) {
           // Don't fail the update if event publishing fails
           console.error(
@@ -232,6 +246,14 @@ export class AuthController {
 
       // Re-fetch from DB (this will also repopulate cache)
       const freshUser = await this.authService.findUserById(updatedUser.id);
+
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.USER_PROFILE_UPDATED,
+        actorId: updatedUser.id,
+        actorRole: updatedUser.role as any,
+        service: "user-management",
+        metadata: { fieldsUpdated: Object.keys(updates) },
+      });
 
       res.status(200).json(freshUser);
     } catch (error: any) {

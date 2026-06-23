@@ -13,6 +13,8 @@ import {
   connectRedis,
   EventAck,
   RedisEventBus,
+  publishActivity,
+  ACTIVITY_ACTIONS,
 } from "@fixserv-colauncha/shared";
 import { ArtisanCreatedEvent } from "../../events/artisanCreatedEvent";
 import { UserCreatedEvent } from "../../events/userCreatedEvent";
@@ -115,6 +117,14 @@ export class AuthService implements IAuthService {
       foundUser.email,
       foundUser.role,
     );
+
+    await publishActivity({
+      action: ACTIVITY_ACTIONS.USER_LOGGED_IN,
+      actorId: foundUser.id,
+      actorRole: foundUser.role as any,
+      service: "user-management",
+      metadata: { email: foundUser.email },
+    });
 
     return { user: foundUser, BearerToken };
   }
@@ -842,6 +852,16 @@ export class AuthService implements IAuthService {
           suspendedAt: new Date(),
         },
       });
+
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.USER_SUSPENDED,
+        actorId: adminId,
+        actorRole: "ADMIN",
+        targetId: targetUserId,
+        targetType: "USER",
+        service: "user-management",
+        metadata: { reason, suspendedUntil: suspendedUntil ?? null },
+      });
     } catch (eventError) {
       console.error("Failed to emit AccountSuspendedEvent:", eventError);
     }
@@ -876,6 +896,15 @@ export class AuthService implements IAuthService {
           reinstatedBy: adminId,
           reinstatedAt: new Date(),
         },
+      });
+
+      await publishActivity({
+        action: ACTIVITY_ACTIONS.USER_UNSUSPENDED,
+        actorId: adminId,
+        actorRole: "ADMIN",
+        targetId: targetUserId,
+        targetType: "USER",
+        service: "user-management",
       });
     } catch (eventError) {
       console.error("Failed to emit AccountUnsuspendedEvent:", eventError);

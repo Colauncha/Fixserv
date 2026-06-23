@@ -16,3 +16,4 @@ services/user-management
 services/review-and-feedback
 services/order-management
 services/notifications-service
+services/activity-service

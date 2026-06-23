@@ -1,16 +1,11 @@
 {
-  "name": "notifications-service",
+  "name": "activity-service",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "clean": "rm -rf dist",
-    "dev": "pnpm exec ts-node-dev --respawn src/index.ts",
-    "build": "pnpm exec tsc -p tsconfig.json",
-    "prod": "node dist/index.js",
-    "start": "node dist/index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {

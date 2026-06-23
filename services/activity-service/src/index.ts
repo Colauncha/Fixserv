@@ -8,8 +8,7 @@ import {
   disconnectRedis,
 } from "@fixserv-colauncha/shared";
 
-import { ServiceEventsHandler } from "./events/handlers/serviceEventHandler";
-import { ReviewEventsHandler } from "./events/handlers/reviewEventHandler";
+import { ActivityEventsHandler } from "./events/handlers/activityEventsHandler";
 
 import { connectRedis } from "@fixserv-colauncha/shared";
 
@@ -22,14 +21,14 @@ if (!process.env.MONGO_URI) {
 if (!process.env.REDIS_URL) throw new Error("REDIS_URL must be defined");
 
 const start = async (): Promise<void> => {
-  console.log("🚀 Starting user-management service...");
+  console.log("🚀 Starting activity-service...");
 
   await connectDB();
   await connectRedis();
 
   // Start HTTP server immediately — don't wait for event bus
-  const server = app.listen(4000, () => {
-    console.log("✅ user-management running on port 4000");
+  const server = app.listen(4007, () => {
+    console.log("✅ activity-service running on port 4007");
   });
 
   // Event bus is non-fatal — retry in background
@@ -37,12 +36,8 @@ const start = async (): Promise<void> => {
     try {
       const eventBus = RedisEventBus.instance(process.env.REDIS_URL);
       await eventBus.connect();
-      const eventsHandler = new ServiceEventsHandler(eventBus);
-      const reviewEventHandler = new ReviewEventsHandler(eventBus);
-
-      await eventsHandler.setupSubscriptions();
-      await reviewEventHandler.setupSubscriptions();
-
+      const activityEventHandler = new ActivityEventsHandler(eventBus);
+      await activityEventHandler.setupSubscriptions();
       console.log("📡 Event handlers initialized");
     } catch (eventError: any) {
       console.error(
@@ -73,6 +68,6 @@ const start = async (): Promise<void> => {
 };
 
 start().catch((err) => {
-  console.error("💀 Failed to start user management:", err);
+  console.error("💀 Failed to start activity service:", err);
   process.exit(1);
 });

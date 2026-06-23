@@ -12,6 +12,7 @@ import { EmailService } from "../../../infrastructure/services/emailServiceImpls
 import expressListEndpoints from "express-list-endpoints";
 import { checkSuspension } from "../../middlewares/checkSuspension";
 
+
 const router = express.Router();
 
 const emailService = new EmailService();
@@ -22,6 +23,8 @@ const authController = new AuthController(authService);
 
 const authMiddleware = new AuthMiddleware();
 const validate = new ValidateRequest();
+
+// const activityController = new ActivityController();
 
 /*
 const service = `${process.env.USER_MANAGEMENT_URL}/
@@ -174,5 +177,4 @@ router.get(
   requireRole("ADMIN"),
   authController.getSuspendedUsers.bind(authController),
 );
-
 export { router as adminRouter };
