@@ -20,7 +20,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.6.5",
   "dependencies": {
-    "@fixserv-colauncha/shared": "^1.0.28",
+    "@fixserv-colauncha/shared": "^1.0.33",
     "pnpm": "^10.10.0"
   },
   "devDependencies": {
