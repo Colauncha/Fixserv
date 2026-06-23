@@ -24,6 +24,7 @@ jobs:
           - wallet-service
           - search-and-discovery
           - review-and-feedback
+          - activity-service
 
     steps:
       # 1. Checkout the repository
