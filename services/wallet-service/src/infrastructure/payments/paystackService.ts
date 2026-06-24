@@ -50,7 +50,6 @@ export class PaystackService {
 */
 
 import axios from "axios";
-import { publishActivity, ACTIVITY_ACTIONS } from "@fixserv-colauncha/shared";
 
 export class PaystackService {
   private static readonly BASE_URL =
@@ -213,7 +212,7 @@ export class PaystackService {
         recipientCode,
       });
 
-      /*
+      //for prod
       const response = await axios.post(
         `${this.BASE_URL}/transfer`,
         {
@@ -228,12 +227,12 @@ export class PaystackService {
             "Content-Type": "application/json",
           },
           timeout: 15000,
-        }
+        },
       );
 
       if (!response.data.status) {
         throw new Error(
-          response.data.message || "Transfer initialization failed"
+          response.data.message || "Transfer initialization failed",
         );
       }
 
@@ -245,7 +244,8 @@ export class PaystackService {
       });
 
       return result;
-      */
+
+      /*
       return {
         transfer_code: `TRF_mock_${Date.now()}_${Math.random()
           .toString(36)
@@ -255,6 +255,7 @@ export class PaystackService {
           .substr(2, 9)}`,
         status: "success",
       };
+      */
     } catch (error: any) {
       console.error("Error initializing transfer with Paystack:", {
         message: error.message,

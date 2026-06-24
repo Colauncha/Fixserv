@@ -19,6 +19,10 @@ import {
   WalletTopUpEvent,
   WalletWithdrawalEvent,
 } from "../../events/walletEvent";
+import {
+  PlatformWalletService,
+  PLATFORM_FEE_PERCENT,
+} from "./platformWalletService";
 
 const userCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -470,11 +474,18 @@ export class WalletService {
         });
       }
 
-      const amount = lockedTx.amount;
+      // const amount = lockedTx.amount;
+      const totalAmount = lockedTx.amount;
       const currentDate = new Date();
 
+      // ── NEW: Calculate fee split ─────────────────────────────────────
+      const platformFee = Number(
+        (totalAmount * PLATFORM_FEE_PERCENT).toFixed(2),
+      );
+      const artisanAmount = Number((totalAmount - platformFee).toFixed(2));
+
       // Update client wallet - reduce locked balance
-      clientWallet.lockedBalance -= amount;
+      clientWallet.lockedBalance -= totalAmount;
       clientWallet.updatedAt = currentDate;
 
       // Add completion transaction to client wallet
@@ -482,7 +493,7 @@ export class WalletService {
         id: uuidv4(),
         type: "DEBIT",
         purpose: "PAYMENT_COMPLETED",
-        amount,
+        amount: totalAmount,
         reference: orderId,
         description: `Payment completed for order ${orderId} - funds released to artisan`,
         createdAt: currentDate,
@@ -490,7 +501,8 @@ export class WalletService {
       });
 
       // Update artisan wallet - add balance
-      artisanWallet.balance += amount;
+      // artisanWallet.balance += amount;
+      artisanWallet.balance += artisanAmount;
       artisanWallet.updatedAt = currentDate;
 
       // Add credit transaction to artisan wallet
@@ -498,7 +510,8 @@ export class WalletService {
         id: uuidv4(),
         type: "CREDIT",
         purpose: "PAYMENT_RECEIVED",
-        amount,
+        // amount,
+        amount: artisanAmount,
         reference: orderId,
         description: `Payment received for completed order ${orderId}`,
         createdAt: currentDate,
@@ -514,10 +527,25 @@ export class WalletService {
       await artisanWallet.save({ session });
       await lockedTx.save({ session });
 
+      // ── NEW: Credit platform wallet within the SAME session ──────────
+      // All four writes are atomic — if any fails, all roll back
+      await PlatformWalletService.creditFee(
+        {
+          amount: platformFee,
+          orderId,
+          artisanId,
+          clientId: lockedTx.userId,
+        },
+        session,
+      );
+
       //commit the transaction
       await session.commitTransaction();
       console.log(
-        `Successfully released ${amount} to artisan ${artisanId} for order ${orderId}`,
+        `✅ Order ${orderId} settled:\n` +
+          `   Total locked:   ₦${totalAmount}\n` +
+          `   Artisan gets:   ₦${artisanAmount} (95%)\n` +
+          `   Platform fee:   ₦${platformFee} (5%)`,
       );
 
       await publishActivity({
@@ -527,7 +555,7 @@ export class WalletService {
         targetId: orderId,
         targetType: "ORDER",
         service: "wallet-service",
-        metadata: { amount },
+        metadata: { amount: totalAmount, artisanAmount, platformFee },
       });
 
       // await lockedTx.save();
