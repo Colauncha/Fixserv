@@ -141,6 +141,15 @@ const OrderSchema = new mongoose.Schema(
         },
       },
     ],
+    platformFee: {
+      type: Number,
+      default: 0,
+    },
+
+    artisanAmount: {
+      type: Number,
+      default: 0,
+    },
   },
   { versionKey: false },
 );

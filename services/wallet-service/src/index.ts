@@ -9,6 +9,7 @@ import {
   disconnectRedis,
   RedisEventBus,
 } from "@fixserv-colauncha/shared";
+import { PlatformWalletModel } from "./infrastructure/persistence/models/platformWalletModel";
 import { WalletEventsHandler } from "./events/handlers/walletEventsHandler";
 
 if (!process.env.JWT_KEY) throw new Error("JWT_KEY must be defined");
@@ -20,6 +21,8 @@ const start = async (): Promise<void> => {
 
   await connectDB();
   await connectRedis();
+
+  await ensurePlatformWalletExists();
 
   // Start HTTP server immediately — don't wait for event bus
   const server = app.listen(4005, () => {
@@ -61,6 +64,23 @@ const start = async (): Promise<void> => {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 };
+
+async function ensurePlatformWalletExists(): Promise<void> {
+  await PlatformWalletModel.findOneAndUpdate(
+    { accountId: "fixserv_platform" },
+    {
+      $setOnInsert: {
+        accountId: "fixserv_platform",
+        balance: 0,
+        totalEarned: 0,
+        totalWithdrawn: 0,
+        totalOrders: 0,
+      },
+    },
+    { upsert: true, new: true },
+  );
+  console.log("✅ Platform wallet ready");
+}
 
 start().catch((err) => {
   console.error("💀 Failed to start wallet service:", err);

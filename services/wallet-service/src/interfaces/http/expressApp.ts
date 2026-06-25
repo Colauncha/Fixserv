@@ -11,6 +11,7 @@ import morgan from "morgan";
 import helmet from "helmet";
 import { walletRouter } from "./routes/walletRoute";
 import { webhookRouter } from "./routes/webHookRoute";
+import { platformWalletRouter } from "./routes/platformWalletRoutes";
 
 const app = express();
 
@@ -36,6 +37,8 @@ app.use(mongoSanitize());
 app.use(morgan("dev"));
 
 app.use("/api/wallet", walletRouter);
+app.use("/api/wallet/platform-wallet", platformWalletRouter);
+
 app.all("*", async () => {
   throw new NotFoundError();
 });

@@ -243,32 +243,33 @@ class PaystackWebhookProcessor {
     const secret = process.env.PAYSTACK_SECRET_KEY;
 
     //For Production
-    /*
-    if(!signature||!secret){
+
+    if (!signature || !secret) {
       console.error("Missing signature or secret key for webhook verification");
       return false;
     }
 
-    try{
+    try {
       // Hash the RAW body bytes — not the re-stringified object
-    const rawBody = Buffer.isBuffer(req.body)
-      ? req.body
-      : Buffer.from(JSON.stringify(webhookData));
+      const rawBody = Buffer.isBuffer(req.body)
+        ? req.body
+        : Buffer.from(JSON.stringify(webhookData));
 
-    const hash = crypto
-      .createHmac("sha512", secret)
-      .update(rawBody)
-      .digest("hex");
+      const hash = crypto
+        .createHmac("sha512", secret)
+        .update(rawBody)
+        .digest("hex");
 
-    const isValid = hash === signature;
+      const isValid = hash === signature;
 
-    if (!isValid) {
-      console.error("Invalid webhook signature — possible spoofing attempt");
-    }
+      if (!isValid) {
+        console.error("Invalid webhook signature — possible spoofing attempt");
+      }
 
-    return isValid;
-    }
-    */
+      return isValid;
+
+      /*
+  }
     //For Dev
     // Skip verification in development or for test signatures
     const isTestMode =
@@ -308,6 +309,7 @@ class PaystackWebhookProcessor {
       return hash === signature;
 
       // return true;
+      */
     } catch (error: any) {
       console.error("Signature verification error:", error);
       return false;
