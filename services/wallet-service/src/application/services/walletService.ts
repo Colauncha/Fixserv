@@ -725,36 +725,35 @@ export class WalletService {
   /**
    * Initiate withdrawal request
    */
+
   static async initiateWithdrawal(
     userId: string,
     amount: number,
     accountNumber: string,
     bankCode: string,
-    pin?: string, // Optional security PIN
+    pin?: string,
   ) {
+    // ── Step 1: Validate amount ───────────────────────────────────────────
+    const MIN_WITHDRAWAL = 100;
+    if (amount < MIN_WITHDRAWAL) {
+      throw new BadRequestError(
+        `Minimum withdrawal amount is ₦${MIN_WITHDRAWAL}`,
+      );
+    }
+
+    // ── Step 2: Check wallet balance and lock funds ───────────────────────
     const session = await mongoose.startSession();
     session.startTransaction();
 
+    let reference: string;
+    let recipientCode: string;
+    let accountName: string;
+    let withdrawalRequest: any;
+
     try {
-      console.log(
-        `Initiating withdrawal for user ${userId}, amount: ${amount}`,
-      );
-
-      // Validate minimum withdrawal amount
-      const MIN_WITHDRAWAL = 100; // 100 NGN minimum
-      if (amount < MIN_WITHDRAWAL) {
-        throw new BadRequestError(
-          `Minimum withdrawal amount is ₦${MIN_WITHDRAWAL}`,
-        );
-      }
-
-      // Get user wallet
       const wallet = await WalletModel.findOne({ userId }).session(session);
-      if (!wallet) {
-        throw new BadRequestError("Wallet not found");
-      }
+      if (!wallet) throw new BadRequestError("Wallet not found");
 
-      // Check if user has sufficient balance
       const availableBalance = wallet.balance - wallet.lockedBalance;
       if (availableBalance < amount) {
         throw new BadRequestError(
@@ -762,59 +761,82 @@ export class WalletService {
         );
       }
 
-      // Resolve account details
-      const accountDetails = await this.resolveAccountDetails(
+      // Resolve account details (outside DB tx is fine — read-only)
+      const accountDetails = await PaystackService.resolveAccountNumber(
         accountNumber,
         bankCode,
       );
+      accountName = accountDetails.account_name;
 
-      // Create transfer recipient
+      // Create Paystack transfer recipient
       const recipient = await PaystackService.createTransferRecipient(
         accountNumber,
         bankCode,
-        accountDetails.accountName,
+        accountName,
       );
+      recipientCode = recipient.recipient_code;
 
-      // Generate unique reference
-      const reference = `WD_${userId}_${Date.now()}_${Math.random()
+      reference = `WD_${userId}_${Date.now()}_${Math.random()
         .toString(36)
         .substr(2, 9)}`;
 
-      // Create withdrawal request record
-      const withdrawalRequest = new WithdrawalRequestModel({
-        userId,
-        amount,
-        recipientCode: recipient.recipient_code,
-        accountNumber,
-        bankCode,
-        accountName: recipient.name,
-        reference,
-        status: "PENDING",
-      });
-
-      // Lock funds in wallet (similar to order escrow)
+      // Lock funds immediately
       wallet.balance -= amount;
       wallet.lockedBalance += amount;
-
-      // Add transaction record
       wallet.transactions.push({
         id: uuidv4(),
         type: "DEBIT",
         purpose: "WITHDRAWAL_PENDING",
         amount,
         reference,
-        description: `Withdrawal to ${recipient.name} - ${accountNumber}`,
+        description: `Withdrawal to ${accountName} - ${accountNumber}`,
         createdAt: new Date(),
         status: "PENDING",
       });
 
-      // Save all changes
+      withdrawalRequest = new WithdrawalRequestModel({
+        userId,
+        amount,
+        recipientCode,
+        accountNumber,
+        bankCode,
+        accountName,
+        reference,
+        status: "PENDING",
+      });
+
       await wallet.save({ session });
       await withdrawalRequest.save({ session });
-
       await session.commitTransaction();
 
       console.log(`Withdrawal request created: ${reference}`);
+    } catch (error: any) {
+      if (session.inTransaction()) await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+
+    // ── Step 3: Immediately send to Paystack (outside DB tx) ─────────────
+    // DB is committed — funds are locked. Now attempt the real transfer.
+    try {
+      withdrawalRequest.status = "PROCESSING";
+      await withdrawalRequest.save();
+
+      const transferResult = await PaystackService.initializeTransfer(
+        amount * 100, // convert naira → kobo
+        recipientCode,
+        "Wallet withdrawal",
+      );
+
+      // Save transfer code for webhook matching
+      await WithdrawalRequestModel.findByIdAndUpdate(withdrawalRequest._id, {
+        transferCode: transferResult.transfer_code,
+      });
+
+      console.log(
+        `✅ Transfer initiated: ${transferResult.transfer_code} for ₦${amount}`,
+      );
 
       await publishActivity({
         action: ACTIVITY_ACTIONS.WALLET_WITHDRAWAL,
@@ -825,19 +847,29 @@ export class WalletService {
       });
 
       return {
-        message: "Withdrawal request created successfully",
+        message: "Withdrawal initiated successfully. Funds are on their way.",
         withdrawalId: withdrawalRequest.id,
         reference,
-        accountName: recipient.name,
+        accountName,
         amount,
-        status: "PENDING",
+        transferCode: transferResult.transfer_code,
+        status: "PROCESSING",
       };
-    } catch (error: any) {
-      await session.abortTransaction();
-      console.error("Error initiating withdrawal:", error);
-      throw error;
-    } finally {
-      session.endSession();
+    } catch (transferError: any) {
+      // Transfer failed — refund the locked funds
+      console.error(
+        "Paystack transfer failed, refunding:",
+        transferError.message,
+      );
+
+      await this.handleWithdrawalFailure(
+        reference,
+        transferError.message || "Transfer failed",
+      );
+
+      throw new BadRequestError(
+        `Withdrawal failed: ${transferError.message}. Your funds have been returned to your wallet.`,
+      );
     }
   }
 

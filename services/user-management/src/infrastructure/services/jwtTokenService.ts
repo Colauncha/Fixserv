@@ -18,7 +18,7 @@ export class JwtTokenService implements TokenService {
 
   generateBearerToken(id: string, email: string, role: string): string {
     return jwt.sign({ id, email, role }, process.env.JWT_KEY!, {
-      expiresIn: "1h",
+      expiresIn: this.VERIFICATION_TOKEN_EXPIRY,
     });
   }
 
