@@ -631,6 +631,12 @@ class PaystackWebhookProcessor {
 
       // Handle failed withdrawal - refund to wallet
       // await WithdrawalService.refundFailedTransfer(reference);
+
+      //Refund the users locked funds
+      await WalletService.handleWithdrawalFailure(
+        reference,
+        failure_reason || "Transfer failed",
+      );
     } catch (error: any) {
       console.error(`Error processing transfer failure [${requestId}]:`, error);
     }
@@ -650,6 +656,12 @@ class PaystackWebhookProcessor {
 
       // Handle transfer reversal - credit back to wallet
       // await WithdrawalService.handleTransferReversal(reference);
+
+      //Treat reversal same as failure - refund the user
+      await WalletService.handleWithdrawalFailure(
+        reference,
+        "Transfer reversed by Paystack",
+      );
     } catch (error: any) {
       console.error(
         `Error processing transfer reversal [${requestId}]:`,

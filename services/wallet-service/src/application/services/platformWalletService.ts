@@ -102,6 +102,7 @@ export class PlatformWalletService {
   }
 
   // ─── Admin: withdraw platform earnings to a real bank account ─────────
+
   static async initiateWithdrawal(data: {
     adminId: string;
     amount: number;
@@ -119,7 +120,13 @@ export class PlatformWalletService {
     if (amount <= 0)
       throw new BadRequestError("Amount must be greater than zero");
 
-    // ── Step 1: Deduct from platform wallet (DB transaction) ─────────────
+    // ── Step 1: Resolve account (fast-fail on bad details) ───────────────
+    const accountDetails = await PaystackService.resolveAccountNumber(
+      accountNumber,
+      bankCode,
+    );
+
+    // ── Step 2: Deduct from platform wallet (DB transaction) ─────────────
     const session = await mongoose.startSession();
     session.startTransaction();
     let reference: string;
@@ -137,12 +144,6 @@ export class PlatformWalletService {
         );
       }
 
-      // Resolve account before deducting so we fail fast on bad bank details
-      const accountDetails = await PaystackService.resolveAccountNumber(
-        accountNumber,
-        bankCode,
-      );
-
       reference = `PLATFORM_WD_${adminId}_${Date.now()}`;
 
       wallet.balance -= amount;
@@ -159,45 +160,26 @@ export class PlatformWalletService {
 
       await wallet.save({ session });
       await session.commitTransaction();
+    } catch (error: any) {
+      if (session.inTransaction()) await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
 
-      // ── Step 2: Initiate Paystack transfer AFTER DB commit ──────────────
-      // (external API calls must never be inside a DB transaction)
+    // ── Step 3: Create recipient and transfer (outside DB tx) ─────────────
+    try {
       const recipient = await PaystackService.createTransferRecipient(
         accountNumber,
         bankCode,
         accountDetails.account_name,
       );
 
-      let transferResult;
-      try {
-        transferResult = await PaystackService.initializeTransfer(
-          amount * 100, // Paystack expects kobo
-          recipient.recipient_code,
-          "Fixserv platform earnings withdrawal",
-        );
-      } catch (transferError: any) {
-        // Transfer failed AFTER DB commit — reverse the deduction
-        await PlatformWalletModel.findOneAndUpdate(
-          { accountId: "fixserv_platform" },
-          {
-            $inc: { balance: amount, totalWithdrawn: -amount },
-            $push: {
-              transactions: {
-                id: uuidv4(),
-                type: "CREDIT",
-                purpose: "REFUND_ADJUSTMENT",
-                amount,
-                reference,
-                description: `Reversal for failed withdrawal: ${transferError.message}`,
-                createdAt: new Date(),
-              },
-            },
-          },
-        );
-        throw new BadRequestError(
-          `Transfer failed: ${transferError.message}. Amount has been reversed.`,
-        );
-      }
+      const transferResult = await PaystackService.initializeTransfer(
+        amount * 100, // naira → kobo
+        recipient.recipient_code,
+        "Fixserv platform earnings withdrawal",
+      );
 
       console.log(
         `✅ Platform withdrawal ₦${amount} initiated. ` +
@@ -211,11 +193,34 @@ export class PlatformWalletService {
         amount,
         accountName: accountDetails.account_name,
       };
-    } catch (error: any) {
-      if (session.inTransaction()) await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
+    } catch (transferError: any) {
+      // Transfer failed AFTER DB commit — reverse the deduction
+      console.error(
+        "Platform transfer failed, reversing:",
+        transferError.message,
+      );
+
+      await PlatformWalletModel.findOneAndUpdate(
+        { accountId: "fixserv_platform" },
+        {
+          $inc: { balance: amount, totalWithdrawn: -amount },
+          $push: {
+            transactions: {
+              id: uuidv4(),
+              type: "CREDIT",
+              purpose: "REFUND_ADJUSTMENT",
+              amount,
+              reference,
+              description: `Reversal for failed withdrawal: ${transferError.message}`,
+              createdAt: new Date(),
+            },
+          },
+        },
+      );
+
+      throw new BadRequestError(
+        `Transfer failed: ${transferError.message}. Amount has been reversed to platform wallet.`,
+      );
     }
   }
 }

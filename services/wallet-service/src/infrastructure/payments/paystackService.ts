@@ -243,7 +243,12 @@ export class PaystackService {
         status: result.status,
       });
 
-      return result;
+      // return result;
+      return {
+        transfer_code: result.transfer_code,
+        reference: result.reference,
+        status: result.status,
+      };
 
       /*
       return {
