@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+
 jest.mock("../../infrastructure/clients/reviewClient", () => {
   return {
     ReviewRepositoryClient: jest.fn().mockImplementation(() => ({
@@ -72,11 +74,11 @@ describe("ServiceRatedEvent Subscription", () => {
       const serviceId = event.payload?.serviceId;
       const newRating = event.payload?.newRating;
       console.log("🔥 Handler called with", { serviceId, newRating });
-      await serviceRepo.updateRating(serviceId, newRating);
+      await serviceRepo.updateRating(serviceId, newRating, 1);
     });
 
     await capturedHandler!(
-      new ServiceRatedEvent({ serviceId, newRating: 4.5 })
+      new ServiceRatedEvent({ serviceId, newRating: 4.5 }),
     );
 
     const updated = await ServiceModel.findById(serviceId);
