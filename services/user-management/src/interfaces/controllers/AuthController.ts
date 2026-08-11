@@ -942,6 +942,49 @@ export class AuthController {
     }
   }
 
+  async updateArtisanRating(req: Request, res: Response): Promise<void> {
+    try {
+      const { artisanId } = req.params;
+      const { rating, reviewCount } = req.body;
+
+      if (rating === undefined || reviewCount === undefined) {
+        res.status(400).json({
+          success: false,
+          message: "rating and reviewCount are required",
+        });
+        return;
+      }
+
+      // Guard: only artisans have ratings
+      const user = await this.authService.findUserById(artisanId);
+      if (!user || user.role !== "ARTISAN") {
+        res.status(404).json({ success: false, message: "Artisan not found" });
+        return;
+      }
+
+      await this.userRepository.updateRating(artisanId, rating, reviewCount);
+
+      // Invalidate cache so the fresh rating is immediately visible
+      await this.authService.invalidateUserCache(artisanId);
+
+      console.log(
+        `✅ Artisan ${artisanId} rating updated to ${rating} (${reviewCount} reviews)`,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Artisan rating updated",
+        data: { artisanId, rating, reviewCount },
+      });
+    } catch (error: any) {
+      console.error(
+        "Failed to update artisan rating internally:",
+        error.message,
+      );
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   /*
   // Call this logic AFTER successfully saving the updated user
   async checkAndEmitProfileCompletion(user: UserAggregate) {

@@ -12,6 +12,12 @@ const ServiceSchema = new mongoose.Schema(
     estimatedDuration: { type: String, required: true },
     isActive: { type: Boolean, default: true },
     rating: { type: Number, default: 0, min: 0, max: 5, required: true },
+
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
+    ratingHistory: [{ rating: Number, reviewCount: Number, updatedAt: Date }],
     skillSet: {
       type: [String],
       default: ["General repair"],

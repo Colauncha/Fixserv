@@ -138,15 +138,20 @@ export class ServiceRepositoryImpl implements IServiceRepository {
     }
   }
 
-  async updateRating(serviceId: string, newRating: number): Promise<void> {
+  async updateRating(
+    serviceId: string,
+    newRating: number,
+    reviewCount: number,
+  ): Promise<void> {
     try {
       await ServiceModel.findOneAndUpdate(
         { _id: serviceId },
         {
-          $set: { rating: newRating },
+          $set: { rating: newRating, reviewCount },
           $push: {
             ratingHistory: {
               rating: newRating,
+              reviewCount,
               updatedAt: new Date(),
             },
           },

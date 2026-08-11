@@ -467,16 +467,21 @@ export class UserRepositoryImpl implements IUserRepository {
     return { users: paginatedUsers, total };
   }
 
-  async updateRating(userId: string, newRating: number): Promise<void> {
+  async updateRating(
+    userId: string,
+    newRating: number,
+    reviewCount: number,
+  ): Promise<void> {
     try {
       // Only artisans have ratings
       await ArtisanModel.findOneAndUpdate(
         { _id: userId },
         {
-          $set: { rating: newRating },
+          $set: { rating: newRating, reviewCount },
           $push: {
             ratingHistory: {
               rating: newRating,
+              reviewCount,
               updatedAt: new Date(),
             },
           },

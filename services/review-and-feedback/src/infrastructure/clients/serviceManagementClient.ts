@@ -4,13 +4,13 @@ export class ServiceManagementClient {
   constructor(private httpClient: AxiosInstance) {}
 
   async getService(
-    serviceId: string
+    serviceId: string,
   ): Promise<{ exists: boolean; rating?: number }> {
     try {
       const response = await this.httpClient.get(`/${serviceId}`);
       return {
         exists: true,
-        rating: response.data.rating, 
+        rating: response.data.rating,
       };
     } catch (error: any) {
       if (error.response?.status === 404) {
@@ -22,11 +22,13 @@ export class ServiceManagementClient {
 
   async updateServiceRating(
     serviceId: string,
-    newRating: number
+    newRating: number,
+    reviewCount: number,
   ): Promise<void> {
     try {
-      await this.httpClient.patch(`/${serviceId}`, {
+      await this.httpClient.patch(`/${serviceId}/rating`, {
         rating: newRating,
+        reviewCount,
       });
     } catch (error: any) {
       throw new Error(`Failed to update service rating: ${error.message}`);

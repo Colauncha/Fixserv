@@ -23,12 +23,14 @@ import { EmailService } from "../../infrastructure/services/emailServiceImpls";
 import { JwtTokenService } from "../../infrastructure/services/jwtTokenService";
 import { Categories } from "../../domain/value-objects/categories";
 import { Certificates } from "../../domain/value-objects/certificates";
+import { NewsletterService } from "./newsletterService";
 
 export class UserService implements IUserService {
   private eventBus = RedisEventBus.instance(process.env.REDIS_URL);
   private pendingEvents = new Map<string, Promise<EventAck>>();
   private emailService = new EmailService();
   private tokenService = new JwtTokenService();
+  private newsletterService = new NewsletterService(this.emailService);
   constructor(private userRepository: IUserRepository) {}
 
   /*
@@ -428,6 +430,13 @@ export class UserService implements IUserService {
         normalizedEmail,
         verificationToken,
       );
+
+      await this.newsletterService.autoSubscribeUser({
+        email: normalizedEmail,
+        fullName: user.fullName,
+        userId: user.id,
+        role: user.role,
+      });
 
       // Publish events
       // await this.publishEventsWithRetry(eventsToPublish);

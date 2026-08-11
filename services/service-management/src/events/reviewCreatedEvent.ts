@@ -7,14 +7,17 @@ export class ReviewCreatedEvent extends BaseEvent {
   constructor(
     public payload: {
       reviewId: string;
+      orderId: string;
       artisanId: string;
       serviceId: string;
       clientId: string;
       artisanRating: number;
       serviceRating: number;
       status: "pending" | "processing" | "published" | "flagged";
-    }
+    },
   ) {
     super(payload);
+
+    this.id = payload.reviewId;
   }
 }

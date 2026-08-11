@@ -209,6 +209,37 @@ export class EmailService implements IEmailService {
       // Don't throw - email is optional, don't block the verification process
     }
   }
+
+  async sendNewsletter(data: {
+    to: string;
+    subject: string;
+    htmlContent: string;
+    unsubscribeToken: string;
+  }): Promise<void> {
+    const unsubscribeUrl = `${process.env.BASE_URL}/api/newsletter/unsubscribe?token=${data.unsubscribeToken}`;
+
+    // Append unsubscribe footer to every newsletter — required by email laws (CAN-SPAM, GDPR)
+    const htmlWithFooter = `
+    ${data.htmlContent}
+    <hr style="margin-top:40px; border:none; border-top:1px solid #eee;" />
+    <p style="font-size:12px; color:#999; text-align:center;">
+      You're receiving this because you subscribed to Fixserv updates.<br/>
+      <a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe</a>
+    </p>
+  `;
+
+    await transporter.sendMail({
+      from: `"Fixserv" <${process.env.MAIL_USERNAME}>`,
+      to: data.to,
+      subject: data.subject,
+      html: htmlWithFooter,
+      // Required header for email clients to show unsubscribe button natively
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
+  }
 }
 
 /*

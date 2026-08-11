@@ -80,6 +80,11 @@ const artisanSchema = new mongoose.Schema<IArtisan>(
       min: 1,
       max: 5,
     },
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
+    ratingHistory: [{ rating: Number, reviewCount: Number, updatedAt: Date }],
     skillSet: {
       type: [String],
       default: ["General repair"],

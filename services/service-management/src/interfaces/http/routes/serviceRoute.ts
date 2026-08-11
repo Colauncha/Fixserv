@@ -59,6 +59,11 @@ router.patch(
   serviceController.updateService.bind(serviceController),
 );
 
+router.patch(
+  "/:serviceId/rating",
+  serviceController.updateServiceRating.bind(serviceController),
+);
+
 router.delete(
   "/:serviceId",
   authenticate.protect,

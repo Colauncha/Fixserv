@@ -13,8 +13,10 @@ export class ReviewCreatedEvent extends BaseEvent {
       artisanRating: number;
       serviceRating: number;
       status: "pending" | "processing" | "published" | "flagged";
-    }
+    },
   ) {
     super(payload);
+
+    this.id = payload.reviewId;
   }
 }

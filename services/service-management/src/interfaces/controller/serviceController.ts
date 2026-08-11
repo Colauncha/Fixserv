@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import { ServiceService } from "../../application/services/serviceService";
 import { BadRequestError } from "@fixserv-colauncha/shared";
+import { ServiceRepositoryImpl } from "../../infrastructure/serviceRepositoryImpl";
 
 export class ServiceController {
+  private serviceRepository = new ServiceRepositoryImpl();
   constructor(private serviceService: ServiceService) {}
 
   async create(req: Request, res: Response): Promise<void> {
@@ -275,6 +277,35 @@ export class ServiceController {
         console.error("Offer base service error:", error);
         res.status(500).json({ error: "Failed to offer service" });
       }
+    }
+  }
+
+  async updateServiceRating(req: Request, res: Response): Promise<void> {
+    try {
+      const { serviceId } = req.params;
+      const { rating, reviewCount } = req.body;
+
+      if (rating === undefined || reviewCount === undefined) {
+        res.status(400).json({
+          success: false,
+          message: "rating and reviewCount are required",
+        });
+        return;
+      }
+
+      await this.serviceRepository.updateRating(serviceId, rating, reviewCount);
+
+      console.log(
+        `✅ Service ${serviceId} rating updated to ${rating} (${reviewCount} reviews)`,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Service rating updated",
+        data: { serviceId, rating, reviewCount },
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
     }
   }
 

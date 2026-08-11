@@ -16,16 +16,19 @@ export class ReviewRepositoryClient implements IReviewRepository {
     });
   }
 
-  async findPublishedByService(serviceId: string): Promise<ReviewDto[]> {
+  async findPublishedByService(
+    serviceId: string,
+  ): Promise<{ artisanRating: number; serviceRating: number }[]> {
     try {
-      const response = await this.httpClient.get<{
-        success: boolean;
-        data: ReviewDto[];
-      }>(`/service/${serviceId}`, {
+      const response = await this.httpClient.get(`/service/${serviceId}`, {
         params: { status: "published" },
       });
 
-      return response.data.data;
+      // return response.data.data.map((review) => ({
+      //   artisanRating: review.artisanRating,
+      //   serviceRating: review.serviceRating,
+      // }));
+      return response.data.data ?? response.data ?? [];
     } catch (error: any) {
       if (error.code === "ECONNABORTED") {
         console.error("⚠️ Axios timeout error:", error.message);
@@ -33,7 +36,7 @@ export class ReviewRepositoryClient implements IReviewRepository {
         console.error(
           "⚠️ Axios response error:",
           error.response.status,
-          error.response.data
+          error.response.data,
         );
       } else {
         console.error("⚠️ Axios unknown error:", error);
