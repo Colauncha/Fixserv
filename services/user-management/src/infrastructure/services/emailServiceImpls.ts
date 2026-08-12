@@ -218,14 +218,69 @@ export class EmailService implements IEmailService {
   }): Promise<void> {
     const unsubscribeUrl = `${process.env.BASE_URL}/api/newsletter/unsubscribe?token=${data.unsubscribeToken}`;
 
-    // Append unsubscribe footer to every newsletter — required by email laws (CAN-SPAM, GDPR)
     const htmlWithFooter = `
-    ${data.htmlContent}
-    <hr style="margin-top:40px; border:none; border-top:1px solid #eee;" />
-    <p style="font-size:12px; color:#999; text-align:center;">
-      You're receiving this because you subscribed to Fixserv updates.<br/>
-      <a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe</a>
-    </p>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>${data.subject}</title>
+    </head>
+    <body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table width="600" cellpadding="0" cellspacing="0" border="0"
+                   style="background:#ffffff; border-radius:8px; overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="background:#dc3545; padding:20px; text-align:center;">
+                  <h1 style="color:#ffffff; margin:0; font-size:24px;">Fixserv 🛠️</h1>
+                </td>
+              </tr>
+
+              <!-- Body content -->
+              <tr>
+                <td style="padding:30px;">
+                  ${data.htmlContent}
+                </td>
+              </tr>
+
+              <!-- Footer with unsubscribe link -->
+              <tr>
+                <td style="background:#f8f8f8; padding:20px; text-align:center;
+                            border-top:1px solid #eeeeee;">
+                  <p style="font-size:12px; color:#999999; margin:0 0 8px 0;">
+                    You're receiving this because you subscribed to Fixserv updates.
+                  </p>
+                  <!-- ── Unsubscribe link — styled as button for max compatibility ── -->
+                  <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                    <tr>
+                      <td style="border-radius:4px; border:1px solid #cccccc;">
+                        <a href="${unsubscribeUrl}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           style="display:inline-block;
+                                  padding:8px 16px;
+                                  font-size:12px;
+                                  color:#666666;
+                                  text-decoration:none;
+                                  font-family:Arial,sans-serif;">
+                          Unsubscribe
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
   `;
 
     await transporter.sendMail({
