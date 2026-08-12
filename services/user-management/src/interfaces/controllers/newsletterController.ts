@@ -1,4 +1,5 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 import { NewsletterService } from "../../application/services/newsletterService";
 import { BadRequestError } from "@fixserv-colauncha/shared";
 
@@ -21,13 +22,14 @@ export class NewsletterController {
       }
 
       // If a logged-in user subscribes, attach their account info
-      const userId = req.currentUser?.id;
+      const userId = req.currentUser?.id ?? null;
       const role = req.currentUser?.role as "CLIENT" | "ARTISAN" | undefined;
 
       const result = await this.newsletterService.subscribe({
         email,
         fullName: fullName ?? "",
-        userId,
+        userId: userId ?? undefined,
+        // role: role ?? "VISITOR",
         role: role ?? "VISITOR",
       });
 
@@ -132,4 +134,28 @@ export class NewsletterController {
       </html>
     `;
   }
+
+  // In AuthMiddleware class inside your shared package
+  // Helper: tries to decode JWT if present but never blocks the request
+  optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+    let token = (req as any).session?.jwt;
+    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (token) {
+      try {
+        const payload = jwt.verify(token, process.env.JWT_KEY!) as {
+          id: string;
+          email: string;
+          role: string;
+        };
+        req.currentUser = payload; // attaches user if token valid
+      } catch {
+        // Invalid/expired token — just continue as unauthenticated
+      }
+    }
+
+    next();
+  };
 }

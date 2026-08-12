@@ -16,6 +16,7 @@ export const newsletterRouter = Router();
 // Public — anyone can subscribe (logged in or not)
 newsletterRouter.post(
   "/subscribe",
+  newsletterCtrl.optionalAuth, // allow both logged-in and guest users
   newsletterCtrl.subscribe.bind(newsletterCtrl),
 );
 
