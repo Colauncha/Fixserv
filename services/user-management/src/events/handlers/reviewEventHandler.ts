@@ -14,7 +14,7 @@ export class ReviewEventsHandler {
   private subscriptions: { unsubscribe: () => Promise<void> }[] = [];
 
   private reviewClient = new ReviewRepositoryClient(
-    createAxiosClient(process.env.REVIEW_AND_FEEDBACK_URL!)
+    createAxiosClient(process.env.REVIEW_AND_FEEDBACK_URL!),
   );
   private ratingCalculator = new RatingCalculator(this.reviewClient);
 
@@ -30,11 +30,11 @@ export class ReviewEventsHandler {
             break;
           case "ReviewPublished":
             await this.handleReviewPublished(
-              new ReviewPublishedEvent(evt.payload)
+              new ReviewPublishedEvent(evt.payload),
             );
             break;
         }
-      }
+      },
     );
     this.subscriptions.push(sub);
     console.log("User-Management subscribed to review_events");
@@ -50,13 +50,15 @@ export class ReviewEventsHandler {
       // tell review‐and‐feedback we accepted the task
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(event.payload.reviewId, "processed", "user-management")
+        new EventAck(event.id, "processed", "user-management"),
       );
-      console.log("A new review was created and being processed");
+      console.log(
+        `User-Management: ACK sent for ReviewCreated ${event.payload.reviewId}`,
+      );
     } catch (e: any) {
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(e.payload.reviewId, "failed", "user-management")
+        new EventAck(event.id, "failed", "user-management"),
       );
     }
   }
@@ -64,21 +66,26 @@ export class ReviewEventsHandler {
   /** 2️⃣ final rating update after review is published */
   private async handleReviewPublished(event: ReviewPublishedEvent) {
     try {
-      const avg = await this.ratingCalculator.calculateAverageArtisanRating(
-        event.payload.artisanId
-      );
+      const { average, count } =
+        await this.ratingCalculator.calculateAverageArtisanRating(
+          event.payload.artisanId,
+        );
 
-      await this.userRepository.updateRating(event.payload.artisanId, avg);
+      await this.userRepository.updateRating(
+        event.payload.artisanId,
+        average,
+        count,
+      );
 
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(event.payload.reviewId, "processed", "user-management")
+        new EventAck(event.payload.reviewId, "processed", "user-management"),
       );
       console.log("Artisan rating updated");
     } catch (e: any) {
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(e.payload.reviewId, "failed", "user-management")
+        new EventAck(e.payload.reviewId, "failed", "user-management"),
       );
     }
   }

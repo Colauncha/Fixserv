@@ -23,10 +23,12 @@ export class UserManagementClient {
   async updateArtisanRating(
     artisanId: string,
     newRating: number,
+    reviewCount: number,
   ): Promise<void> {
     try {
-      await this.httpClient.patch(`/${artisanId}`, {
+      await this.httpClient.patch(`/artisan/${artisanId}/rating`, {
         rating: newRating,
+        reviewCount,
       });
     } catch (error: any) {
       throw new Error(`Failed to update artisan rating: ${error.message}`);

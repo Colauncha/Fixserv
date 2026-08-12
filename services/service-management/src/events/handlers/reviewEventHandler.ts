@@ -20,7 +20,7 @@ export class ReviewEventsHandler {
           break;
         case "ReviewPublished":
           await this.handleReviewPublished(
-            new ReviewPublishedEvent(evt.payload)
+            new ReviewPublishedEvent(evt.payload),
           );
           break;
       }
@@ -30,32 +30,67 @@ export class ReviewEventsHandler {
   }
 
   private async handleReviewCreated(event: ReviewCreatedEvent) {
-    // **just acknowledge — no rating update yet**
-    await this.eventBus.publish(
-      "event_acks",
-      new EventAck(event.payload.reviewId, "processed", "service-management")
-    );
-    console.log("A new review was created and being processed");
+    try {
+      // **just acknowledge — no rating update yet**
+      await this.eventBus.publish(
+        "event_acks",
+        new EventAck(event.id, "processed", "service-management"),
+      );
+      console.log(`service-Management: ACK sent for ReviewCreated ${event.id}`);
+    } catch (e: any) {
+      await this.eventBus.publish(
+        "event_acks",
+        new EventAck(event.id, "failed", "service-management", e.message),
+      );
+    }
   }
 
-  /** 2️⃣ final rating update after review is published */
+  /** 2️⃣ final rating update after review is published 
   private async handleReviewPublished(event: ReviewPublishedEvent) {
     try {
       const avg = await this.ratingCalculator.calculateAverageServiceRating(
-        event.payload.serviceId
+        event.payload.serviceId,
       );
 
       await this.serviceRepository.updateRating(event.payload.serviceId, avg);
 
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(event.payload.reviewId, "processed", "service-management")
+        new EventAck(event.payload.reviewId, "processed", "service-management"),
       );
       console.log("Service rating updated");
     } catch (e: any) {
       await this.eventBus.publish(
         "event_acks",
-        new EventAck(e.payload.reviewId, "failed", "service-management")
+        new EventAck(e.payload.reviewId, "failed", "service-management"),
+      );
+    }
+  }
+  */
+
+  private async handleReviewPublished(event: ReviewPublishedEvent) {
+    try {
+      // Recalculate average including the newly published review
+      const { average, count } =
+        await this.ratingCalculator.calculateAverageServiceRating(
+          event.payload.serviceId,
+        );
+
+      // Update artisan's rating AND review count in user-management DB
+      await this.serviceRepository.updateRating(
+        event.payload.serviceId,
+        average,
+        count,
+      );
+
+      console.log(
+        `✅ Service ${event.payload.serviceId} rating updated: ${average} (${count} reviews)`,
+      );
+    } catch (e: any) {
+      // Non-fatal — rating update failed but review is already published
+      console.error(
+        `Failed to update service rating for ${event.payload.serviceId}:`,
+        e.message,
       );
     }
   }

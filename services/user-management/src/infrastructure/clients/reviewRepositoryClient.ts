@@ -4,14 +4,16 @@ import { ReviewDto } from "../../modules-from-other-services/review-dto";
 export class ReviewRepositoryClient {
   constructor(private httpClient: AxiosInstance) {}
 
-  async getPublishedReviewsByArtisan(artisanId: string): Promise<ReviewDto[]> {
+  async getPublishedReviewsByArtisan(
+    artisanId: string,
+  ): Promise<{ artisanRating: number; serviceRating: number }[]> {
     try {
-      const response = await this.httpClient.get<{
-        success: boolean;
-        data: ReviewDto[];
-      }>(`/artisan/${artisanId}?status=published`);
+      const response = await this.httpClient.get(
+        `/artisan/${artisanId}?status=published`,
+      );
 
-      return response.data.data;
+      // return response.data.data;
+      return response.data?.data ?? response.data ?? [];
     } catch (error: any) {
       if (error.code === "ECONNABORTED") {
         console.error("⚠️ Axios timeout error:", error.message);

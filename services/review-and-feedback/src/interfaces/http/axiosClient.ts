@@ -3,8 +3,9 @@ import axios, { AxiosInstance } from "axios";
 export function createAxiosClient(baseURL: string): AxiosInstance {
   const instance = axios.create({
     baseURL,
-    timeout: 5000,
+    timeout: 8000,
     headers: {
+      "X-Internal-Service": "true",
       "Content-Type": "application/json",
       "Service-Name": "review-service",
     },
@@ -23,7 +24,7 @@ export function createAxiosClient(baseURL: string): AxiosInstance {
         }
       }
       return Promise.reject(error);
-    }
+    },
   );
 
   return instance;

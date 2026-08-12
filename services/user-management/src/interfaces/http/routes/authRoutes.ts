@@ -12,7 +12,6 @@ import { EmailService } from "../../../infrastructure/services/emailServiceImpls
 import expressListEndpoints from "express-list-endpoints";
 import { checkSuspension } from "../../middlewares/checkSuspension";
 
-
 const router = express.Router();
 
 const emailService = new EmailService();
@@ -138,6 +137,11 @@ router.patch(
   authMiddleware.protect,
   requireRole("ADMIN", "ARTISAN", "CLIENT"),
   authController.updateUser.bind(authController),
+);
+
+router.patch(
+  "/artisan/:artisanId/rating",
+  authController.updateArtisanRating.bind(authController),
 );
 
 router.get("/endpoints", (req: Request, res: Response) => {

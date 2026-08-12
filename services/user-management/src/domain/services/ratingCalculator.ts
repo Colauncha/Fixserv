@@ -3,20 +3,24 @@ import { ReviewRepositoryClient } from "../../infrastructure/clients/reviewRepos
 export class RatingCalculator {
   constructor(private reviewClient: ReviewRepositoryClient) {}
 
-  async calculateAverageArtisanRating(artisanId: string): Promise<number> {
-    const reviews = await this.reviewClient.getPublishedReviewsByArtisan(
-      artisanId
-    );
+  async calculateAverageArtisanRating(
+    artisanId: string,
+  ): Promise<{ average: number; count: number }> {
+    const reviews =
+      await this.reviewClient.getPublishedReviewsByArtisan(artisanId);
 
     if (reviews.length === 0) {
-      return 0; // No reviews, return average rating of 0
+      return { average: 0, count: 0 };
     }
 
-    const totalRating = reviews.reduce(
+    const total = reviews.reduce(
       (sum, review) => sum + review.artisanRating,
-      0
+      0,
     );
 
-    return parseFloat((totalRating / reviews.length).toFixed(1));
+    return {
+      average: parseFloat((total / reviews.length).toFixed(1)),
+      count: reviews.length,
+    };
   }
 }

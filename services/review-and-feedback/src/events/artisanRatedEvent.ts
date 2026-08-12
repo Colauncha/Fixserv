@@ -8,7 +8,8 @@ export class ArtisanRatedEvent extends BaseEvent {
     public payload: {
       artisanId: string;
       newRating: number;
-    }
+      reviewCount: number;
+    },
   ) {
     super(payload);
   }

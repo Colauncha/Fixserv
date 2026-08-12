@@ -8,7 +8,8 @@ export class ServiceRatedEvent extends BaseEvent {
     public payload: {
       serviceId: string;
       newRating: number;
-    }
+      reviewCount: number;
+    },
   ) {
     super(payload);
   }

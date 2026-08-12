@@ -14,20 +14,45 @@ type DayHours = {
 
 export type BusinessHoursSchedule = Record<Day, DayHours>;
 
+const DEFAULT_OPEN: DayHours = { open: "09:00", close: "17:00" };
+const DEFAULT_CLOSED: DayHours = { open: "closed", close: "closed" };
+
+// ── Helper: normalise whatever comes in for a single day ─────────────
+// Accepts: undefined | null | string "09:00-17:00" | { open, close }
+function normaliseDay(value: any, fallback: DayHours): DayHours {
+  if (!value) return fallback;
+
+  // Legacy string format "09:00-17:00" or "09:00- 17:00"
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "closed") {
+      return DEFAULT_CLOSED;
+    }
+    const [open, close] = value.split("-").map((s: string) => s.trim());
+    return open && close ? { open, close } : fallback;
+  }
+
+  // Object format { open, close }
+  if (typeof value === "object" && value.open !== undefined) {
+    return { open: value.open, close: value.close };
+  }
+
+  return fallback;
+}
+
 export class BusinessHours {
   private readonly _schedule: BusinessHoursSchedule;
 
-  constructor(schedule: Partial<BusinessHoursSchedule>) {
-    const defaultHours: DayHours = { open: "09:00", close: "17:00" };
-
+  constructor(
+    schedule: Partial<BusinessHoursSchedule> | Record<string, any> = {},
+  ) {
     this._schedule = {
-      monday: schedule.monday || defaultHours,
-      tuesday: schedule.tuesday || defaultHours,
-      wednesday: schedule.wednesday || defaultHours,
-      thursday: schedule.thursday || defaultHours,
-      friday: schedule.friday || defaultHours,
-      saturday: schedule.saturday || { open: "closed", close: "closed" },
-      sunday: schedule.sunday || { open: "closed", close: "closed" },
+      monday: normaliseDay(schedule.monday, DEFAULT_OPEN),
+      tuesday: normaliseDay(schedule.tuesday, DEFAULT_OPEN),
+      wednesday: normaliseDay(schedule.wednesday, DEFAULT_OPEN),
+      thursday: normaliseDay(schedule.thursday, DEFAULT_OPEN),
+      friday: normaliseDay(schedule.friday, DEFAULT_OPEN),
+      saturday: normaliseDay(schedule.saturday, DEFAULT_CLOSED),
+      sunday: normaliseDay(schedule.sunday, DEFAULT_CLOSED),
     };
   }
   isOpen(day: Day, time: string): boolean {
@@ -52,19 +77,25 @@ export class BusinessHours {
   }
 
   // ✅ Deserialize from JSON (used in fromJSON of UserAggregate)
-  static fromJSON(schedule: BusinessHoursSchedule): BusinessHours {
+  static fromJSON(
+    schedule: BusinessHoursSchedule | Record<string, any>,
+  ): BusinessHours {
     //  return new BusinessHours(schedule);
     // Handle case where days might be stored as "09:00- 17:00" strings
-    const normalized = Object.entries(schedule).reduce((acc, [day, value]: [string, DayHours | string]) => {
-      if (typeof value === "string") {
-        const [open, close] = value.split("-").map((s: string) => s.trim());
-        acc[day as Day] = { open, close };
-      } else {
-        acc[day as Day] = value;
-      }
-      return acc;
-    }, {} as BusinessHoursSchedule);
+    // const normalized = Object.entries(schedule).reduce(
+    //   (acc, [day, value]: [string, DayHours | string]) => {
+    //     if (typeof value === "string") {
+    //       const [open, close] = value.split("-").map((s: string) => s.//trim());
+    //       acc[day as Day] = { open, close };
+    //     } else {
+    //       acc[day as Day] = value;
+    //     }
+    //     return acc;
+    //   },
+    //   {} as BusinessHoursSchedule,
+    // );
 
-    return new BusinessHours(normalized);
+    // return new BusinessHours(normalized);
+    return new BusinessHours(schedule);
   }
 }
