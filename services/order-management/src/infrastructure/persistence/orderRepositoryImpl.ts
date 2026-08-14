@@ -63,6 +63,13 @@ export class orderRepositoryImpls implements OrderRepository {
     return docs.map((doc) => this.toDomain(doc));
   }
 
+  async countCompletedByArtisan(artisanId: string): Promise<number> {
+    return await OrderModel.countDocuments({
+      artisanId,
+      status: "COMPLETED",
+    });
+  }
+
   toDomain(raw: any): Order {
     return new Order(
       raw._id,

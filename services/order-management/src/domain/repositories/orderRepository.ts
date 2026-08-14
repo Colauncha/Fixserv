@@ -55,4 +55,5 @@ export interface OrderRepository {
       services: string[];
     }>
   >;
+  countCompletedByArtisan(artisanId: string): Promise<number>;
 }

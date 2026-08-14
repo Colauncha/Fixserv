@@ -235,7 +235,7 @@ export class EmailService implements IEmailService {
 
               <!-- Header -->
               <tr>
-                <td style="background:#dc3545; padding:20px; text-align:center;">
+                <td style="background:#346DA3; padding:20px; text-align:center;">
                   <h1 style="color:#ffffff; margin:0; font-size:24px;">Fixserv 🛠️</h1>
                 </td>
               </tr>
