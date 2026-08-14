@@ -130,6 +130,21 @@ export class OrderService {
     await this.orderRepository.delete(orderId);
   }
 
+  async getArtisanWorkStats(artisanId: string): Promise<{
+    artisanId: string;
+    completedOrders: number;
+    description: string;
+  }> {
+    const completedOrders =
+      await this.orderRepository.countCompletedByArtisan(artisanId);
+
+    return {
+      artisanId,
+      completedOrders,
+      description: `${completedOrders} repair${completedOrders !== 1 ? "s" : ""} completed`,
+    };
+  }
+
   async initiatePayment(orderId: string): Promise<string> {
     const order = await this.orderRepository.findById(orderId);
     if (!order) throw new BadRequestError("Order not found");

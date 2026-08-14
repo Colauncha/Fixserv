@@ -91,6 +91,11 @@ router.delete(
   orderController.deleteOrder.bind(orderController),
 );
 
+router.get(
+  "/artisan/:artisanId/work-stats",
+  orderController.getArtisanWorkStatsHandler.bind(orderController),
+);
+
 // NEW ARTISAN RESPONSE ROUTES
 router.post(
   "/:orderId/accept",

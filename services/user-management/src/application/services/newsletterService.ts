@@ -203,7 +203,7 @@ export class NewsletterService {
         unsubscribeToken,
         htmlContent: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc3545;">Welcome to Fixserv${fullName ? `, ${fullName}` : ""}! 🎉</h2>
+            <h2 style="color: #346DA3;">Welcome to Fixserv${fullName ? `, ${fullName}` : ""}! 🎉</h2>
             <p>Thanks for subscribing to Fixserv updates. You'll hear from us about:</p>
             <ul>
               <li>New artisans and services on the platform</li>

@@ -97,6 +97,25 @@ export class OrderController {
     }
   };
 
+  async getArtisanWorkStatsHandler(req: Request, res: Response): Promise<void> {
+    try {
+      const { artisanId } = req.params;
+
+      if (!artisanId) {
+        res
+          .status(400)
+          .json({ success: false, message: "artisanId is required" });
+        return;
+      }
+
+      const stats = await this.orderService.getArtisanWorkStats(artisanId);
+
+      res.status(200).json({ success: true, data: stats });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
   getPublicOrders = async (req: Request, res: Response): Promise<void> => {
     const orders = await this.orderService.getPublicOrders();
     res.status(200).json(orders);
