@@ -71,23 +71,24 @@
 
 
 # ---- STAGE 1: Builder ----
- FROM node:18-alpine AS builder
+ FROM node:22-alpine AS builder
  WORKDIR /app
 
- RUN npm install -g pnpm
+ RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
  COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
  COPY services/order-management/package.json ./services/order-management/
 
- RUN pnpm install --shamefully-hoist
+RUN pnpm install --no-frozen-lockfile
+
 
  COPY services ./services
 
- RUN cd services/order-management && pnpm install --shamefully-hoist
+ RUN cd services/order-management && pnpm install --no-frozen-lockfile
  RUN cd services/order-management && pnpm run build
 
 # ---- STAGE 3: Runtime ----
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 
  COPY --from=builder /app/node_modules ./node_modules

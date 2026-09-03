@@ -1,27 +1,28 @@
 # ---- STAGE 1: Builder ----
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/activity-service/package.json ./services/activity-service/
 
 
-RUN pnpm install --shamefully-hoist
+# RUN pnpm install --shamefully-hoist
+RUN pnpm install --no-frozen-lockfile
 
 
 COPY services ./services
 
 
-RUN cd services/activity-service && pnpm install --shamefully-hoist
+RUN cd services/activity-service && pnpm install --no-frozen-lockfile
 RUN cd services/activity-service && pnpm run build
 
 
 # ---- STAGE 2: Runtime ----
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 
