@@ -67,7 +67,7 @@
 
 
 # ---- STAGE 1: Builder ----
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 #  
 RUN npm install -g pnpm
@@ -75,8 +75,8 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/user-management/package.json ./services/user-management/
  
-# RUN pnpm install --shamefully-hoist
-RUN pnpm install --frozen-lockfile=false
+RUN pnpm install --shamefully-hoist
+
  
 COPY services ./services
 
