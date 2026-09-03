@@ -68,7 +68,8 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/review-and-feedback/package.json ./services/review-and-feedback/
 
-RUN pnpm install --shamefully-hoist
+# RUN pnpm install --shamefully-hoist
+RUN pnpm install --frozen-lockfile=false
 
 COPY services ./services
 

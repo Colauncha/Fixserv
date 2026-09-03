@@ -6,7 +6,8 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/wallet-service/package.json ./services/wallet-service/
  
-RUN pnpm install --shamefully-hoist
+# RUN pnpm install --shamefully-hoist
+RUN pnpm install --frozen-lockfile=false
  
 COPY services ./services
  

@@ -79,7 +79,8 @@
  COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
  COPY services/order-management/package.json ./services/order-management/
 
- RUN pnpm install --shamefully-hoist
+#  RUN pnpm install --shamefully-hoist
+RUN pnpm install --frozen-lockfile=false
 
  COPY services ./services
 

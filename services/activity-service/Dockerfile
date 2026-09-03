@@ -10,7 +10,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/activity-service/package.json ./services/activity-service/
 
 
-RUN pnpm install --shamefully-hoist
+# RUN pnpm install --shamefully-hoist
+RUN pnpm install --frozen-lockfile=false
 
 
 COPY services ./services
