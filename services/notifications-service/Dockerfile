@@ -62,7 +62,7 @@
 # CMD ["node", "dist/index.js"]
 
 # ---- STAGE 1: Builder ----
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 RUN npm install -g pnpm
