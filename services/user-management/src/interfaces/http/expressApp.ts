@@ -16,6 +16,7 @@ import { uploadRouter } from "./routes/uploadRoute";
 import { categoryRouter } from "./routes/categoryRoutes";
 import { certificateRouter } from "./routes/certificateRoute";
 import { newsletterRouter } from "./routes/newsletterRoutes";
+import { referralRouter } from "./routes/referralRoutes";
 import expressListEndpoints from "express-list-endpoints";
 // import { trackActivity } from "../middlewares/trackActivity";
 
@@ -51,6 +52,7 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/certificate", certificateRouter);
 app.use("/api/newsletter", newsletterRouter);
+app.use("/api/referral", referralRouter);
 
 //app.get("/api/endpoints", (req, res) //=> {
 //  const endpoints = //expressListEndpoints(app);

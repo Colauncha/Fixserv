@@ -316,12 +316,15 @@ export class ReferralService {
       await referralReward.save({ session });
 
       await publishActivity({
-  action: ACTIVITY_ACTIONS.FIXPOINTS_EARNED,
-  actorId: referralCodeDoc.userId,
-  actorRole: referrerBalance.userType,
-  service: "wallet-service",
-  metadata: { points: FIXPOINTS_CONFIG.REFERRAL_REWARD, reason: "REFERRAL_REWARD" },
-});
+        action: ACTIVITY_ACTIONS.FIXPOINTS_EARNED,
+        actorId: referralCodeDoc.userId,
+        actorRole: referrerBalance.userType,
+        service: "wallet-service",
+        metadata: {
+          points: FIXPOINTS_CONFIG.REFERRAL_REWARD,
+          reason: "REFERRAL_REWARD",
+        },
+      });
 
       // Increment usage count
       referralCodeDoc.usageCount += 1;
