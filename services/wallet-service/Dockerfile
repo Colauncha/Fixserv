@@ -2,19 +2,23 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
  
-RUN npm install -g pnpm
+# RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/wallet-service/package.json ./services/wallet-service/
  
-RUN pnpm install --shamefully-hoist
+# RUN pnpm install --shamefully-hoist
+RUN pnpm install --no-frozen-lockfile
 
  
 COPY services ./services
  
-RUN cd services/wallet-service && pnpm install -shamefully-hoist
+# RUN cd services/wallet-service && pnpm install -shamefully-hoist
+RUN cd services/wallet-service && pnpm install --no-frozen-lockfile
 RUN cd services/wallet-service && pnpm run build
 #  ---- STAGE 2: Runtime ----
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/wallet-service/dist ./dist

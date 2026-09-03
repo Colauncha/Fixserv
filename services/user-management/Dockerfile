@@ -70,23 +70,26 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 #  
-RUN npm install -g pnpm
+# RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
  
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/user-management/package.json ./services/user-management/
  
-RUN pnpm install --shamefully-hoist
+# RUN pnpm install --shamefully-hoist
+RUN pnpm install --no-frozen-lockfile
 
  
 COPY services ./services
 
-RUN cd services/user-management && pnpm install --shamefully-hoist
+# RUN cd services/user-management && pnpm install --shamefully-hoist
+RUN cd services/user-management && pnpm install --no-frozen-lockfile
 
 # RUN mkdir -p /app/services/user-management/uploads
 RUN cd services/user-management && pnpm run build
 
 # ---- STAGE 3: Runtime ----
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 # 
 COPY --from=builder /app/node_modules ./node_modules
