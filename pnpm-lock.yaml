@@ -21,9 +21,6 @@ importers:
       express:
         specifier: ^4.21.2
         version: 4.22.1
-      pnpm:
-        specifier: ^10.10.0
-        version: 10.30.3
     devDependencies:
       '@types/express':
         specifier: 4.17.21
@@ -3236,11 +3233,6 @@ packages:
     resolution: {integrity: sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==}
     engines: {node: '>=10.13.0'}
 
-  pnpm@10.30.3:
-    resolution: {integrity: sha512-yWHR4KLY41TsqlFmuCJRZmi39Ey1vZUSLVkN2Bki9gb1RzttI+xKW+Bef80Y6EiNR9l4u+mBhy8RRdBumnQAFw==}
-    engines: {node: '>=18.12'}
-    hasBin: true
-
   presentable-error@0.0.1:
     resolution: {integrity: sha512-E6rsNU1QNJgB3sjj7OANinGncFKuK+164sLXw1/CqBjj/EkXSoSdHCtWQGBNlREIGLnL7IEUEGa08YFVUbrhVg==}
     engines: {node: '>=16'}
@@ -4963,6 +4955,8 @@ snapshots:
       delegates: 1.0.0
       express: 4.22.1
       readable-stream: 3.6.2
+    transitivePeerDependencies:
+      - supports-color
 
   arg@4.1.3:
     dependencies:
@@ -5377,6 +5371,8 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
       typedarray: 0.0.6
+    transitivePeerDependencies:
+      - supports-color
 
   console-control-strings@1.1.0:
     dependencies:
@@ -5456,8 +5452,6 @@ snapshots:
       express: 4.22.1
       object-assign: 4.1.1
       vary: 1.1.2
-    transitivePeerDependencies:
-      - supports-color
 
   create-require@1.1.1:
     dependencies:
@@ -5625,6 +5619,8 @@ snapshots:
     dependencies:
       express: 4.22.1
       safe-buffer: 5.2.1
+    transitivePeerDependencies:
+      - supports-color
 
   ee-first@1.1.1:
     dependencies:
@@ -6693,6 +6689,8 @@ snapshots:
       lodash.once: 4.1.1
       ms: 2.1.3
       semver: 7.7.4
+    transitivePeerDependencies:
+      - supports-color
 
   jwa@2.0.1:
     dependencies:
@@ -6700,12 +6698,16 @@ snapshots:
       ecdsa-sig-formatter: 1.0.11
       express: 4.22.1
       safe-buffer: 5.2.1
+    transitivePeerDependencies:
+      - supports-color
 
   jws@4.0.1:
     dependencies:
       express: 4.22.1
       jwa: 2.0.1
       safe-buffer: 5.2.1
+    transitivePeerDependencies:
+      - supports-color
 
   jwt@0.2.0:
     dependencies:
@@ -7114,6 +7116,8 @@ snapshots:
       express: 4.22.1
       gauge: 3.0.2
       set-blocking: 2.0.0
+    transitivePeerDependencies:
+      - supports-color
 
   object-assign@4.1.1:
     dependencies:
@@ -7269,10 +7273,6 @@ snapshots:
     dependencies:
       express: 4.22.1
 
-  pnpm@10.30.3:
-    dependencies:
-      express: 4.22.1
-
   presentable-error@0.0.1:
     dependencies:
       express: 4.22.1
@@ -7349,8 +7349,6 @@ snapshots:
       http-errors: 2.0.1
       iconv-lite: 0.4.24
       unpipe: 1.0.0
-    transitivePeerDependencies:
-      - supports-color
 
   react-dom@19.2.4(react@19.2.4):
     dependencies:
@@ -7377,6 +7375,8 @@ snapshots:
       inherits: 2.0.4
       string_decoder: 1.3.0
       util-deprecate: 1.0.2
+    transitivePeerDependencies:
+      - supports-color
 
   readdirp@3.6.0:
     dependencies:
@@ -7700,6 +7700,8 @@ snapshots:
     dependencies:
       express: 4.22.1
       safe-buffer: 5.2.1
+    transitivePeerDependencies:
+      - supports-color
 
   strip-ansi@6.0.1:
     dependencies:
@@ -7936,8 +7938,6 @@ snapshots:
       express: 4.22.1
       media-typer: 0.3.0
       mime-types: 2.1.35
-    transitivePeerDependencies:
-      - supports-color
 
   typedarray@0.0.6:
     dependencies:
@@ -8005,8 +8005,6 @@ snapshots:
   utils-merge@1.0.1:
     dependencies:
       express: 4.22.1
-    transitivePeerDependencies:
-      - supports-color
 
   uuid@11.1.0:
     dependencies:
@@ -8040,8 +8038,6 @@ snapshots:
   vary@1.1.2:
     dependencies:
       express: 4.22.1
-    transitivePeerDependencies:
-      - supports-color
 
   walker@1.0.8:
     dependencies:
