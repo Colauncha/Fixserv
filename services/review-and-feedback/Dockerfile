@@ -82,6 +82,9 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
+
+COPY --from=builder /app/services/review-and-feedback/node_modules ./services/review-and-feedback/node_modules
+
 COPY --from=builder /app/services/review-and-feedback/dist ./dist
 COPY --from=builder /app/services/review-and-feedback/package.json ./
 

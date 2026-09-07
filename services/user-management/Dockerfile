@@ -66,45 +66,49 @@
 # CMD ["node", "dist/index.js"]
 
 
-# ---- STAGE 1: Builder ----
 FROM node:22-alpine AS builder
+
 WORKDIR /app
-#  
-# RUN npm install -g pnpm
+
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
- 
+
+# Copy workspace manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/user-management/package.json ./services/user-management/
- 
-# RUN pnpm install --shamefully-hoist
+
+# Install root workspace dependencies
 RUN pnpm install --no-frozen-lockfile
 
- 
+# Copy source
 COPY services ./services
 
-# RUN cd services/user-management && pnpm install --shamefully-hoist
+# Install service-level dependencies (includes dotenv and all runtime deps)
 RUN cd services/user-management && pnpm install --no-frozen-lockfile
 
-# RUN mkdir -p /app/services/user-management/uploads
+# Build TypeScript
 RUN cd services/user-management && pnpm run build
 
-# ---- STAGE 3: Runtime ----
+# ---- Runtime ----
 FROM node:22-alpine
+
 WORKDIR /app
-# 
+
+# Copy root node_modules (shared packages like @fixserv-colauncha/shared)
 COPY --from=builder /app/node_modules ./node_modules
+
+# ── KEY FIX: also copy service-level node_modules ────────────────────────
+# dotenv and all other service deps live here, not in root node_modules
+COPY --from=builder /app/services/user-management/node_modules ./services/user-management/node_modules
+
+# Copy the compiled output
 COPY --from=builder /app/services/user-management/dist ./dist
+
+# Copy package.json so Node knows how to resolve modules
 COPY --from=builder /app/services/user-management/package.json ./
-# COPY --from=builder /app/services/user-management/uploads ./uploads
+
 ENV NODE_ENV=production
+
 CMD ["node", "dist/index.js"]
-
-
-
-
-
-
-
 
 
 

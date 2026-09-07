@@ -27,6 +27,9 @@ WORKDIR /app
 
 
 COPY --from=builder /app/node_modules ./node_modules
+
+COPY --from=builder /app/services/activity-service/node_modules ./services/activity-service/node_modules
+
 COPY --from=builder /app/services/activity-service/dist ./dist
 COPY --from=builder /app/services/activity-service/package.json ./
 

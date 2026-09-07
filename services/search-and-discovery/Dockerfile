@@ -82,6 +82,9 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
+
+COPY --from=builder /app/services/search-and-discovery/node_modules ./services/search-and-discovery/node_modules
+
 COPY --from=builder /app/services/search-and-discovery/dist ./dist
 COPY --from=builder /app/services/search-and-discovery/package.json ./
 
