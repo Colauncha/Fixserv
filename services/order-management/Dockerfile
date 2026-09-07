@@ -92,6 +92,9 @@ FROM node:22-alpine
 WORKDIR /app
 
  COPY --from=builder /app/node_modules ./node_modules
+
+COPY --from=builder /app/services/order-management/node_modules ./services/order-management/node_modules
+
  COPY --from=builder /app/services/order-management/dist ./dist
  COPY --from=builder /app/services/order-management/package.json ./
 

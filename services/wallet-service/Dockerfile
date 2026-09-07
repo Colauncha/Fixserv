@@ -21,6 +21,9 @@ RUN cd services/wallet-service && pnpm run build
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
+
+COPY --from=builder /app/services/wallet-service/node_modules ./services/wallet-service/node_modules
+
 COPY --from=builder /app/services/wallet-service/dist ./dist
 COPY --from=builder /app/services/wallet-service/package.json ./
 
