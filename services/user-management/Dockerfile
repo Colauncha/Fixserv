@@ -66,6 +66,7 @@
 # CMD ["node", "dist/index.js"]
 
 
+
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -76,39 +77,51 @@ RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/user-management/package.json ./services/user-management/
 
-# Install root workspace dependencies
-RUN pnpm install --no-frozen-lockfile
+# Hoist everything (runtime + devDeps) into /app/node_modules
+RUN pnpm install --no-frozen-lockfile --shamefully-hoist
 
 # Copy source
 COPY services ./services
 
-# Install service-level dependencies (includes dotenv and all runtime deps)
-RUN cd services/user-management && pnpm install --no-frozen-lockfile
-
-# Build TypeScript
-RUN cd services/user-management && pnpm run build
+# Build using the hoisted tsc from /app/node_modules/.bin/tsc
+# Do NOT use "pnpm exec tsc" — it looks inside the service node_modules
+# Use the direct path instead so it always finds the hoisted binary
+RUN /app/node_modules/.bin/tsc -p services/user-management/tsconfig.json
 
 # ---- Runtime ----
 FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy root node_modules (shared packages like @fixserv-colauncha/shared)
+# Single flat node_modules — everything Node needs is here
 COPY --from=builder /app/node_modules ./node_modules
 
-# ── KEY FIX: also copy service-level node_modules ────────────────────────
-# dotenv and all other service deps live here, not in root node_modules
-COPY --from=builder /app/services/user-management/node_modules ./services/user-management/node_modules
-
-# Copy the compiled output
+# Compiled output
 COPY --from=builder /app/services/user-management/dist ./dist
 
-# Copy package.json so Node knows how to resolve modules
+# Package.json for module resolution
 COPY --from=builder /app/services/user-management/package.json ./
 
 ENV NODE_ENV=production
 
 CMD ["node", "dist/index.js"]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
