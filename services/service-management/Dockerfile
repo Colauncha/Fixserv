@@ -60,39 +60,48 @@
 
 # CMD ["node", "dist/index.js"]
 
-
-# ---- STAGE 1: Builder ----
 FROM node:22-alpine AS builder
+
 WORKDIR /app
 
-# RUN npm install -g pnpm
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
+# Copy workspace manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/service-management/package.json ./services/service-management/
 
-# RUN pnpm install --shamefully-hoist
-RUN pnpm install --no-frozen-lockfile
+# Hoist everything (runtime + devDeps) into /app/node_modules
+RUN pnpm install --no-frozen-lockfile --shamefully-hoist
 
-
+# Copy source
 COPY services ./services
 
-RUN cd services/service-management && pnpm install --no-frozen-lockfile
-RUN cd services/service-management && pnpm run build
+# Build using the hoisted tsc from /app/node_modules/.bin/tsc
+# Do NOT use "pnpm exec tsc" — it looks inside the service node_modules
+# Use the direct path instead so it always finds the hoisted binary
+RUN /app/node_modules/.bin/tsc -p services/service-management/tsconfig.json
 
-# ---- STAGE 2: Runtime ----
+# ---- Runtime ----
 FROM node:22-alpine
+
 WORKDIR /app
 
+# Single flat node_modules — everything Node needs is here
 COPY --from=builder /app/node_modules ./node_modules
 
-COPY --from=builder /app/services/service-management/node_modules ./services/service-management/node_modules
-
+# Compiled output
 COPY --from=builder /app/services/service-management/dist ./dist
+
+# Package.json for module resolution
 COPY --from=builder /app/services/service-management/package.json ./
 
 ENV NODE_ENV=production
+
 CMD ["node", "dist/index.js"]
+
+
+
+
 
 
 # FROM node:18-alpine AS builder
